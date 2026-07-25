@@ -1,0 +1,8 @@
+{
+  "permissions": {
+    "allow": [
+      "PowerShell($env:PGPASSWORD=\"postgres\"; psql -U postgres -h localhost -c \"SELECT version\\(\\);\" 2>&1 | Select-Object -First 5)",
+      "PowerShell(Get-ChildItem \"C:\\\\Users\\\\kuppa\\\\OneDrive\\\\Desktop\\\\MOP_Careers_Website\" -Force -ErrorAction SilentlyContinue | Select-Object Name,Length | Format-Table -AutoSize; Write-Output \"--- pgpass ---\"; if \\(Test-Path \"$env:APPDATA\\\\postgresql\\\\pgpass.conf\"\\) { \"pgpass.conf exists\" } else { \"no pgpass.conf\" })"
+    ]
+  }
+}

@@ -1,0 +1,100 @@
+import { Navigate, Route, Routes } from 'react-router-dom';
+
+import Layout from './components/Layout';
+import ProtectedRoute, { HOME_FOR_ROLE } from './components/ProtectedRoute';
+import { useAuth } from './context/AuthContext';
+
+import ChangePassword from './pages/ChangePassword';
+import ForgotPassword from './pages/ForgotPassword';
+import Login from './pages/Login';
+import ResetPassword from './pages/ResetPassword';
+
+import AdminAccounts from './pages/admin/Accounts';
+import AdminBatches from './pages/admin/Batches';
+import AdminDashboard from './pages/admin/Dashboard';
+
+import BatchWorkspace from './pages/teacher/BatchWorkspace';
+import TeacherBatches from './pages/teacher/Batches';
+
+import StudentCurriculum from './pages/student/Curriculum';
+import StudentHome from './pages/student/Home';
+import StudentMissed from './pages/student/Missed';
+import StudentSchedule from './pages/student/Schedule';
+
+/** Sends whoever is signed in to their own home. */
+function RoleRedirect() {
+  const { user, loading } = useAuth();
+  if (loading) return null;
+  if (!user) return <Navigate to="/login" replace />;
+  if (user.must_change_password) return <Navigate to="/change-password" replace />;
+  return <Navigate to={HOME_FOR_ROLE[user.role] || '/login'} replace />;
+}
+
+function NotFound() {
+  return (
+    <div className="flex min-h-screen flex-col items-center justify-center px-4 text-center">
+      <p className="text-5xl font-bold text-navy-200">404</p>
+      <h1 className="mt-3 text-xl font-semibold text-navy">Page not found</h1>
+      <p className="mt-1 text-sm text-navy-400">
+        That page doesn&apos;t exist or you don&apos;t have access to it.
+      </p>
+      <a href="/" className="btn-cta mt-6">
+        Go home
+      </a>
+    </div>
+  );
+}
+
+export default function App() {
+  return (
+    <Routes>
+      {/* Public — the marketing site replaces this root route in Phase 5. */}
+      <Route path="/" element={<RoleRedirect />} />
+      <Route path="/login" element={<Login />} />
+      <Route path="/forgot-password" element={<ForgotPassword />} />
+      <Route path="/reset-password" element={<ResetPassword />} />
+      <Route path="/change-password" element={<ChangePassword />} />
+
+      {/* Admin */}
+      <Route
+        element={
+          <ProtectedRoute roles={['admin']}>
+            <Layout />
+          </ProtectedRoute>
+        }
+      >
+        <Route path="/admin" element={<AdminDashboard />} />
+        <Route path="/admin/batches" element={<AdminBatches />} />
+        <Route path="/admin/accounts" element={<AdminAccounts />} />
+      </Route>
+
+      {/* Teacher workspace — admins may open it too, since they can do everything. */}
+      <Route
+        element={
+          <ProtectedRoute roles={['teacher', 'admin']}>
+            <Layout />
+          </ProtectedRoute>
+        }
+      >
+        <Route path="/teacher" element={<TeacherBatches />} />
+        <Route path="/teacher/batches/:batchId" element={<BatchWorkspace />} />
+      </Route>
+
+      {/* Student */}
+      <Route
+        element={
+          <ProtectedRoute roles={['student']}>
+            <Layout />
+          </ProtectedRoute>
+        }
+      >
+        <Route path="/app" element={<StudentHome />} />
+        <Route path="/app/curriculum" element={<StudentCurriculum />} />
+        <Route path="/app/missed" element={<StudentMissed />} />
+        <Route path="/app/schedule" element={<StudentSchedule />} />
+      </Route>
+
+      <Route path="*" element={<NotFound />} />
+    </Routes>
+  );
+}

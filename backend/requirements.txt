@@ -1,0 +1,17 @@
+fastapi==0.140.0
+uvicorn[standard]==0.34.0
+sqlalchemy==2.0.51
+alembic==1.14.0
+psycopg2-binary==2.9.12
+python-jose[cryptography]==3.3.0
+
+# bcrypt is used directly rather than through passlib: passlib 1.7.4 (2020) is
+# incompatible with bcrypt 5.x and raises on hash(). See app/security.py.
+bcrypt==5.0.0
+
+python-dotenv==1.0.1
+pydantic-settings==2.7.0
+python-multipart==0.0.20
+email-validator==2.2.0
+reportlab==4.2.5
+anthropic==0.120.0

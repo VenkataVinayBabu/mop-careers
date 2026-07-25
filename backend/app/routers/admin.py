@@ -1,0 +1,329 @@
+"""Admin-only endpoints: batches, teacher assignment, accounts, milestones."""
+import secrets
+from datetime import date
+
+from fastapi import APIRouter, Depends, HTTPException, Query, status
+from sqlalchemy import func, select
+from sqlalchemy.orm import Session, selectinload
+
+from app.curriculum import ensure_curriculum
+from app.database import get_db
+from app.deps import get_student_or_404, require_admin
+from app.mail import send_new_account
+from app.models import (
+    ROLE_STUDENT,
+    ROLE_TEACHER,
+    Attendance,
+    Batch,
+    CurriculumDay,
+    Milestone,
+    TeacherBatch,
+    User,
+)
+from app.schemas import (
+    AssignTeacherRequest,
+    BatchCreate,
+    BatchOut,
+    BatchUpdate,
+    BlockToggleRequest,
+    MessageResponse,
+    MilestoneOut,
+    MilestoneUpdate,
+    UserCreate,
+    UserOut,
+    UserUpdate,
+)
+from app.security import hash_password
+
+router = APIRouter(prefix="/admin", tags=["admin"], dependencies=[Depends(require_admin)])
+
+
+def _batch_out(db: Session, batch: Batch) -> BatchOut:
+    count = db.scalar(
+        select(func.count(User.id)).where(User.batch_id == batch.id, User.role == ROLE_STUDENT)
+    )
+    data = BatchOut.model_validate(batch)
+    data.student_count = count or 0
+    data.teachers = [link.teacher for link in batch.teacher_links]  # type: ignore[misc]
+    return data
+
+
+# --- batches --------------------------------------------------------------
+@router.get("/batches", response_model=list[BatchOut])
+def list_batches(db: Session = Depends(get_db)) -> list[BatchOut]:
+    batches = db.scalars(
+        select(Batch)
+        .options(selectinload(Batch.teacher_links).selectinload(TeacherBatch.teacher))
+        .order_by(Batch.created_at.desc())
+    ).all()
+    return [_batch_out(db, b) for b in batches]
+
+
+@router.post("/batches", response_model=BatchOut, status_code=status.HTTP_201_CREATED)
+def create_batch(payload: BatchCreate, db: Session = Depends(get_db)) -> BatchOut:
+    if db.scalar(select(Batch).where(func.lower(Batch.name) == payload.name.lower())):
+        raise HTTPException(status.HTTP_409_CONFLICT, "A batch with that name already exists")
+
+    batch = Batch(**payload.model_dump())
+    db.add(batch)
+    db.flush()                      # assign batch.id before building curriculum
+    ensure_curriculum(db, batch.id)  # every batch starts with all 55 days
+    db.commit()
+    db.refresh(batch)
+    return _batch_out(db, batch)
+
+
+@router.patch("/batches/{batch_id}", response_model=BatchOut)
+def update_batch(
+    batch_id: int, payload: BatchUpdate, db: Session = Depends(get_db)
+) -> BatchOut:
+    batch = db.get(Batch, batch_id)
+    if batch is None:
+        raise HTTPException(status.HTTP_404_NOT_FOUND, "Batch not found")
+
+    updates = payload.model_dump(exclude_unset=True)
+    if "name" in updates and updates["name"]:
+        clash = db.scalar(
+            select(Batch).where(
+                func.lower(Batch.name) == updates["name"].lower(), Batch.id != batch_id
+            )
+        )
+        if clash:
+            raise HTTPException(status.HTTP_409_CONFLICT, "A batch with that name already exists")
+
+    for field, value in updates.items():
+        setattr(batch, field, value)
+
+    # Starting a batch stamps the batch_started milestone for its students.
+    if updates.get("status") == "active":
+        stamp = batch.start_date or date.today()
+        for student in db.scalars(
+            select(User).where(User.batch_id == batch.id, User.role == ROLE_STUDENT)
+        ).all():
+            ms = _get_or_create_milestone(db, student.id)
+            if ms.batch_started is None:
+                ms.batch_started = stamp
+
+    db.commit()
+    db.refresh(batch)
+    return _batch_out(db, batch)
+
+
+@router.delete("/batches/{batch_id}", response_model=MessageResponse)
+def delete_batch(batch_id: int, db: Session = Depends(get_db)) -> MessageResponse:
+    batch = db.get(Batch, batch_id)
+    if batch is None:
+        raise HTTPException(status.HTTP_404_NOT_FOUND, "Batch not found")
+
+    enrolled = db.scalar(
+        select(func.count(User.id)).where(User.batch_id == batch_id, User.role == ROLE_STUDENT)
+    )
+    if enrolled:
+        raise HTTPException(
+            status.HTTP_409_CONFLICT,
+            f"Cannot delete — {enrolled} student(s) are still assigned to this batch",
+        )
+
+    db.delete(batch)
+    db.commit()
+    return MessageResponse(message="Batch deleted")
+
+
+# --- teacher assignment ---------------------------------------------------
+@router.post("/batches/{batch_id}/teachers", response_model=BatchOut)
+def assign_teacher(
+    batch_id: int, payload: AssignTeacherRequest, db: Session = Depends(get_db)
+) -> BatchOut:
+    batch = db.get(Batch, batch_id)
+    if batch is None:
+        raise HTTPException(status.HTTP_404_NOT_FOUND, "Batch not found")
+
+    teacher = db.get(User, payload.teacher_id)
+    if teacher is None or teacher.role != ROLE_TEACHER:
+        raise HTTPException(status.HTTP_404_NOT_FOUND, "Teacher not found")
+
+    already = db.scalar(
+        select(TeacherBatch).where(
+            TeacherBatch.batch_id == batch_id, TeacherBatch.teacher_id == teacher.id
+        )
+    )
+    if not already:
+        db.add(TeacherBatch(batch_id=batch_id, teacher_id=teacher.id))
+        db.commit()
+
+    db.refresh(batch)
+    return _batch_out(db, batch)
+
+
+@router.delete("/batches/{batch_id}/teachers/{teacher_id}", response_model=BatchOut)
+def unassign_teacher(
+    batch_id: int, teacher_id: int, db: Session = Depends(get_db)
+) -> BatchOut:
+    link = db.scalar(
+        select(TeacherBatch).where(
+            TeacherBatch.batch_id == batch_id, TeacherBatch.teacher_id == teacher_id
+        )
+    )
+    if link is None:
+        raise HTTPException(status.HTTP_404_NOT_FOUND, "That teacher is not assigned to this batch")
+
+    db.delete(link)
+    db.commit()
+
+    batch = db.get(Batch, batch_id)
+    if batch is None:
+        raise HTTPException(status.HTTP_404_NOT_FOUND, "Batch not found")
+    db.refresh(batch)
+    return _batch_out(db, batch)
+
+
+# --- accounts -------------------------------------------------------------
+@router.get("/users", response_model=list[UserOut])
+def list_users(
+    role: str | None = Query(default=None, pattern="^(teacher|student|admin)$"),
+    batch_id: int | None = None,
+    db: Session = Depends(get_db),
+) -> list[UserOut]:
+    stmt = select(User)
+    if role:
+        stmt = stmt.where(User.role == role)
+    if batch_id is not None:
+        stmt = stmt.where(User.batch_id == batch_id)
+    users = db.scalars(stmt.order_by(User.role, User.name)).all()
+    return [UserOut.model_validate(u) for u in users]
+
+
+@router.post("/users", response_model=UserOut, status_code=status.HTTP_201_CREATED)
+def create_user(payload: UserCreate, db: Session = Depends(get_db)) -> UserOut:
+    email = payload.email.lower()
+    if db.scalar(select(User).where(User.email == email)):
+        raise HTTPException(status.HTTP_409_CONFLICT, "An account with that email already exists")
+
+    if payload.batch_id is not None and db.get(Batch, payload.batch_id) is None:
+        raise HTTPException(status.HTTP_404_NOT_FOUND, "Batch not found")
+
+    if payload.role == ROLE_STUDENT and payload.batch_id is None:
+        raise HTTPException(status.HTTP_400_BAD_REQUEST, "Students must be assigned to a batch")
+
+    # No self-registration exists, so a generated temporary password is emailed
+    # to the account holder when the admin does not supply one.
+    temp_password = payload.password or f"Mop@{secrets.randbelow(900000) + 100000}"
+
+    user = User(
+        name=payload.name,
+        email=email,
+        phone=payload.phone,
+        role=payload.role,
+        password_hash=hash_password(temp_password),
+        must_change_password=True,
+        yoe_it=payload.yoe_it if payload.role == ROLE_STUDENT else None,
+        batch_id=payload.batch_id if payload.role == ROLE_STUDENT else None,
+    )
+    db.add(user)
+    db.flush()
+
+    if user.role == ROLE_STUDENT:
+        today = date.today()
+        db.add(
+            Milestone(
+                student_id=user.id,
+                enrolled=today,
+                batch_assigned=today if user.batch_id else None,
+            )
+        )
+
+    db.commit()
+    db.refresh(user)
+
+    send_new_account(user.email, user.name, user.role, temp_password)
+    return UserOut.model_validate(user)
+
+
+@router.patch("/users/{user_id}", response_model=UserOut)
+def update_user(user_id: int, payload: UserUpdate, db: Session = Depends(get_db)) -> UserOut:
+    user = db.get(User, user_id)
+    if user is None:
+        raise HTTPException(status.HTTP_404_NOT_FOUND, "User not found")
+
+    updates = payload.model_dump(exclude_unset=True)
+
+    if "batch_id" in updates:
+        if user.role != ROLE_STUDENT:
+            raise HTTPException(status.HTTP_400_BAD_REQUEST, "Only students belong to a batch")
+        if updates["batch_id"] is not None and db.get(Batch, updates["batch_id"]) is None:
+            raise HTTPException(status.HTTP_404_NOT_FOUND, "Batch not found")
+
+    for field, value in updates.items():
+        setattr(user, field, value)
+
+    if updates.get("batch_id"):
+        ms = _get_or_create_milestone(db, user.id)
+        if ms.batch_assigned is None:
+            ms.batch_assigned = date.today()
+
+    db.commit()
+    db.refresh(user)
+    return UserOut.model_validate(user)
+
+
+@router.post("/users/{user_id}/block", response_model=UserOut)
+def toggle_block(
+    user_id: int,
+    payload: BlockToggleRequest,
+    db: Session = Depends(get_db),
+    admin: User = Depends(require_admin),
+) -> UserOut:
+    user = db.get(User, user_id)
+    if user is None:
+        raise HTTPException(status.HTTP_404_NOT_FOUND, "User not found")
+    if user.id == admin.id:
+        raise HTTPException(status.HTTP_400_BAD_REQUEST, "You cannot block your own account")
+
+    user.is_blocked = payload.is_blocked
+    db.commit()
+    db.refresh(user)
+    return UserOut.model_validate(user)
+
+
+# --- milestones -----------------------------------------------------------
+def _get_or_create_milestone(db: Session, student_id: int) -> Milestone:
+    ms = db.scalar(select(Milestone).where(Milestone.student_id == student_id))
+    if ms is None:
+        ms = Milestone(student_id=student_id)
+        db.add(ms)
+        db.flush()
+    return ms
+
+
+@router.get("/students/{student_id}/milestones", response_model=MilestoneOut)
+def get_milestones(student_id: int, db: Session = Depends(get_db)) -> MilestoneOut:
+    get_student_or_404(db, student_id)
+    return MilestoneOut.model_validate(_get_or_create_milestone(db, student_id))
+
+
+@router.patch("/students/{student_id}/milestones", response_model=MilestoneOut)
+def update_milestones(
+    student_id: int, payload: MilestoneUpdate, db: Session = Depends(get_db)
+) -> MilestoneOut:
+    get_student_or_404(db, student_id)
+    ms = _get_or_create_milestone(db, student_id)
+    for field, value in payload.model_dump(exclude_unset=True).items():
+        setattr(ms, field, value)
+    db.commit()
+    db.refresh(ms)
+    return MilestoneOut.model_validate(ms)
+
+
+# --- overview -------------------------------------------------------------
+@router.get("/stats")
+def admin_stats(db: Session = Depends(get_db)) -> dict:
+    return {
+        "batches": db.scalar(select(func.count(Batch.id))) or 0,
+        "students": db.scalar(select(func.count(User.id)).where(User.role == ROLE_STUDENT)) or 0,
+        "teachers": db.scalar(select(func.count(User.id)).where(User.role == ROLE_TEACHER)) or 0,
+        "blocked": db.scalar(select(func.count(User.id)).where(User.is_blocked.is_(True))) or 0,
+        "classes_completed": db.scalar(
+            select(func.count(CurriculumDay.id)).where(CurriculumDay.status == "completed")
+        ) or 0,
+        "attendance_records": db.scalar(select(func.count(Attendance.id))) or 0,
+    }

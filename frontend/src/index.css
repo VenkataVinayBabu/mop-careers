@@ -1,0 +1,76 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  html {
+    -webkit-text-size-adjust: 100%;
+  }
+  body {
+    @apply bg-navy-50 text-navy-800 font-sans antialiased;
+  }
+  /* Keyboard focus stays visible everywhere for accessibility. */
+  *:focus-visible {
+    @apply outline-none ring-2 ring-teal ring-offset-2;
+  }
+}
+
+@layer components {
+  .btn {
+    @apply inline-flex items-center justify-center gap-2 rounded-lg px-4 py-2.5 text-sm
+           font-semibold transition disabled:cursor-not-allowed disabled:opacity-50;
+  }
+  /* Orange is reserved for calls to action. */
+  .btn-cta {
+    @apply btn bg-orange text-white hover:bg-orange-600 active:bg-orange-700;
+  }
+  .btn-primary {
+    @apply btn bg-navy text-white hover:bg-navy-600;
+  }
+  .btn-secondary {
+    @apply btn bg-teal text-white hover:bg-teal-600;
+  }
+  .btn-ghost {
+    @apply btn border border-navy-200 bg-white text-navy-700 hover:bg-navy-50;
+  }
+  .btn-sm {
+    @apply px-3 py-1.5 text-xs;
+  }
+
+  .card {
+    @apply rounded-xl border border-navy-100 bg-white shadow-card;
+  }
+
+  .label {
+    @apply mb-1.5 block text-sm font-medium text-navy-700;
+  }
+  .input {
+    @apply w-full rounded-lg border border-navy-200 bg-white px-3.5 py-2.5 text-sm
+           text-navy-800 placeholder:text-navy-300
+           focus:border-teal focus:outline-none focus:ring-1 focus:ring-teal;
+  }
+
+  .badge {
+    @apply inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-semibold;
+  }
+  .badge-done {
+    @apply badge bg-teal-100 text-teal-700;
+  }
+  .badge-pending {
+    @apply badge bg-navy-100 text-navy-600;
+  }
+  .badge-warn {
+    @apply badge bg-orange-100 text-orange-700;
+  }
+
+  .table-wrap {
+    @apply overflow-x-auto;
+  }
+  .th {
+    @apply whitespace-nowrap px-4 py-3 text-left text-xs font-semibold uppercase
+           tracking-wide text-navy-400;
+  }
+  .td {
+    @apply whitespace-nowrap px-4 py-3 text-sm text-navy-700;
+  }
+}

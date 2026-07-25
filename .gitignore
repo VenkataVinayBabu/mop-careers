@@ -1,0 +1,32 @@
+# Secrets — never commit
+.env
+*.env
+!.env.example
+
+# Python
+__pycache__/
+*.py[cod]
+.venv/
+venv/
+*.egg-info/
+.pytest_cache/
+
+# Uploads (user content, not source). Git cannot re-include a file whose parent
+# directory is excluded, so the directories are un-ignored before the .gitkeep.
+backend/uploads/**
+!backend/uploads/
+!backend/uploads/notes/
+!backend/uploads/notes/.gitkeep
+
+# Node
+node_modules/
+dist/
+dist-ssr/
+*.local
+.vite/
+
+# Editors / OS
+.vscode/
+.idea/
+.DS_Store
+Thumbs.db
