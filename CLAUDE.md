@@ -186,6 +186,15 @@ Python 3.13.2 · Node v22.17.0 (npm 10.9.2) · Git 2.50.1 · PostgreSQL 17.9
     ticking and clearing, and that students/teachers cannot edit milestones.
     Browser-verified all three roles, an actual notes download from the student UI, and
     the Roadmap modal.
+  - **Frontend write paths verified in the browser** (an earlier pass had exercised most
+    mutations through the API instead of the UI, which is exactly where form-wiring bugs
+    hide): forced first-login change screen incl. mismatch validation; blocked-student
+    message rendering on the login form; block/unblock toggle and badge; batch creation
+    modal; account creation modal incl. the "students need a batch" toast and the
+    auto-generated-password path; notes PDF upload through the real file input
+    (change -> FormData -> axios) plus Remove with on-disk cleanup; and the complete
+    forgot-password journey — request form, confirmation screen, following the real
+    emailed link, length validation, reset, and signing in with the new password.
 
   Deviations & decisions worth remembering:
   - **bcrypt is used directly instead of passlib.** passlib 1.7.4 is broken against
