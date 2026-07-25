@@ -2,7 +2,8 @@
   "permissions": {
     "allow": [
       "PowerShell($env:PGPASSWORD=\"postgres\"; psql -U postgres -h localhost -c \"SELECT version\\(\\);\" 2>&1 | Select-Object -First 5)",
-      "PowerShell(Get-ChildItem \"C:\\\\Users\\\\kuppa\\\\OneDrive\\\\Desktop\\\\MOP_Careers_Website\" -Force -ErrorAction SilentlyContinue | Select-Object Name,Length | Format-Table -AutoSize; Write-Output \"--- pgpass ---\"; if \\(Test-Path \"$env:APPDATA\\\\postgresql\\\\pgpass.conf\"\\) { \"pgpass.conf exists\" } else { \"no pgpass.conf\" })"
+      "PowerShell(Get-ChildItem \"C:\\\\Users\\\\kuppa\\\\OneDrive\\\\Desktop\\\\MOP_Careers_Website\" -Force -ErrorAction SilentlyContinue | Select-Object Name,Length | Format-Table -AutoSize; Write-Output \"--- pgpass ---\"; if \\(Test-Path \"$env:APPDATA\\\\postgresql\\\\pgpass.conf\"\\) { \"pgpass.conf exists\" } else { \"no pgpass.conf\" })",
+      "PowerShell(cd \"C:\\\\Users\\\\kuppa\\\\OneDrive\\\\Desktop\\\\MOP_Careers_Website\"; git commit -q -F \"C:\\\\Users\\\\kuppa\\\\AppData\\\\Local\\\\Temp\\\\claude\\\\C--Users-kuppa-OneDrive-Desktop-MOP-Careers-Website\\\\f8716e63-8474-4f79-ac66-62df34292f7c\\\\scratchpad\\\\commitmsg.txt\"; if \\($?\\) { Write-Output \"COMMITTED\" }; Write-Output \"=== log ===\"; git log --oneline; Write-Output \"=== clean? ===\"; $s = git status --porcelain | Where-Object { $_ -notmatch 'node_modules' }; if \\($s\\) { $s } else { \"working tree clean\" })"
     ]
   }
 }

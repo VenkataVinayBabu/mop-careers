@@ -10,6 +10,7 @@ from app.curriculum import ensure_curriculum
 from app.database import get_db
 from app.deps import get_student_or_404, require_admin
 from app.mail import send_new_account
+from app.milestones import get_or_create_milestone as _get_or_create_milestone
 from app.models import (
     ROLE_STUDENT,
     ROLE_TEACHER,
@@ -286,15 +287,6 @@ def toggle_block(
 
 
 # --- milestones -----------------------------------------------------------
-def _get_or_create_milestone(db: Session, student_id: int) -> Milestone:
-    ms = db.scalar(select(Milestone).where(Milestone.student_id == student_id))
-    if ms is None:
-        ms = Milestone(student_id=student_id)
-        db.add(ms)
-        db.flush()
-    return ms
-
-
 @router.get("/students/{student_id}/milestones", response_model=MilestoneOut)
 def get_milestones(student_id: int, db: Session = Depends(get_db)) -> MilestoneOut:
     get_student_or_404(db, student_id)

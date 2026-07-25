@@ -10,11 +10,124 @@ import {
   PageHeader,
   Spinner,
 } from '../../components/ui';
+import { MILESTONE_STEPS } from '../../constants';
 
 const TABS = [
   { key: 'student', label: 'Students' },
   { key: 'teacher', label: 'Teachers' },
 ];
+
+/** Which milestones the system sets on its own — shown read-only to explain why. */
+const AUTO_MILESTONES = {
+  enrolled: 'Set when the account is created',
+  batch_assigned: 'Set when the student joins a batch',
+  batch_started: 'Set when the batch becomes active',
+  midpoint_day28: 'Set when day 28 is marked complete',
+  course_completed: 'Set when all 55 days are complete',
+};
+
+function MilestonesModal({ student, onClose }) {
+  const toast = useToast();
+  const [form, setForm] = useState(null);
+  const [loading, setLoading] = useState(true);
+  const [saving, setSaving] = useState(false);
+  const [error, setError] = useState('');
+
+  useEffect(() => {
+    let cancelled = false;
+    (async () => {
+      try {
+        const { data } = await api.get(`/admin/students/${student.id}/milestones`);
+        if (!cancelled) {
+          setForm(
+            Object.fromEntries(MILESTONE_STEPS.map((s) => [s.key, data[s.key] || ''])),
+          );
+        }
+      } catch (err) {
+        if (!cancelled) setError(errorMessage(err));
+      } finally {
+        if (!cancelled) setLoading(false);
+      }
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, [student.id]);
+
+  const save = async () => {
+    setSaving(true);
+    try {
+      // Empty inputs must clear the date, so send null rather than "".
+      const body = Object.fromEntries(
+        MILESTONE_STEPS.map((s) => [s.key, form[s.key] || null]),
+      );
+      await api.patch(`/admin/students/${student.id}/milestones`, body);
+      toast.success(`Roadmap updated for ${student.name}.`);
+      onClose();
+    } catch (err) {
+      toast.error(errorMessage(err));
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  return (
+    <Modal
+      open
+      title={`Roadmap — ${student.name}`}
+      onClose={onClose}
+      footer={
+        <>
+          <button type="button" onClick={onClose} className="btn-ghost">
+            Cancel
+          </button>
+          <button
+            type="button"
+            onClick={save}
+            disabled={saving || loading || !form}
+            className="btn-cta"
+          >
+            {saving && <Spinner className="h-4 w-4" />}
+            {saving ? 'Saving…' : 'Save roadmap'}
+          </button>
+        </>
+      }
+    >
+      {loading ? (
+        <Loading label="Loading roadmap…" />
+      ) : error ? (
+        <ErrorState message={error} />
+      ) : (
+        <div className="space-y-4">
+          <p className="text-sm text-navy-400">
+            Clear a date to un-set that milestone. Automatic milestones can be corrected
+            here too.
+          </p>
+          {MILESTONE_STEPS.map((step) => (
+            <div key={step.key}>
+              <label className="label" htmlFor={`ms-${step.key}`}>
+                {step.label}
+                {AUTO_MILESTONES[step.key] && (
+                  <span className="ml-2 font-normal text-navy-300">automatic</span>
+                )}
+              </label>
+              <input
+                id={`ms-${step.key}`}
+                type="date"
+                className="input"
+                value={form[step.key]}
+                onChange={(e) => setForm({ ...form, [step.key]: e.target.value })}
+              />
+              {AUTO_MILESTONES[step.key] && (
+                <p className="mt-1 text-xs text-navy-400">{AUTO_MILESTONES[step.key]}</p>
+              )}
+            </div>
+          ))}
+        </div>
+      )}
+    </Modal>
+  );
+}
 
 function CreateUserModal({ role, batches, onClose, onSaved }) {
   const toast = useToast();
@@ -187,6 +300,7 @@ export default function AdminAccounts() {
   const [users, setUsers] = useState([]);
   const [batches, setBatches] = useState([]);
   const [creating, setCreating] = useState(false);
+  const [milestonesFor, setMilestonesFor] = useState(null);
   const [query, setQuery] = useState('');
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(true);
@@ -327,7 +441,16 @@ export default function AdminAccounts() {
                       </div>
                     </td>
                     <td className="td">
-                      <div className="flex justify-end">
+                      <div className="flex justify-end gap-2">
+                        {u.role === 'student' && (
+                          <button
+                            type="button"
+                            onClick={() => setMilestonesFor(u)}
+                            className="btn-ghost btn-sm"
+                          >
+                            Roadmap
+                          </button>
+                        )}
                         <button
                           type="button"
                           onClick={() => toggleBlock(u)}
@@ -353,6 +476,9 @@ export default function AdminAccounts() {
           onClose={() => setCreating(false)}
           onSaved={load}
         />
+      )}
+      {milestonesFor && (
+        <MilestonesModal student={milestonesFor} onClose={() => setMilestonesFor(null)} />
       )}
     </div>
   );

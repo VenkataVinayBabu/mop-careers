@@ -12,6 +12,7 @@ from sqlalchemy.orm import Session
 from app.config import NOTES_DIR
 from app.database import get_db
 from app.deps import assert_batch_access, require_staff, teacher_batch_ids
+from app.milestones import sync_curriculum_milestones
 from app.models import (
     DAY_COMPLETED,
     ROLE_ADMIN,
@@ -98,8 +99,15 @@ def update_day(
 ) -> CurriculumDayOut:
     """Set the date, paste a recording link, edit the topic, mark complete."""
     day = _get_day(db, day_id, user)
-    for field, value in payload.model_dump(exclude_unset=True).items():
+    updates = payload.model_dump(exclude_unset=True)
+    for field, value in updates.items():
         setattr(day, field, value)
+
+    # Completing day 28 or the final day advances the students' roadmap.
+    if "status" in updates:
+        db.flush()
+        sync_curriculum_milestones(db, day.batch_id)
+
     db.commit()
     db.refresh(day)
     return CurriculumDayOut.model_validate(day)
