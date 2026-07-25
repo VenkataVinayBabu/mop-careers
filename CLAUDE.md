@@ -170,9 +170,14 @@ Python 3.13.2 · Node v22.17.0 (npm 10.9.2) · Git 2.50.1 · PostgreSQL 17.9
   - Frontend: Vite + React 18 + Tailwind (brand palette), sidebar layout, role-guarded
     routes, admin/teacher/student screens, toasts, loading/empty/error states,
     mobile-responsive.
-  - Verification: **78/78 API assertions passed** covering auth, RBAC, role isolation
-    (student cannot read other students; teacher 404s on unassigned batches), block
-    /unblock, forced password change, and validation. Browser-verified all three roles.
+  - Verification: **111/111 API assertions passed** across two suites. The first (78)
+    covered auth, RBAC, role isolation (student cannot read other students; teacher 404s
+    on unassigned batches), block/unblock, forced password change and validation. A
+    second pass (33) closed a gap the first missed: notes PDF upload/download, including
+    magic-byte validation, filename-traversal sanitising, replace/delete with on-disk
+    cleanup, cross-batch and unassigned-teacher denial, and a full forgot-password round
+    trip using the real token from the dev email log (single-use verified).
+    Browser-verified all three roles plus an actual notes download from the student UI.
 
   Deviations & decisions worth remembering:
   - **bcrypt is used directly instead of passlib.** passlib 1.7.4 is broken against
