@@ -9,7 +9,7 @@ import random
 import sys
 from datetime import date, timedelta
 
-from sqlalchemy import delete, select
+from sqlalchemy import delete, func, select
 from sqlalchemy.orm import Session
 
 from app.config import NOTES_DIR
@@ -21,9 +21,14 @@ from app.models import (
     ROLE_ADMIN,
     ROLE_STUDENT,
     ROLE_TEACHER,
+    Application,
     Attendance,
     Batch,
+    Company,
     CurriculumDay,
+    FeePayment,
+    FeeRecord,
+    InterviewRound,
     Milestone,
     PasswordResetToken,
     TeacherBatch,
@@ -128,7 +133,15 @@ def upsert_user(db: Session, *, name: str, email: str, password: str, role: str,
 
 
 def reset_data(db: Session) -> None:
-    """Drop all Phase 1 rows. Destructive — only runs behind --reset."""
+    """Drop all seeded rows. Destructive — only runs behind --reset.
+
+    Order matters: children before parents.
+    """
+    db.execute(delete(InterviewRound))
+    db.execute(delete(Application))
+    db.execute(delete(Company))
+    db.execute(delete(FeePayment))
+    db.execute(delete(FeeRecord))
     db.execute(delete(Attendance))
     db.execute(delete(PasswordResetToken))
     db.execute(delete(CurriculumDay))
@@ -137,7 +150,131 @@ def reset_data(db: Session) -> None:
     db.execute(delete(User))
     db.execute(delete(Batch))
     db.commit()
-    print("  Cleared existing Phase 1 data.")
+    print("  Cleared existing data.")
+
+
+TOTAL_FEE = 45000.00
+
+# (fee paid so far, [(amount, days_after_start, mode)]) per student, in order.
+# Deliberately varied so the pending-balance list and collection summary have
+# something meaningful to show: one paid in full, one unpaid, three partway.
+FEE_PLAN = [
+    [(20000, 0, "UPI"), (25000, 20, "bank")],   # Aditya  - paid in full
+    [(15000, 1, "UPI")],                        # Bhavana - part paid
+    [(20000, 2, "cash"), (10000, 25, "UPI")],   # Charan  - part paid
+    [],                                         # Divya   - nothing yet
+    [(45000, 3, "bank")],                       # Eshwar  - paid in full
+]
+
+COMPANIES = [
+    ("Infosys", "https://infosys.com", "Bengaluru"),
+    ("TCS", "https://tcs.com", "Hyderabad"),
+    ("Zoho", "https://zoho.com", "Chennai"),
+    ("Freshworks", "https://freshworks.com", "Chennai"),
+]
+
+# (student index, company index, role, status, package_lpa, [(round, result)])
+APPLICATIONS = [
+    (0, 0, "Python Full Stack Developer", "joined", 6.5,
+     [("Online Assessment", "passed"), ("Technical Round 1", "passed"), ("HR Round", "passed")]),
+    (0, 1, "Software Engineer Trainee", "rejected", None,
+     [("Aptitude Test", "failed")]),
+    (1, 2, "Backend Developer", "offered", 7.2,
+     [("Technical Screen", "passed"), ("System Design", "passed"), ("HR Round", "passed")]),
+    (1, 3, "Associate Engineer", "interviewing", None,
+     [("Online Assessment", "passed"), ("Technical Round 1", "pending")]),
+    (2, 0, "Python Developer", "shortlisted", None, []),
+    (3, 1, "Graduate Engineer Trainee", "applied", None, []),
+    (4, 3, "Full Stack Engineer", "offered", 8.0,
+     [("Coding Round", "passed"), ("Technical Round", "passed"), ("Hiring Manager", "passed")]),
+]
+
+
+def seed_phase2(db: Session, students: list[User], start: date) -> None:
+    """Fees and placements demo data."""
+    # --- fees ---------------------------------------------------------
+    payments_made = 0
+    for student, plan in zip(students, FEE_PLAN):
+        record = db.scalar(select(FeeRecord).where(FeeRecord.student_id == student.id))
+        if record is None:
+            record = FeeRecord(student_id=student.id)
+            db.add(record)
+        record.total_fee = TOTAL_FEE
+        record.notes = "Standard Python Full Stack programme fee."
+        db.flush()
+
+        existing = db.scalar(
+            select(func.count(FeePayment.id)).where(FeePayment.student_id == student.id)
+        )
+        if existing:
+            continue
+        for amount, offset, mode in plan:
+            db.add(
+                FeePayment(
+                    student_id=student.id,
+                    amount=amount,
+                    paid_on=start + timedelta(days=offset),
+                    mode=mode,
+                    reference=f"REF{student.id:03d}{offset:03d}",
+                )
+            )
+            payments_made += 1
+
+    fully_paid = sum(1 for p in FEE_PLAN if sum(a for a, _, _ in p) >= TOTAL_FEE)
+    print(f"  Fees: {len(students)} records at {TOTAL_FEE:,.0f}, {payments_made} payments "
+          f"({fully_paid} paid in full)")
+
+    # --- companies ----------------------------------------------------
+    companies: list[Company] = []
+    for name, website, location in COMPANIES:
+        c = db.scalar(select(Company).where(Company.name == name))
+        if c is None:
+            c = Company(name=name, website=website, location=location)
+            db.add(c)
+            db.flush()
+        companies.append(c)
+
+    # --- applications + rounds ----------------------------------------
+    created = 0
+    for s_idx, c_idx, role, status_, package, rounds in APPLICATIONS:
+        student = students[s_idx]
+        company = companies[c_idx]
+        existing = db.scalar(
+            select(Application).where(
+                Application.student_id == student.id,
+                Application.company_id == company.id,
+                Application.role_title == role,
+            )
+        )
+        if existing:
+            continue
+
+        app = Application(
+            student_id=student.id,
+            company_id=company.id,
+            role_title=role,
+            status=status_,
+            package_lpa=package,
+            applied_on=start + timedelta(days=30 + s_idx * 2),
+        )
+        db.add(app)
+        db.flush()
+        created += 1
+
+        for i, (round_name, result) in enumerate(rounds):
+            db.add(
+                InterviewRound(
+                    application_id=app.id,
+                    round_name=round_name,
+                    scheduled_on=start + timedelta(days=32 + s_idx * 2 + i * 3),
+                    result=result,
+                    feedback="Handled the questions well." if result == "passed" else None,
+                )
+            )
+
+    placed = len({a[0] for a in APPLICATIONS if a[3] in ("offered", "joined")})
+    print(f"  Placements: {len(companies)} companies, {created} applications, "
+          f"{placed} of {len(students)} students placed")
 
 
 def seed(reset: bool = False) -> None:
@@ -243,6 +380,9 @@ def seed(reset: bool = False) -> None:
                 marked += 1
         print(f"  Curriculum: days 1-{COMPLETED_THROUGH_DAY} marked complete "
               f"(recording links + notes PDFs), {marked} attendance records created")
+
+        db.flush()
+        seed_phase2(db, students, start)
 
         db.commit()
         print("\nSeed complete.")

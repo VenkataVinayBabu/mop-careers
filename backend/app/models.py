@@ -1,4 +1,4 @@
-"""Phase 1 ORM models.
+"""ORM models (Phases 1-2).
 
 Enum-like columns are plain strings validated at the Pydantic layer rather than
 native PostgreSQL ENUMs — native enums require a migration to add a value, which
@@ -38,6 +38,33 @@ BATCH_ACTIVE = "active"
 BATCH_COMPLETED = "completed"
 
 TOTAL_CURRICULUM_DAYS = 55
+
+# --- Phase 2 vocabularies -------------------------------------------------
+PAYMENT_MODES = ("UPI", "cash", "bank")
+
+APP_APPLIED = "applied"
+APP_SHORTLISTED = "shortlisted"
+APP_INTERVIEWING = "interviewing"
+APP_OFFERED = "offered"
+APP_REJECTED = "rejected"
+APP_JOINED = "joined"
+APPLICATION_STATUSES = (
+    APP_APPLIED,
+    APP_SHORTLISTED,
+    APP_INTERVIEWING,
+    APP_OFFERED,
+    APP_REJECTED,
+    APP_JOINED,
+)
+
+# A student counts as placed once an offer exists — joining is a later step that
+# should not reduce the placement count.
+PLACED_STATUSES = (APP_OFFERED, APP_JOINED)
+
+ROUND_PENDING = "pending"
+ROUND_PASSED = "passed"
+ROUND_FAILED = "failed"
+ROUND_RESULTS = (ROUND_PENDING, ROUND_PASSED, ROUND_FAILED)
 
 
 class User(Base):
@@ -198,6 +225,98 @@ MILESTONE_FIELDS = (
     "placement_ready",
     "offer_received",
 )
+
+
+# ==========================================================================
+#  Phase 2 — fees and placements
+# ==========================================================================
+class FeeRecord(Base):
+    """The agreed total fee for one student. Balance is never stored — it is
+    derived from total_fee minus the sum of payments, so the two can't drift."""
+
+    __tablename__ = "fee_records"
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True)
+    student_id: Mapped[int] = mapped_column(
+        ForeignKey("users.id", ondelete="CASCADE"), unique=True, nullable=False, index=True
+    )
+    total_fee: Mapped[float] = mapped_column(Numeric(10, 2), nullable=False, default=0)
+    notes: Mapped[str | None] = mapped_column(Text)
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
+
+    student: Mapped[User] = relationship()
+
+
+class FeePayment(Base):
+    __tablename__ = "fee_payments"
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True)
+    student_id: Mapped[int] = mapped_column(
+        ForeignKey("users.id", ondelete="CASCADE"), nullable=False, index=True
+    )
+    amount: Mapped[float] = mapped_column(Numeric(10, 2), nullable=False)
+    paid_on: Mapped[date] = mapped_column(Date, nullable=False)
+    mode: Mapped[str] = mapped_column(String(10), nullable=False)   # UPI / cash / bank
+    reference: Mapped[str | None] = mapped_column(String(120))
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
+
+    student: Mapped[User] = relationship()
+
+
+class Company(Base):
+    __tablename__ = "companies"
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True)
+    name: Mapped[str] = mapped_column(String(150), unique=True, nullable=False)
+    website: Mapped[str | None] = mapped_column(String(300))
+    location: Mapped[str | None] = mapped_column(String(150))
+    notes: Mapped[str | None] = mapped_column(Text)
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
+
+    applications: Mapped[list[Application]] = relationship(
+        back_populates="company", cascade="all, delete-orphan"
+    )
+
+
+class Application(Base):
+    __tablename__ = "applications"
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True)
+    student_id: Mapped[int] = mapped_column(
+        ForeignKey("users.id", ondelete="CASCADE"), nullable=False, index=True
+    )
+    company_id: Mapped[int] = mapped_column(
+        ForeignKey("companies.id", ondelete="CASCADE"), nullable=False, index=True
+    )
+    role_title: Mapped[str] = mapped_column(String(150), nullable=False)
+    status: Mapped[str] = mapped_column(String(20), default=APP_APPLIED, nullable=False, index=True)
+    package_lpa: Mapped[float | None] = mapped_column(Numeric(6, 2))
+    applied_on: Mapped[date | None] = mapped_column(Date)
+    notes: Mapped[str | None] = mapped_column(Text)
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
+
+    student: Mapped[User] = relationship()
+    company: Mapped[Company] = relationship(back_populates="applications")
+    rounds: Mapped[list[InterviewRound]] = relationship(
+        back_populates="application",
+        cascade="all, delete-orphan",
+        order_by="InterviewRound.id",
+    )
+
+
+class InterviewRound(Base):
+    __tablename__ = "interview_rounds"
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True)
+    application_id: Mapped[int] = mapped_column(
+        ForeignKey("applications.id", ondelete="CASCADE"), nullable=False, index=True
+    )
+    round_name: Mapped[str] = mapped_column(String(120), nullable=False)
+    scheduled_on: Mapped[date | None] = mapped_column(Date)
+    result: Mapped[str] = mapped_column(String(20), default=ROUND_PENDING, nullable=False)
+    feedback: Mapped[str | None] = mapped_column(Text)
+
+    application: Mapped[Application] = relationship(back_populates="rounds")
 
 
 class PasswordResetToken(Base):

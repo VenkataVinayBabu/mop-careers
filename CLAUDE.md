@@ -210,4 +210,34 @@ Python 3.13.2 · Node v22.17.0 (npm 10.9.2) · Git 2.50.1 · PostgreSQL 17.9
   - Stat cards for mock interviews and resume score render placeholders in Phase 1 and
     get wired up in Phases 4 and 3 respectively.
 
-- **Next: Phase 2 — Fees + Placements (admin only; students never see fees).**
+- **Phase 2 — Fees + Placements ✅ complete & verified.**
+  - 5 new tables in one migration: `fee_records`, `fee_payments`, `companies`,
+    `applications`, `interview_rounds` (12 tables total).
+  - Fees (`/admin/fees`): set a per-student total, record and delete payments,
+    pending-balance list, batch-wise collection summary. **Balance is never stored** —
+    always `total_fee - sum(payments)`, so the two cannot drift.
+  - Placements (`/admin/placements`): companies / applications / interview-rounds CRUD
+    plus batch-wise stats. Student side is a read-only `/student/applications`.
+  - Frontend: admin Fees and Placements screens, student My Applications, sidebar
+    entries per role, rupee formatting via `Intl.NumberFormat('en-IN')`.
+  - Verification: **83/83 API assertions passed**, plus browser checks of the write
+    paths (recording a payment, the overpayment rejection, editing an application and
+    watching the stats recompute).
+
+  Decisions worth remembering:
+  - **Fees are locked at router level** (`dependencies=[Depends(require_admin)]` on the
+    whole router) rather than per-endpoint, so a future endpoint added to that file
+    cannot accidentally be exposed. Verified: students and teachers get 403 on every
+    fee route, and no student-facing fee endpoint exists at all.
+  - **"Placed" means status `offered` or `joined`** — joining is a later step and must
+    not reduce the placement count. Package stats use the *best* offer per student, so
+    someone with several offers is counted once at their strongest.
+  - **Overpayment is refused** (400) rather than allowed to produce a negative balance.
+  - A payment cannot be recorded before a total fee is set (400).
+  - `StudentApplicationOut` deliberately omits the admin's private `notes` field and the
+    `student_id`; the student schema is separate from the admin one rather than filtered.
+  - Money crosses the API as a float purely so the JSON is a number, not a quoted
+    string. Postgres `NUMERIC(10,2)` stays the source of truth and sums are computed
+    with `Decimal` before conversion.
+
+- **Next: Phase 3 — ATS Resume Builder (needs `ANTHROPIC_API_KEY` in `backend/.env`).**

@@ -5,7 +5,7 @@ from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
 from app.config import settings
-from app.routers import admin, auth, files, student, teacher
+from app.routers import admin, auth, fees, files, placements, student, teacher
 
 logging.basicConfig(
     level=logging.INFO,
@@ -29,6 +29,8 @@ app.add_middleware(
 
 app.include_router(auth.router)
 app.include_router(admin.router)
+app.include_router(fees.router)
+app.include_router(placements.router)
 app.include_router(teacher.router)
 app.include_router(student.router)
 app.include_router(files.router)

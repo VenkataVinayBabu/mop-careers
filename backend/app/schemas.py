@@ -234,5 +234,178 @@ class MessageResponse(BaseModel):
     message: str
 
 
+# ==========================================================================
+#  Phase 2 — fees and placements
+# ==========================================================================
+# Money is stored as NUMERIC(10,2) in Postgres, which is the source of truth.
+# It crosses the API as a float purely so the JSON is a number rather than a
+# quoted string; sums are computed with Decimal before conversion.
+
+PaymentMode = Literal["UPI", "cash", "bank"]
+ApplicationStatus = Literal[
+    "applied", "shortlisted", "interviewing", "offered", "rejected", "joined"
+]
+RoundResult = Literal["pending", "passed", "failed"]
+
+
+# --- fees -----------------------------------------------------------------
+class FeeSetRequest(BaseModel):
+    total_fee: float = Field(ge=0, le=10_000_000)
+    notes: str | None = None
+
+
+class FeePaymentCreate(BaseModel):
+    amount: float = Field(gt=0, le=10_000_000)
+    paid_on: date
+    mode: PaymentMode
+    reference: str | None = Field(default=None, max_length=120)
+
+
+class FeePaymentOut(ORMModel):
+    id: int
+    student_id: int
+    amount: float
+    paid_on: date
+    mode: PaymentMode
+    reference: str | None = None
+
+
+class StudentFeeOut(BaseModel):
+    student_id: int
+    student_name: str
+    email: EmailStr
+    batch_id: int | None = None
+    batch_name: str | None = None
+    total_fee: float
+    paid: float
+    balance: float
+    notes: str | None = None
+    payments: list[FeePaymentOut] = []
+
+
+class FeeSummaryRow(BaseModel):
+    student_id: int
+    student_name: str
+    batch_name: str | None = None
+    total_fee: float
+    paid: float
+    balance: float
+
+
+class BatchCollectionSummary(BaseModel):
+    batch_id: int
+    batch_name: str
+    student_count: int
+    total_billed: float
+    total_collected: float
+    outstanding: float
+    collection_percent: float
+
+
+# --- placements -----------------------------------------------------------
+class CompanyCreate(BaseModel):
+    name: str = Field(min_length=1, max_length=150)
+    website: str | None = Field(default=None, max_length=300)
+    location: str | None = Field(default=None, max_length=150)
+    notes: str | None = None
+
+
+class CompanyUpdate(BaseModel):
+    name: str | None = Field(default=None, min_length=1, max_length=150)
+    website: str | None = Field(default=None, max_length=300)
+    location: str | None = Field(default=None, max_length=150)
+    notes: str | None = None
+
+
+class CompanyOut(ORMModel):
+    id: int
+    name: str
+    website: str | None = None
+    location: str | None = None
+    notes: str | None = None
+    application_count: int = 0
+
+
+class InterviewRoundCreate(BaseModel):
+    round_name: str = Field(min_length=1, max_length=120)
+    scheduled_on: date | None = None
+    result: RoundResult = "pending"
+    feedback: str | None = None
+
+
+class InterviewRoundUpdate(BaseModel):
+    round_name: str | None = Field(default=None, min_length=1, max_length=120)
+    scheduled_on: date | None = None
+    result: RoundResult | None = None
+    feedback: str | None = None
+
+
+class InterviewRoundOut(ORMModel):
+    id: int
+    application_id: int
+    round_name: str
+    scheduled_on: date | None = None
+    result: RoundResult
+    feedback: str | None = None
+
+
+class ApplicationCreate(BaseModel):
+    student_id: int
+    company_id: int
+    role_title: str = Field(min_length=1, max_length=150)
+    status: ApplicationStatus = "applied"
+    package_lpa: float | None = Field(default=None, ge=0, le=1000)
+    applied_on: date | None = None
+    notes: str | None = None
+
+
+class ApplicationUpdate(BaseModel):
+    role_title: str | None = Field(default=None, min_length=1, max_length=150)
+    status: ApplicationStatus | None = None
+    package_lpa: float | None = Field(default=None, ge=0, le=1000)
+    applied_on: date | None = None
+    notes: str | None = None
+
+
+class ApplicationOut(ORMModel):
+    id: int
+    student_id: int
+    student_name: str = ""
+    company_id: int
+    company_name: str = ""
+    role_title: str
+    status: ApplicationStatus
+    package_lpa: float | None = None
+    applied_on: date | None = None
+    notes: str | None = None
+    rounds: list[InterviewRoundOut] = []
+
+
+class StudentApplicationOut(BaseModel):
+    """Read-only view a student sees of their own applications.
+
+    Deliberately omits the admin's private `notes` field.
+    """
+
+    id: int
+    company_name: str
+    role_title: str
+    status: ApplicationStatus
+    package_lpa: float | None = None
+    applied_on: date | None = None
+    rounds: list[InterviewRoundOut] = []
+
+
+class PlacementStats(BaseModel):
+    batch_id: int | None = None
+    batch_name: str
+    total_students: int
+    placed_count: int
+    placed_percent: float
+    average_package: float | None = None
+    highest_package: float | None = None
+    applications: int = 0
+
+
 # Resolve the forward reference in TokenResponse.
 TokenResponse.model_rebuild()

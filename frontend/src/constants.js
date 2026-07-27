@@ -19,6 +19,43 @@ export function formatDate(value) {
   return d.toLocaleDateString(undefined, { day: 'numeric', month: 'short', year: 'numeric' });
 }
 
+/** Application status -> badge class + label. */
+export const APPLICATION_STATUS = {
+  applied: { label: 'Applied', cls: 'badge-pending' },
+  shortlisted: { label: 'Shortlisted', cls: 'badge-pending' },
+  interviewing: { label: 'Interviewing', cls: 'badge-warn' },
+  offered: { label: 'Offered', cls: 'badge-done' },
+  joined: { label: 'Joined', cls: 'badge-done' },
+  rejected: { label: 'Rejected', cls: 'badge-warn' },
+};
+
+export const APPLICATION_STATUS_KEYS = Object.keys(APPLICATION_STATUS);
+
+export const ROUND_RESULT = {
+  pending: { label: 'Pending', cls: 'badge-pending' },
+  passed: { label: 'Passed', cls: 'badge-done' },
+  failed: { label: 'Failed', cls: 'badge-warn' },
+};
+
+export const PAYMENT_MODES = ['UPI', 'cash', 'bank'];
+
+const rupees = new Intl.NumberFormat('en-IN', {
+  style: 'currency',
+  currency: 'INR',
+  maximumFractionDigits: 0,
+});
+
+/** Fees are in rupees; packages are in LPA and formatted separately. */
+export function formatMoney(value) {
+  if (value == null) return '—';
+  return rupees.format(value);
+}
+
+export function formatLpa(value) {
+  if (value == null) return '—';
+  return `${Number(value).toFixed(1)} LPA`;
+}
+
 export function formatShortDate(value) {
   if (!value) return null;
   const d = new Date(`${value}T00:00:00`);

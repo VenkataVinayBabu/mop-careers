@@ -138,7 +138,9 @@ Re-seed from scratch with `python -m app.seed --reset` (destructive).
 ## What each role can do
 
 **Admin** — everything. Batch CRUD with teacher assignment, teacher/student account
-creation, block/unblock, and the full curriculum workspace for any batch.
+creation, block/unblock, the full curriculum workspace for any batch, **fees**
+(totals, payments, outstanding balances, batch collection summary) and **placements**
+(companies, applications, interview rounds, batch-wise stats).
 
 **Teacher** — *only their assigned batches.* Mark class days complete, set dates,
 paste recording links, upload notes PDFs, take attendance, and view their students'
@@ -146,8 +148,12 @@ progress. No access to fees, placements, accounts, or other batches.
 
 **Student** — *own data only.* Home dashboard (milestone roadmap, next class,
 attendance stats), 55-day curriculum roadmap with recordings and notes, missed
-classes, and schedule. Blocked students see *"Please contact MOP administration"* at
-login.
+classes, schedule, and a read-only "My Applications" view of their placement
+activity. Blocked students see *"Please contact MOP administration"* at login.
+
+> **Fees are admin-only.** There is no student-facing fee endpoint anywhere, and the
+> fee router is locked with a router-level admin dependency so a new endpoint added to
+> that file cannot accidentally be exposed.
 
 ---
 
@@ -206,7 +212,7 @@ server-generated filename.
 ## Roadmap
 
 - **Phase 1 — Foundation + Curriculum** ✅ complete
-- **Phase 2** — Fees + placements (admin)
+- **Phase 2 — Fees + Placements** ✅ complete
 - **Phase 3** — ATS resume builder + AI scoring
 - **Phase 4** — AI interviewer
 - **Phase 5** — Public site, enquiries, doubt support, certificates, polish

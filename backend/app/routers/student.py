@@ -9,10 +9,13 @@ from sqlalchemy.orm import Session
 
 from app.database import get_db
 from app.deps import require_student
+from sqlalchemy.orm import selectinload
+
 from app.models import (
     DAY_COMPLETED,
     DAY_PENDING,
     TOTAL_CURRICULUM_DAYS,
+    Application,
     Attendance,
     Batch,
     CurriculumDay,
@@ -21,7 +24,9 @@ from app.models import (
 )
 from app.schemas import (
     CurriculumDayOut,
+    InterviewRoundOut,
     MilestoneOut,
+    StudentApplicationOut,
     StudentDashboard,
     StudentDayView,
 )
@@ -131,6 +136,36 @@ def dashboard(
         missed_count=missed,
         milestones=MilestoneOut.model_validate(milestone) if milestone else MilestoneOut(),
     )
+
+
+@router.get("/applications", response_model=list[StudentApplicationOut])
+def my_applications(
+    db: Session = Depends(get_db), student: User = Depends(require_student)
+) -> list[StudentApplicationOut]:
+    """Read-only. Scoped to the authenticated student, and the admin's private
+    per-application notes are deliberately not exposed.
+
+    There is no student-facing fee endpoint anywhere — fees are admin-only.
+    """
+    apps = db.scalars(
+        select(Application)
+        .options(selectinload(Application.company), selectinload(Application.rounds))
+        .where(Application.student_id == student.id)
+        .order_by(Application.created_at.desc())
+    ).all()
+
+    return [
+        StudentApplicationOut(
+            id=a.id,
+            company_name=a.company.name if a.company else "",
+            role_title=a.role_title,
+            status=a.status,
+            package_lpa=float(a.package_lpa) if a.package_lpa is not None else None,
+            applied_on=a.applied_on,
+            rounds=[InterviewRoundOut.model_validate(r) for r in a.rounds],
+        )
+        for a in apps
+    ]
 
 
 @router.get("/milestones", response_model=MilestoneOut)

@@ -12,10 +12,13 @@ import ResetPassword from './pages/ResetPassword';
 import AdminAccounts from './pages/admin/Accounts';
 import AdminBatches from './pages/admin/Batches';
 import AdminDashboard from './pages/admin/Dashboard';
+import AdminFees from './pages/admin/Fees';
+import AdminPlacements from './pages/admin/Placements';
 
 import BatchWorkspace from './pages/teacher/BatchWorkspace';
 import TeacherBatches from './pages/teacher/Batches';
 
+import StudentApplications from './pages/student/Applications';
 import StudentCurriculum from './pages/student/Curriculum';
 import StudentHome from './pages/student/Home';
 import StudentMissed from './pages/student/Missed';
@@ -66,6 +69,10 @@ export default function App() {
         <Route path="/admin" element={<AdminDashboard />} />
         <Route path="/admin/batches" element={<AdminBatches />} />
         <Route path="/admin/accounts" element={<AdminAccounts />} />
+        {/* Fees and placements are admin-only — the route guard above is the
+            frontend half; the API enforces it independently. */}
+        <Route path="/admin/fees" element={<AdminFees />} />
+        <Route path="/admin/placements" element={<AdminPlacements />} />
       </Route>
 
       {/* Teacher workspace — admins may open it too, since they can do everything. */}
@@ -92,6 +99,7 @@ export default function App() {
         <Route path="/app/curriculum" element={<StudentCurriculum />} />
         <Route path="/app/missed" element={<StudentMissed />} />
         <Route path="/app/schedule" element={<StudentSchedule />} />
+        <Route path="/app/applications" element={<StudentApplications />} />
       </Route>
 
       <Route path="*" element={<NotFound />} />
