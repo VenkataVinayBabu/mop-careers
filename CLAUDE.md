@@ -245,4 +245,39 @@ Python 3.13.2 · Node v22.17.0 (npm 10.9.2) · Git 2.50.1 · PostgreSQL 17.9
     string. Postgres `NUMERIC(10,2)` stays the source of truth and sums are computed
     with `Decimal` before conversion.
 
-- **Next: Phase 3 — ATS Resume Builder (needs `ANTHROPIC_API_KEY` in `backend/.env`).**
+- **Phase 5 — Public site + Doubts + Polish ✅ complete & verified.**
+  - 2 new tables: `enquiries`, `doubts` (14 tables total, 3 migrations).
+  - Public marketing site at `/` — hero, About, programme structure (45+45), the
+    55-day curriculum outline, outcomes (placeholder figures, clearly labelled),
+    Enquire Now form and a Login button. No auth anywhere on it; a signed-in visitor
+    is redirected to their own dashboard instead.
+  - `POST /public/enquiries` is the only unauthenticated write on the API, so it
+    carries an in-process per-IP throttle (5/hour) on top of Pydantic validation.
+    The enquiry is saved *before* the email is attempted, so a mail failure never
+    loses a lead.
+  - Doubt Support: `class_doubt` emails the batch teacher(s), `technical`/`other` go to
+    `ADMIN_DOUBTS_EMAIL`. Subject is exactly `[MOP Doubt] Day X — Topic — Student Name`
+    (`General` when no day is given). "My Queries" for students; a shared inbox
+    component for admin and teacher, with teachers scoped to their own batches.
+  - Certificate: MOP-branded reportlab PDF (landscape A4, navy/teal/orange), generated
+    in memory. Locked until the `course_completed` milestone; the download endpoint
+    403s otherwise. LinkedIn add-to-profile deep link alongside the download.
+  - Verification: **60/60 API assertions passed**, and **every UI write path driven
+    through the browser before reporting done**: public enquiry submit (plus its 429
+    rate-limit state rendering correctly), admin enquiry status change and delete,
+    student doubt submission with the day topic resolving, admin mark-answered,
+    teacher inbox scoping, and the certificate in both locked and unlocked states
+    including a real download. Verified a clean console in a fresh tab.
+
+  Decisions worth remembering:
+  - The rate limit is in-process, so restarting the backend clears it. Fine for a
+    single-process deployment; a multi-process one would need Redis.
+  - `Doubt.related_day` stores the day *number*, not a `CurriculumDay` FK, so a doubt
+    survives the batch's curriculum rows being edited or rebuilt.
+  - A class doubt from a batch with no assigned teacher falls back to the admin address
+    and logs a warning, rather than silently going nowhere.
+  - The certificate is never written to disk — there is nothing worth caching, and it
+    keeps it un-fetchable by guessing a filename.
+
+- **Next: Phase 3 — ATS Resume Builder (needs `ANTHROPIC_API_KEY` in `backend/.env`),
+  then Phase 4 — AI Interviewer.**

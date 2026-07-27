@@ -396,6 +396,80 @@ class StudentApplicationOut(BaseModel):
     rounds: list[InterviewRoundOut] = []
 
 
+# ==========================================================================
+#  Phase 5 — enquiries, doubts, certificate
+# ==========================================================================
+EnquiryStatus = Literal["New", "Contacted", "Converted", "Closed"]
+DoubtType = Literal["class_doubt", "technical", "other"]
+DoubtStatus = Literal["open", "answered"]
+
+
+class EnquiryCreate(BaseModel):
+    """Public, unauthenticated. Validated tightly because anyone can post here."""
+
+    name: str = Field(min_length=2, max_length=120)
+    phone: str = Field(min_length=6, max_length=20)
+    email: EmailStr
+    message: str = Field(min_length=5, max_length=2000)
+
+    @field_validator("phone")
+    @classmethod
+    def _clean_phone(cls, v: str) -> str:
+        cleaned = v.strip()
+        digits = [c for c in cleaned if c.isdigit()]
+        if len(digits) < 6:
+            raise ValueError("Enter a valid phone number")
+        return cleaned
+
+
+class EnquiryOut(ORMModel):
+    id: int
+    name: str
+    phone: str
+    email: EmailStr
+    message: str
+    status: EnquiryStatus
+    created_at: datetime
+
+
+class EnquiryStatusUpdate(BaseModel):
+    status: EnquiryStatus
+
+
+class DoubtCreate(BaseModel):
+    query_type: DoubtType
+    related_day: int | None = Field(default=None, ge=1, le=55)
+    description: str = Field(min_length=5, max_length=4000)
+
+
+class DoubtOut(ORMModel):
+    id: int
+    student_id: int
+    student_name: str = ""
+    batch_name: str | None = None
+    query_type: DoubtType
+    related_day: int | None = None
+    day_topic: str | None = None
+    description: str
+    status: DoubtStatus
+    answered_at: datetime | None = None
+    created_at: datetime
+
+
+class DoubtStatusUpdate(BaseModel):
+    status: DoubtStatus
+
+
+class CertificateStatus(BaseModel):
+    unlocked: bool
+    student_name: str
+    course_name: str
+    batch_name: str | None = None
+    start_date: date | None = None
+    completed_on: date | None = None
+    linkedin_url: str | None = None
+
+
 class PlacementStats(BaseModel):
     batch_id: int | None = None
     batch_name: str

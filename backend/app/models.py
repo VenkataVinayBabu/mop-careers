@@ -66,6 +66,22 @@ ROUND_PASSED = "passed"
 ROUND_FAILED = "failed"
 ROUND_RESULTS = (ROUND_PENDING, ROUND_PASSED, ROUND_FAILED)
 
+# --- Phase 5 vocabularies -------------------------------------------------
+ENQUIRY_NEW = "New"
+ENQUIRY_CONTACTED = "Contacted"
+ENQUIRY_CONVERTED = "Converted"
+ENQUIRY_CLOSED = "Closed"
+ENQUIRY_STATUSES = (ENQUIRY_NEW, ENQUIRY_CONTACTED, ENQUIRY_CONVERTED, ENQUIRY_CLOSED)
+
+DOUBT_CLASS = "class_doubt"
+DOUBT_TECHNICAL = "technical"
+DOUBT_OTHER = "other"
+DOUBT_TYPES = (DOUBT_CLASS, DOUBT_TECHNICAL, DOUBT_OTHER)
+
+DOUBT_OPEN = "open"
+DOUBT_ANSWERED = "answered"
+DOUBT_STATUSES = (DOUBT_OPEN, DOUBT_ANSWERED)
+
 
 class User(Base):
     __tablename__ = "users"
@@ -317,6 +333,42 @@ class InterviewRound(Base):
     feedback: Mapped[str | None] = mapped_column(Text)
 
     application: Mapped[Application] = relationship(back_populates="rounds")
+
+
+# ==========================================================================
+#  Phase 5 — enquiries and doubt support
+# ==========================================================================
+class Enquiry(Base):
+    """Submitted from the public site with no authentication."""
+
+    __tablename__ = "enquiries"
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True)
+    name: Mapped[str] = mapped_column(String(120), nullable=False)
+    phone: Mapped[str] = mapped_column(String(20), nullable=False)
+    email: Mapped[str] = mapped_column(String(255), nullable=False, index=True)
+    message: Mapped[str] = mapped_column(Text, nullable=False)
+    status: Mapped[str] = mapped_column(String(20), default=ENQUIRY_NEW, nullable=False, index=True)
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
+
+
+class Doubt(Base):
+    __tablename__ = "doubts"
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True)
+    student_id: Mapped[int] = mapped_column(
+        ForeignKey("users.id", ondelete="CASCADE"), nullable=False, index=True
+    )
+    query_type: Mapped[str] = mapped_column(String(20), nullable=False)
+    # Day number (1-55), not a CurriculumDay FK — a doubt should survive the
+    # batch's curriculum rows being edited or rebuilt.
+    related_day: Mapped[int | None] = mapped_column(Integer)
+    description: Mapped[str] = mapped_column(Text, nullable=False)
+    status: Mapped[str] = mapped_column(String(20), default=DOUBT_OPEN, nullable=False, index=True)
+    answered_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
+
+    student: Mapped[User] = relationship()
 
 
 class PasswordResetToken(Base):

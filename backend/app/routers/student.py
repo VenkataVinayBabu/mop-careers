@@ -3,9 +3,11 @@ student can never read another student's records.
 """
 from datetime import date
 
-from fastapi import APIRouter, Depends
+from fastapi import APIRouter, Depends, HTTPException, Response, status
 from sqlalchemy import func, select
 from sqlalchemy.orm import Session
+
+from app.certificate import COURSE_NAME, build_certificate, linkedin_add_to_profile_url
 
 from app.database import get_db
 from app.deps import require_student
@@ -23,6 +25,7 @@ from app.models import (
     User,
 )
 from app.schemas import (
+    CertificateStatus,
     CurriculumDayOut,
     InterviewRoundOut,
     MilestoneOut,
@@ -166,6 +169,62 @@ def my_applications(
         )
         for a in apps
     ]
+
+
+# --- certificate (Phase 5) ------------------------------------------------
+def _certificate_context(db: Session, student: User) -> tuple[Milestone | None, Batch | None]:
+    milestone = db.scalar(select(Milestone).where(Milestone.student_id == student.id))
+    batch = db.get(Batch, student.batch_id) if student.batch_id else None
+    return milestone, batch
+
+
+@router.get("/certificate", response_model=CertificateStatus)
+def certificate_status(
+    db: Session = Depends(get_db), student: User = Depends(require_student)
+) -> CertificateStatus:
+    """Whether the certificate is unlocked, and the details it will carry."""
+    milestone, batch = _certificate_context(db, student)
+    completed = milestone.course_completed if milestone else None
+
+    return CertificateStatus(
+        unlocked=completed is not None,
+        student_name=student.name,
+        course_name=COURSE_NAME,
+        batch_name=batch.name if batch else None,
+        start_date=batch.start_date if batch else None,
+        completed_on=completed,
+        linkedin_url=linkedin_add_to_profile_url(completed) if completed else None,
+    )
+
+
+@router.get("/certificate/download")
+def download_certificate(
+    db: Session = Depends(get_db), student: User = Depends(require_student)
+) -> Response:
+    """Locked until the course_completed milestone is stamped."""
+    milestone, batch = _certificate_context(db, student)
+    completed = milestone.course_completed if milestone else None
+
+    if completed is None:
+        raise HTTPException(
+            status.HTTP_403_FORBIDDEN,
+            "Your certificate unlocks once you complete the course.",
+        )
+
+    pdf = build_certificate(
+        student_name=student.name,
+        batch_name=batch.name if batch else None,
+        start_date=batch.start_date if batch else None,
+        completed_on=completed,
+    )
+    safe_name = "".join(ch for ch in student.name if ch.isalnum() or ch in " -_").strip()
+    filename = f"MOP_Certificate_{safe_name.replace(' ', '_') or 'Student'}.pdf"
+
+    return Response(
+        content=pdf,
+        media_type="application/pdf",
+        headers={"Content-Disposition": f'attachment; filename="{filename}"'},
+    )
 
 
 @router.get("/milestones", response_model=MilestoneOut)

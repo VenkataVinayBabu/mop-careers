@@ -7,7 +7,7 @@ Idempotent: re-running updates the existing rows rather than duplicating them.
 import argparse
 import random
 import sys
-from datetime import date, timedelta
+from datetime import date, datetime, timedelta, timezone
 
 from sqlalchemy import delete, func, select
 from sqlalchemy.orm import Session
@@ -26,6 +26,8 @@ from app.models import (
     Batch,
     Company,
     CurriculumDay,
+    Doubt,
+    Enquiry,
     FeePayment,
     FeeRecord,
     InterviewRound,
@@ -137,6 +139,8 @@ def reset_data(db: Session) -> None:
 
     Order matters: children before parents.
     """
+    db.execute(delete(Doubt))
+    db.execute(delete(Enquiry))
     db.execute(delete(InterviewRound))
     db.execute(delete(Application))
     db.execute(delete(Company))
@@ -277,6 +281,72 @@ def seed_phase2(db: Session, students: list[User], start: date) -> None:
           f"{placed} of {len(students)} students placed")
 
 
+ENQUIRIES = [
+    ("Karthik Menon", "9876500011", "karthik.menon@example.com",
+     "I am a final-year student. When does the next Python Full Stack batch start, and what is the fee?",
+     "New"),
+    ("Sneha Iyer", "9876500012", "sneha.iyer@example.com",
+     "Do you offer weekend batches? I am working full time and can only attend on Saturdays and Sundays.",
+     "Contacted"),
+    ("Rahul Verma", "9876500013", "rahul.verma@example.com",
+     "Is the 45-day internship guaranteed, and is it paid?",
+     "Converted"),
+    ("Priya Das", "9876500014", "priya.das@example.com",
+     "Please share the detailed syllabus and placement statistics for last year.",
+     "Closed"),
+]
+
+# (student index, type, related_day, description, status)
+DOUBTS = [
+    (0, "class_doubt", 9,
+     "In the nested loop example from class, I don't follow how the inner loop counter resets. "
+     "Could you walk through it once more?", "open"),
+    (1, "technical", None,
+     "My virtual environment activates but VS Code still uses the global interpreter. "
+     "How do I point it at the venv?", "answered"),
+    (2, "class_doubt", 5,
+     "What is the practical difference between list.append() and list.extend()? "
+     "They looked similar in the examples.", "open"),
+    (3, "other", None,
+     "Will the recordings stay available after the course finishes?", "answered"),
+]
+
+
+def seed_phase5(db: Session, students: list[User], start: date) -> None:
+    """Enquiries and doubts demo data."""
+    made_enquiries = 0
+    for name, phone, email, message, status_ in ENQUIRIES:
+        if db.scalar(select(Enquiry).where(Enquiry.email == email)):
+            continue
+        db.add(Enquiry(name=name, phone=phone, email=email, message=message, status=status_))
+        made_enquiries += 1
+
+    made_doubts = 0
+    for s_idx, qtype, day, description, status_ in DOUBTS:
+        student = students[s_idx]
+        if db.scalar(
+            select(Doubt).where(
+                Doubt.student_id == student.id, Doubt.description == description
+            )
+        ):
+            continue
+        db.add(
+            Doubt(
+                student_id=student.id,
+                query_type=qtype,
+                related_day=day,
+                description=description,
+                status=status_,
+                answered_at=datetime.now(timezone.utc) if status_ == "answered" else None,
+            )
+        )
+        made_doubts += 1
+
+    open_count = sum(1 for d in DOUBTS if d[4] == "open")
+    print(f"  Enquiries: {made_enquiries} across New/Contacted/Converted/Closed")
+    print(f"  Doubts: {made_doubts} raised ({open_count} still open)")
+
+
 def seed(reset: bool = False) -> None:
     db = SessionLocal()
     try:
@@ -383,6 +453,7 @@ def seed(reset: bool = False) -> None:
 
         db.flush()
         seed_phase2(db, students, start)
+        seed_phase5(db, students, start)
 
         db.commit()
         print("\nSeed complete.")

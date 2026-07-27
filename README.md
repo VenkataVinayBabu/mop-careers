@@ -5,7 +5,8 @@ Learning and placement platform for **MOP Careers**, a Python Full Stack bootcam
 
 Two faces:
 
-- **Public site** — program info and an enquiry form. No login. *(Phase 5)*
+- **Public site** at `/` — programme info, 55-day curriculum outline, outcomes and an
+  enquiry form. No login required.
 - **Platform** — role-based app for admins, teachers and students. Login and
   forgot-password only; **there is no self-registration.**
 
@@ -139,17 +140,20 @@ Re-seed from scratch with `python -m app.seed --reset` (destructive).
 
 **Admin** — everything. Batch CRUD with teacher assignment, teacher/student account
 creation, block/unblock, the full curriculum workspace for any batch, **fees**
-(totals, payments, outstanding balances, batch collection summary) and **placements**
-(companies, applications, interview rounds, batch-wise stats).
+(totals, payments, outstanding balances, batch collection summary), **placements**
+(companies, applications, interview rounds, batch-wise stats), **enquiries** from the
+public site with a status workflow, and the **doubt support** inbox.
 
 **Teacher** — *only their assigned batches.* Mark class days complete, set dates,
-paste recording links, upload notes PDFs, take attendance, and view their students'
-progress. No access to fees, placements, accounts, or other batches.
+paste recording links, upload notes PDFs, take attendance, view their students'
+progress, and answer doubts from their own students. No access to fees, placements,
+accounts, enquiries, or other batches.
 
 **Student** — *own data only.* Home dashboard (milestone roadmap, next class,
-attendance stats), 55-day curriculum roadmap with recordings and notes, missed
-classes, schedule, and a read-only "My Applications" view of their placement
-activity. Blocked students see *"Please contact MOP administration"* at login.
+attendance stats, certificate), 55-day curriculum roadmap with recordings and notes,
+missed classes, schedule, a read-only "My Applications" view, and doubt support with
+a "My Queries" history. Blocked students see *"Please contact MOP administration"* at
+login.
 
 > **Fees are admin-only.** There is no student-facing fee endpoint anywhere, and the
 > fee router is locked with a router-level admin dependency so a new endpoint added to
@@ -207,14 +211,27 @@ rather than as static files, so a student can only download notes for their own
 batch. Uploads are validated by magic bytes, capped at 10 MB, and stored under a
 server-generated filename.
 
+**The public enquiry form is the only unauthenticated write.** It carries an
+in-process per-IP throttle (5/hour) on top of validation. Because it is in-process,
+restarting the backend resets it — a multi-process deployment would need Redis.
+
+**Doubt routing.** `class_doubt` emails the batch's teacher(s); `technical` and
+`other` go to `ADMIN_DOUBTS_EMAIL`. If a batch has no teacher assigned, class doubts
+fall back to the admin address and log a warning rather than going nowhere.
+
+**Certificates are generated in memory**, never written to disk, and the download
+endpoint returns 403 until the student's `course_completed` milestone is set.
+
 ---
 
 ## Roadmap
 
 - **Phase 1 — Foundation + Curriculum** ✅ complete
 - **Phase 2 — Fees + Placements** ✅ complete
-- **Phase 3** — ATS resume builder + AI scoring
-- **Phase 4** — AI interviewer
-- **Phase 5** — Public site, enquiries, doubt support, certificates, polish
+- **Phase 5 — Public site, enquiries, doubt support, certificates** ✅ complete
+- **Phase 3** — ATS resume builder + AI scoring *(needs `ANTHROPIC_API_KEY`)*
+- **Phase 4** — AI interviewer *(needs `ANTHROPIC_API_KEY`)*
+
+Phase 5 was built ahead of 3 and 4 because it needs no Anthropic API key.
 
 See [CLAUDE.md](CLAUDE.md) for the full specification and progress log.

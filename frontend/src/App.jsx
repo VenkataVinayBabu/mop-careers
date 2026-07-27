@@ -12,25 +12,36 @@ import ResetPassword from './pages/ResetPassword';
 import AdminAccounts from './pages/admin/Accounts';
 import AdminBatches from './pages/admin/Batches';
 import AdminDashboard from './pages/admin/Dashboard';
+import AdminEnquiries from './pages/admin/Enquiries';
 import AdminFees from './pages/admin/Fees';
 import AdminPlacements from './pages/admin/Placements';
+import DoubtsInbox from './pages/staff/DoubtsInbox';
+import Landing from './pages/public/Landing';
 
 import BatchWorkspace from './pages/teacher/BatchWorkspace';
 import TeacherBatches from './pages/teacher/Batches';
 
 import StudentApplications from './pages/student/Applications';
 import StudentCurriculum from './pages/student/Curriculum';
+import StudentDoubts from './pages/student/Doubts';
 import StudentHome from './pages/student/Home';
 import StudentMissed from './pages/student/Missed';
 import StudentSchedule from './pages/student/Schedule';
 
-/** Sends whoever is signed in to their own home. */
-function RoleRedirect() {
+/** The public landing page, unless you are already signed in — in which case
+ *  you go straight to your dashboard. */
+function PublicHome() {
   const { user, loading } = useAuth();
   if (loading) return null;
-  if (!user) return <Navigate to="/login" replace />;
-  if (user.must_change_password) return <Navigate to="/change-password" replace />;
-  return <Navigate to={HOME_FOR_ROLE[user.role] || '/login'} replace />;
+  if (user) {
+    return (
+      <Navigate
+        to={user.must_change_password ? '/change-password' : HOME_FOR_ROLE[user.role] || '/login'}
+        replace
+      />
+    );
+  }
+  return <Landing />;
 }
 
 function NotFound() {
@@ -51,8 +62,9 @@ function NotFound() {
 export default function App() {
   return (
     <Routes>
-      {/* Public — the marketing site replaces this root route in Phase 5. */}
-      <Route path="/" element={<RoleRedirect />} />
+      {/* Public marketing site — no auth. Signed-in users get sent to their
+          own home so the landing page is not a dead end for them. */}
+      <Route path="/" element={<PublicHome />} />
       <Route path="/login" element={<Login />} />
       <Route path="/forgot-password" element={<ForgotPassword />} />
       <Route path="/reset-password" element={<ResetPassword />} />
@@ -73,6 +85,8 @@ export default function App() {
             frontend half; the API enforces it independently. */}
         <Route path="/admin/fees" element={<AdminFees />} />
         <Route path="/admin/placements" element={<AdminPlacements />} />
+        <Route path="/admin/enquiries" element={<AdminEnquiries />} />
+        <Route path="/admin/doubts" element={<DoubtsInbox />} />
       </Route>
 
       {/* Teacher workspace — admins may open it too, since they can do everything. */}
@@ -85,6 +99,7 @@ export default function App() {
       >
         <Route path="/teacher" element={<TeacherBatches />} />
         <Route path="/teacher/batches/:batchId" element={<BatchWorkspace />} />
+        <Route path="/teacher/doubts" element={<DoubtsInbox />} />
       </Route>
 
       {/* Student */}
@@ -100,6 +115,7 @@ export default function App() {
         <Route path="/app/missed" element={<StudentMissed />} />
         <Route path="/app/schedule" element={<StudentSchedule />} />
         <Route path="/app/applications" element={<StudentApplications />} />
+        <Route path="/app/doubts" element={<StudentDoubts />} />
       </Route>
 
       <Route path="*" element={<NotFound />} />

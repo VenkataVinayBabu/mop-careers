@@ -2,7 +2,15 @@ import { useCallback, useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
 
 import { api, errorMessage } from '../../api/client';
-import { ErrorState, Loading, PageHeader, ProgressBar, StatCard } from '../../components/ui';
+import { useToast } from '../../components/Toast';
+import {
+  ErrorState,
+  Loading,
+  PageHeader,
+  ProgressBar,
+  Spinner,
+  StatCard,
+} from '../../components/ui';
 import { MILESTONE_STEPS, formatDate } from '../../constants';
 
 function RoadmapBanner({ milestones }) {
@@ -173,20 +181,107 @@ export default function StudentHome() {
         </div>
       </div>
 
-      {/* Certificate lands in Phase 5, gated on the course-completion milestone. */}
+      <CertificateCard />
+    </div>
+  );
+}
+
+/** Locked until the course_completed milestone is stamped. The API enforces
+ *  that independently — this is just the presentation of it. */
+function CertificateCard() {
+  const toast = useToast();
+  const [cert, setCert] = useState(null);
+  const [downloading, setDownloading] = useState(false);
+
+  useEffect(() => {
+    let cancelled = false;
+    api
+      .get('/student/certificate')
+      .then(({ data }) => {
+        if (!cancelled) setCert(data);
+      })
+      .catch(() => {});
+    return () => {
+      cancelled = true;
+    };
+  }, []);
+
+  const download = async () => {
+    setDownloading(true);
+    try {
+      const { data } = await api.get('/student/certificate/download', {
+        responseType: 'blob',
+      });
+      const url = URL.createObjectURL(data);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = 'MOP_Certificate.pdf';
+      document.body.appendChild(a);
+      a.click();
+      a.remove();
+      URL.revokeObjectURL(url);
+    } catch (err) {
+      toast.error(errorMessage(err));
+    } finally {
+      setDownloading(false);
+    }
+  };
+
+  if (!cert) return null;
+
+  if (!cert.unlocked) {
+    return (
       <div className="card p-5">
         <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-          <div>
-            <p className="text-sm font-semibold text-navy">Course certificate</p>
-            <p className="mt-0.5 text-sm text-navy-400">
-              {data.milestones?.course_completed
-                ? 'Your certificate is ready.'
-                : 'Unlocks when you complete the course.'}
-            </p>
+          <div className="flex items-center gap-3">
+            <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg bg-navy-100 text-navy-400">
+              &#128274;
+            </div>
+            <div>
+              <p className="text-sm font-semibold text-navy">Course certificate</p>
+              <p className="mt-0.5 text-sm text-navy-400">
+                Unlocks when all 55 days are complete.
+              </p>
+            </div>
           </div>
-          <span className="badge-pending shrink-0">
-            {data.milestones?.course_completed ? 'Coming in Phase 5' : 'Locked'}
-          </span>
+          <span className="badge-pending shrink-0">Locked</span>
+        </div>
+      </div>
+    );
+  }
+
+  return (
+    <div className="card border-l-4 border-l-teal p-5">
+      <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+        <div>
+          <div className="flex items-center gap-2">
+            <span className="badge-done">Unlocked</span>
+            <span className="text-xs text-navy-400">
+              Completed {formatDate(cert.completed_on)}
+            </span>
+          </div>
+          <p className="mt-2 font-semibold text-navy">Your course certificate is ready</p>
+          <p className="mt-0.5 text-sm text-navy-400">
+            {cert.course_name}
+            {cert.batch_name ? ` · Batch ${cert.batch_name}` : ''}
+          </p>
+        </div>
+
+        <div className="flex shrink-0 flex-wrap gap-2">
+          <button type="button" onClick={download} disabled={downloading} className="btn-cta">
+            {downloading && <Spinner className="h-4 w-4" />}
+            {downloading ? 'Preparing…' : 'Download certificate'}
+          </button>
+          {cert.linkedin_url && (
+            <a
+              href={cert.linkedin_url}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="btn-ghost"
+            >
+              Share on LinkedIn
+            </a>
+          )}
         </div>
       </div>
     </div>

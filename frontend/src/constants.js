@@ -39,6 +39,49 @@ export const ROUND_RESULT = {
 
 export const PAYMENT_MODES = ['UPI', 'cash', 'bank'];
 
+/** Doubt support (Phase 5). */
+export const DOUBT_TYPES = {
+  class_doubt: {
+    label: 'Class doubt',
+    hint: 'Goes to your batch teacher.',
+  },
+  technical: {
+    label: 'Technical',
+    hint: 'Setup, tooling or environment problems. Goes to the MOP team.',
+  },
+  other: {
+    label: 'Other',
+    hint: 'Anything else. Goes to the MOP team.',
+  },
+};
+
+export const DOUBT_STATUS = {
+  open: { label: 'Open', cls: 'badge-warn' },
+  answered: { label: 'Answered', cls: 'badge-done' },
+};
+
+export const ENQUIRY_STATUSES = ['New', 'Contacted', 'Converted', 'Closed'];
+
+export const ENQUIRY_STATUS_CLS = {
+  New: 'badge-warn',
+  Contacted: 'badge-pending',
+  Converted: 'badge-done',
+  Closed: 'badge-pending',
+};
+
+export function formatDateTime(value) {
+  if (!value) return null;
+  const d = new Date(value);
+  if (Number.isNaN(d.getTime())) return null;
+  return d.toLocaleString(undefined, {
+    day: 'numeric',
+    month: 'short',
+    year: 'numeric',
+    hour: 'numeric',
+    minute: '2-digit',
+  });
+}
+
 const rupees = new Intl.NumberFormat('en-IN', {
   style: 'currency',
   currency: 'INR',

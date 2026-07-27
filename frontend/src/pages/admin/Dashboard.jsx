@@ -83,12 +83,28 @@ export default function AdminDashboard() {
         </Link>
       </div>
 
+      <div className="mt-4 grid gap-4 sm:grid-cols-2">
+        <Link to="/admin/enquiries" className="card p-5 transition hover:shadow-lift">
+          <h3 className="font-semibold text-navy">Enquiries</h3>
+          <p className="mt-1 text-sm text-navy-400">
+            Leads submitted through the public website, with a status workflow.
+          </p>
+          <p className="mt-3 text-sm font-semibold text-teal">View enquiries &rarr;</p>
+        </Link>
+        <Link to="/admin/doubts" className="card p-5 transition hover:shadow-lift">
+          <h3 className="font-semibold text-navy">Doubt support</h3>
+          <p className="mt-1 text-sm text-navy-400">
+            Student queries routed by type, with open and answered tracking.
+          </p>
+          <p className="mt-3 text-sm font-semibold text-teal">Open inbox &rarr;</p>
+        </Link>
+      </div>
+
       <div className="mt-6 card p-5">
         <h3 className="font-semibold text-navy">Coming in later phases</h3>
         <ul className="mt-2 space-y-1 text-sm text-navy-400">
           <li>Phase 3 — ATS resume builder and scoring</li>
           <li>Phase 4 — AI interviewer</li>
-          <li>Phase 5 — Public site, enquiries, doubt support, certificates</li>
         </ul>
       </div>
     </div>

@@ -11,15 +11,21 @@ const NAV = {
     { to: '/admin/accounts', label: 'Accounts' },
     { to: '/admin/fees', label: 'Fees' },
     { to: '/admin/placements', label: 'Placements' },
+    { to: '/admin/enquiries', label: 'Enquiries' },
+    { to: '/admin/doubts', label: 'Doubts' },
   ],
-  // Teachers deliberately get no fees or placements entries.
-  teacher: [{ to: '/teacher', label: 'My Batches', end: true }],
+  // Teachers deliberately get no fees, placements or enquiries entries.
+  teacher: [
+    { to: '/teacher', label: 'My Batches', end: true },
+    { to: '/teacher/doubts', label: 'Doubts' },
+  ],
   student: [
     { to: '/app', label: 'Home', end: true },
     { to: '/app/curriculum', label: 'Curriculum' },
     { to: '/app/missed', label: 'Missed Classes' },
     { to: '/app/schedule', label: 'Schedule' },
     { to: '/app/applications', label: 'My Applications' },
+    { to: '/app/doubts', label: 'Doubt Support' },
   ],
 };
 

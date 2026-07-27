@@ -17,6 +17,7 @@ from app.models import (
     Attendance,
     Batch,
     CurriculumDay,
+    Enquiry,
     Milestone,
     TeacherBatch,
     User,
@@ -27,6 +28,8 @@ from app.schemas import (
     BatchOut,
     BatchUpdate,
     BlockToggleRequest,
+    EnquiryOut,
+    EnquiryStatusUpdate,
     MessageResponse,
     MilestoneOut,
     MilestoneUpdate,
@@ -304,6 +307,42 @@ def update_milestones(
     db.commit()
     db.refresh(ms)
     return MilestoneOut.model_validate(ms)
+
+
+# --- enquiries (Phase 5) --------------------------------------------------
+@router.get("/enquiries", response_model=list[EnquiryOut])
+def list_enquiries(
+    enquiry_status: str | None = Query(default=None, alias="status"),
+    db: Session = Depends(get_db),
+) -> list[EnquiryOut]:
+    stmt = select(Enquiry)
+    if enquiry_status:
+        stmt = stmt.where(Enquiry.status == enquiry_status)
+    rows = db.scalars(stmt.order_by(Enquiry.created_at.desc())).all()
+    return [EnquiryOut.model_validate(e) for e in rows]
+
+
+@router.patch("/enquiries/{enquiry_id}", response_model=EnquiryOut)
+def update_enquiry_status(
+    enquiry_id: int, payload: EnquiryStatusUpdate, db: Session = Depends(get_db)
+) -> EnquiryOut:
+    enquiry = db.get(Enquiry, enquiry_id)
+    if enquiry is None:
+        raise HTTPException(status.HTTP_404_NOT_FOUND, "Enquiry not found")
+    enquiry.status = payload.status
+    db.commit()
+    db.refresh(enquiry)
+    return EnquiryOut.model_validate(enquiry)
+
+
+@router.delete("/enquiries/{enquiry_id}", response_model=MessageResponse)
+def delete_enquiry(enquiry_id: int, db: Session = Depends(get_db)) -> MessageResponse:
+    enquiry = db.get(Enquiry, enquiry_id)
+    if enquiry is None:
+        raise HTTPException(status.HTTP_404_NOT_FOUND, "Enquiry not found")
+    db.delete(enquiry)
+    db.commit()
+    return MessageResponse(message="Enquiry deleted")
 
 
 # --- overview -------------------------------------------------------------
