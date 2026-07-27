@@ -80,6 +80,17 @@ Copy `frontend/.env.example` to `frontend/.env` (the default points at
 
 ## Running
 
+### The easy way
+
+Double-click **`start.bat`** in the project root.
+
+It checks PostgreSQL, opens the backend and frontend each in their own window,
+waits until both respond, then opens http://localhost:5173 in your browser and
+prints the demo logins. Re-running it is safe — anything already running is left
+alone.
+
+### Manually
+
 Two terminals.
 
 **Backend** — http://127.0.0.1:8000 (interactive API docs at `/docs`):
@@ -93,6 +104,13 @@ cd backend && .venv/Scripts/python.exe -m uvicorn app.main:app --reload --port 8
 ```bash
 cd frontend && npm run dev
 ```
+
+### Signing in as more than one role at once
+
+The JWT lives in `localStorage`, which is shared across tabs on the same origin,
+so one browser window means one session — signing in as a teacher logs the admin
+tab out. Use a separate incognito window (or a second Chrome profile) to hold two
+roles at the same time.
 
 ---
 
