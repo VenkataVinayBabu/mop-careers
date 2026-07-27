@@ -279,5 +279,28 @@ Python 3.13.2 · Node v22.17.0 (npm 10.9.2) · Git 2.50.1 · PostgreSQL 17.9
   - The certificate is never written to disk — there is nothing worth caching, and it
     keeps it un-fetchable by guessing a filename.
 
+- **Multi-programme correction (public site only).** The original brief described MOP
+  Careers as "a Python Full Stack bootcamp", so everything was built around one
+  programme. MOP actually runs several — confirmed so far: **Python Full Stack, Java
+  Full Stack, Gen AI** (DevOps was mentioned but not confirmed, so it is not listed).
+  - The public site now lists all three, each with its own description, topic list and
+    "who it's for". The catalogue lives in one file, `frontend/src/data/programmes.js` —
+    adding a programme is a single entry, nothing else changes.
+  - **Durations and start dates are deliberately not shown anywhere on the public
+    site**, per instruction. Verified with a regex sweep of the rendered page.
+  - Enquiries gained a `programme` column so leads are tagged by interest; it appears
+    in the admin list and in the notification email's subject line.
+  - The certificate now takes its course name from `batch.course_type` rather than a
+    hardcoded constant, so a Java student no longer receives a certificate naming
+    Python. Verified by flipping a batch to Java and back.
+
+  **Still single-programme internally, and deliberately so:** `TOTAL_CURRICULUM_DAYS`
+  is a global 55, and `curriculum.py` seeds the Python day 1-11 topics into *every*
+  new batch regardless of course type. A Java batch created today gets 55 days of
+  Python topics. Making that per-course is the real multi-course work — it needs a
+  `Course` entity, per-course curriculum templates and a per-course day count, and it
+  was consciously deferred. The user also noted "every course is 45 days" for later;
+  the platform still assumes 55.
+
 - **Next: Phase 3 — ATS Resume Builder (needs `ANTHROPIC_API_KEY` in `backend/.env`),
   then Phase 4 — AI Interviewer.**

@@ -347,6 +347,9 @@ class Enquiry(Base):
     name: Mapped[str] = mapped_column(String(120), nullable=False)
     phone: Mapped[str] = mapped_column(String(20), nullable=False)
     email: Mapped[str] = mapped_column(String(255), nullable=False, index=True)
+    # Which programme the lead asked about. Free text rather than an FK: the
+    # public catalogue is marketing copy and changes independently of batches.
+    programme: Mapped[str | None] = mapped_column(String(80))
     message: Mapped[str] = mapped_column(Text, nullable=False)
     status: Mapped[str] = mapped_column(String(20), default=ENQUIRY_NEW, nullable=False, index=True)
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())

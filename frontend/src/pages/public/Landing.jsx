@@ -4,100 +4,38 @@ import { Link } from 'react-router-dom';
 import { api, errorMessage } from '../../api/client';
 import Logo from '../../components/Logo';
 import { Spinner } from '../../components/ui';
+import { PROGRAMMES, PROGRAMME_OPTIONS, accentClasses } from '../../data/programmes';
 
 /*
  * Public marketing site — no authentication anywhere on this page.
  * The only network call is the enquiry POST, which is a public endpoint.
+ *
+ * Durations and start dates are deliberately not shown anywhere here.
  */
 
 const NAV = [
   { href: '#about', label: 'About' },
-  { href: '#programme', label: 'Programme' },
-  { href: '#curriculum', label: 'Curriculum' },
+  { href: '#programmes', label: 'Programmes' },
+  { href: '#structure', label: 'How it works' },
   { href: '#outcomes', label: 'Outcomes' },
   { href: '#enquire', label: 'Enquire' },
 ];
 
-// Days 1-11 are the fixed, pre-seeded syllabus. Later days are grouped into
-// indicative modules because instructors finalise them per batch.
-const CURRICULUM = [
-  {
-    range: 'Days 1–11',
-    title: 'Python Fundamentals',
-    fixed: true,
-    items: [
-      'Intro to Python & Setup',
-      'Variables & Data Types',
-      'Operators',
-      'Strings',
-      'Lists',
-      'Tuples & Sets',
-      'Dictionaries',
-      'Conditionals',
-      'Loops',
-      'Loop Control: break/continue/pass',
-      'Functions',
-    ],
-  },
-  {
-    range: 'Days 12–22',
-    title: 'Advanced Python & OOP',
-    items: [
-      'Modules & packages',
-      'File handling',
-      'Exception handling',
-      'Classes & objects',
-      'Inheritance & polymorphism',
-      'Iterators, generators & decorators',
-    ],
-  },
-  {
-    range: 'Days 23–33',
-    title: 'Databases & SQL',
-    items: [
-      'Relational modelling',
-      'SQL queries & joins',
-      'PostgreSQL in practice',
-      'SQLAlchemy ORM',
-      'Migrations',
-      'Query performance basics',
-    ],
-  },
-  {
-    range: 'Days 34–44',
-    title: 'FastAPI & Backend',
-    items: [
-      'REST fundamentals',
-      'FastAPI routing & schemas',
-      'Authentication & JWT',
-      'Role-based access control',
-      'Testing APIs',
-      'Deployment basics',
-    ],
-  },
-  {
-    range: 'Days 45–55',
-    title: 'React & Full Stack Projects',
-    items: [
-      'React components & hooks',
-      'Routing & state',
-      'Consuming APIs with Axios',
-      'Tailwind CSS',
-      'Capstone project',
-      'Portfolio & interview prep',
-    ],
-  },
-];
-
-const OUTCOMES = [
-  { stat: '55', label: 'Days of structured training' },
-  { stat: '45 + 45', label: 'Course days plus internship days' },
+const HIGHLIGHTS = [
+  { stat: `${PROGRAMMES.length}`, label: 'Career-track programmes' },
+  { stat: 'Live', label: 'Instructor-led classes' },
   { stat: '1:1', label: 'Mentor support throughout' },
   { stat: '100%', label: 'Placement assistance' },
 ];
 
 function EnquiryForm() {
-  const [form, setForm] = useState({ name: '', phone: '', email: '', message: '' });
+  const [form, setForm] = useState({
+    name: '',
+    phone: '',
+    email: '',
+    programme: '',
+    message: '',
+  });
   const [status, setStatus] = useState({ state: 'idle', text: '' });
 
   const submit = async (e) => {
@@ -108,10 +46,11 @@ function EnquiryForm() {
         name: form.name.trim(),
         phone: form.phone.trim(),
         email: form.email.trim(),
+        programme: form.programme || null,
         message: form.message.trim(),
       });
       setStatus({ state: 'sent', text: data.message });
-      setForm({ name: '', phone: '', email: '', message: '' });
+      setForm({ name: '', phone: '', email: '', programme: '', message: '' });
     } catch (err) {
       setStatus({ state: 'error', text: errorMessage(err) });
     }
@@ -161,9 +100,20 @@ function EnquiryForm() {
       </div>
 
       <div className="mt-4">
+        <label className="label" htmlFor="en-programme">Which programme?</label>
+        <select id="en-programme" className="input" value={form.programme}
+                onChange={(e) => setForm({ ...form, programme: e.target.value })}>
+          <option value="">Select a programme…</option>
+          {PROGRAMME_OPTIONS.map((o) => (
+            <option key={o.value} value={o.value}>{o.label}</option>
+          ))}
+        </select>
+      </div>
+
+      <div className="mt-4">
         <label className="label" htmlFor="en-message">Your message</label>
         <textarea id="en-message" rows={4} className="input" required
-                  placeholder="Tell us what you'd like to know — batch dates, fees, eligibility…"
+                  placeholder="Tell us what you'd like to know — fees, eligibility, schedule…"
                   value={form.message}
                   onChange={(e) => setForm({ ...form, message: e.target.value })} />
       </div>
@@ -186,12 +136,47 @@ function EnquiryForm() {
   );
 }
 
+function ProgrammeCard({ programme }) {
+  const a = accentClasses(programme.accent);
+  return (
+    <div className={`card border-t-4 ${a.bar} flex h-full flex-col p-6`}>
+      <span className={`inline-flex self-start rounded-full px-3 py-1 text-xs font-semibold ${a.chip}`}>
+        {programme.name}
+      </span>
+      <h3 className="mt-3 text-lg font-bold text-navy">{programme.tagline}</h3>
+      <p className="mt-2 text-sm text-navy-500">{programme.description}</p>
+
+      <div className="mt-4">
+        <p className="text-xs font-semibold uppercase tracking-wide text-navy-400">
+          What you&apos;ll cover
+        </p>
+        <ul className="mt-2 space-y-1.5">
+          {programme.modules.map((m) => (
+            <li key={m} className="flex gap-2 text-sm text-navy-600">
+              <span className={a.dot}>&middot;</span>{m}
+            </li>
+          ))}
+        </ul>
+      </div>
+
+      <div className="mt-auto pt-5">
+        <p className="text-xs text-navy-400">
+          <span className="font-semibold text-navy-500">Who it&apos;s for: </span>
+          {programme.forWhom}
+        </p>
+        <a href="#enquire" className="btn-cta btn-sm mt-4 w-full">
+          Enquire about {programme.name}
+        </a>
+      </div>
+    </div>
+  );
+}
+
 export default function Landing() {
   const [open, setOpen] = useState(false);
 
-  // The public page is a light surface; the app shell sets a navy-tinted body.
   useEffect(() => {
-    document.title = 'MOP Careers — Python Full Stack Bootcamp';
+    document.title = 'MOP Careers — Career-track technology programmes';
   }, []);
 
   return (
@@ -240,27 +225,27 @@ export default function Landing() {
         <div className="mx-auto max-w-6xl px-4 py-16 sm:px-6 sm:py-24">
           <div className="max-w-3xl">
             <span className="inline-block rounded-full bg-teal/20 px-3.5 py-1.5 text-xs font-semibold uppercase tracking-wide text-teal-200">
-              Python Full Stack Programme
+              Career-track technology programmes
             </span>
             <h1 className="mt-5 text-3xl font-bold leading-tight sm:text-5xl">
-              Become a job-ready{' '}
-              <span className="text-teal-300">Python Full Stack</span> developer in 55 days
+              Train for a <span className="text-teal-300">software career</span> that
+              actually starts
             </h1>
             <p className="mt-5 max-w-2xl text-base text-navy-200 sm:text-lg">
-              A 45-day intensive course followed by a 45-day hands-on internship. Learn
-              Python, SQL, FastAPI and React by building real applications — with mentor
-              support, mock interviews and placement assistance throughout.
+              Choose your track — Python Full Stack, Java Full Stack or Gen AI. Every
+              programme pairs a structured course with a hands-on internship, mentor
+              support, mock interviews and placement assistance.
             </p>
             <div className="mt-8 flex flex-col gap-3 sm:flex-row">
-              <a href="#enquire" className="btn-cta">Enquire now</a>
-              <a href="#curriculum" className="btn inline-flex border border-navy-400 text-white hover:bg-navy-600">
-                View curriculum
+              <a href="#programmes" className="btn-cta">Explore programmes</a>
+              <a href="#enquire" className="btn inline-flex border border-navy-400 text-white hover:bg-navy-600">
+                Enquire now
               </a>
             </div>
           </div>
 
           <dl className="mt-14 grid grid-cols-2 gap-6 border-t border-navy-600 pt-8 sm:grid-cols-4">
-            {OUTCOMES.map((o) => (
+            {HIGHLIGHTS.map((o) => (
               <div key={o.label}>
                 <dt className="text-2xl font-bold text-teal-300 sm:text-3xl">{o.stat}</dt>
                 <dd className="mt-1 text-xs text-navy-300 sm:text-sm">{o.label}</dd>
@@ -276,13 +261,13 @@ export default function Landing() {
           <div>
             <h2 className="text-2xl font-bold text-navy sm:text-3xl">About MOP Careers</h2>
             <p className="mt-4 text-navy-500">
-              MOP Careers is a focused training institute for people who want to move into
-              software development and need a structured, accountable path to get there.
+              MOP Careers is a training institute for people who want to move into
+              software and need a structured, accountable path to get there.
             </p>
             <p className="mt-3 text-navy-500">
-              We run one programme and run it properly: Python Full Stack. Small batches,
-              a fixed 55-day syllabus, daily class recordings and notes, attendance you can
-              actually see, and a mentor who knows your name.
+              We run a small number of career-track programmes and run them properly:
+              small batches, a syllabus mapped out in advance, daily class recordings and
+              notes, attendance you can actually see, and a mentor who knows your name.
             </p>
             <p className="mt-3 text-navy-500">
               Every student gets a personal dashboard tracking their progress from
@@ -292,9 +277,9 @@ export default function Landing() {
 
           <div className="grid gap-4 sm:grid-cols-2">
             {[
-              { t: 'Structured syllabus', d: '55 days mapped out from day one — no improvised lessons.' },
+              { t: 'Structured syllabus', d: 'Every session mapped out in advance — no improvised lessons.' },
               { t: 'Never miss a class', d: 'Every session recorded, with downloadable notes.' },
-              { t: 'Real internship', d: '45 days building production-style software after the course.' },
+              { t: 'Real internship', d: 'Build production-style software after the course.' },
               { t: 'Interview ready', d: 'Resume scoring, mock interviews and placement support.' },
             ].map((c) => (
               <div key={c.t} className="card p-5">
@@ -306,83 +291,81 @@ export default function Landing() {
         </div>
       </section>
 
-      {/* ------------------------------------------------------- programme */}
-      <section id="programme" className="bg-navy-50 py-16 sm:py-20">
+      {/* ------------------------------------------------------ programmes */}
+      <section id="programmes" className="bg-navy-50 py-16 sm:py-20">
         <div className="mx-auto max-w-6xl px-4 sm:px-6">
-          <h2 className="text-2xl font-bold text-navy sm:text-3xl">How the programme works</h2>
+          <h2 className="text-2xl font-bold text-navy sm:text-3xl">Our programmes</h2>
           <p className="mt-3 max-w-2xl text-navy-500">
-            Ninety days in total, split into two halves that build on each other.
+            Pick the track that matches where you want to work. Talk to us if you&apos;re
+            not sure which one suits you.
           </p>
 
-          <div className="mt-10 grid gap-6 lg:grid-cols-2">
-            <div className="card border-t-4 border-t-teal p-6 sm:p-8">
-              <span className="badge-done">Days 1–45</span>
-              <h3 className="mt-3 text-xl font-bold text-navy">The course</h3>
-              <p className="mt-2 text-sm text-navy-500">
-                Daily live classes covering Python, databases, FastAPI and React. Each day
-                has a defined topic, a recording, notes and tracked attendance.
-              </p>
-              <ul className="mt-4 space-y-2 text-sm text-navy-600">
-                {['Live instructor-led sessions',
-                  'Recordings and notes for every class',
-                  'Attendance and progress tracking',
-                  'Doubt support between classes'].map((i) => (
-                  <li key={i} className="flex gap-2">
-                    <span className="text-teal">&#10003;</span>{i}
-                  </li>
-                ))}
-              </ul>
-            </div>
-
-            <div className="card border-t-4 border-t-orange p-6 sm:p-8">
-              <span className="badge-warn">Days 46–90</span>
-              <h3 className="mt-3 text-xl font-bold text-navy">The internship</h3>
-              <p className="mt-2 text-sm text-navy-500">
-                A 45-day hands-on internship applying what you learned to real project work,
-                running alongside placement preparation.
-              </p>
-              <ul className="mt-4 space-y-2 text-sm text-navy-600">
-                {['Project work with code review',
-                  'ATS resume builder and scoring',
-                  'AI-assisted mock interviews',
-                  'Placement assistance and referrals'].map((i) => (
-                  <li key={i} className="flex gap-2">
-                    <span className="text-orange">&#10003;</span>{i}
-                  </li>
-                ))}
-              </ul>
-            </div>
+          <div className="mt-10 grid gap-6 lg:grid-cols-3">
+            {PROGRAMMES.map((p) => (
+              <ProgrammeCard key={p.id} programme={p} />
+            ))}
           </div>
+
+          <p className="mt-8 text-sm text-navy-400">
+            Looking for something not listed here?{' '}
+            <a href="#enquire" className="font-semibold text-teal hover:text-teal-700">
+              Ask us
+            </a>
+            .
+          </p>
         </div>
       </section>
 
-      {/* ------------------------------------------------------ curriculum */}
-      <section id="curriculum" className="mx-auto max-w-6xl px-4 py-16 sm:px-6 sm:py-20">
-        <h2 className="text-2xl font-bold text-navy sm:text-3xl">55-day curriculum outline</h2>
+      {/* ------------------------------------------------------- structure */}
+      <section id="structure" className="mx-auto max-w-6xl px-4 py-16 sm:px-6 sm:py-20">
+        <h2 className="text-2xl font-bold text-navy sm:text-3xl">How it works</h2>
         <p className="mt-3 max-w-2xl text-navy-500">
-          Days 1–11 are fixed across every batch. Later modules are finalised by your
-          instructor and may be adjusted to suit the group.
+          Every programme follows the same two-stage shape.
         </p>
 
-        <div className="mt-10 space-y-5">
-          {CURRICULUM.map((mod) => (
-            <div key={mod.range} className="card p-5 sm:p-6">
-              <div className="flex flex-col gap-1 sm:flex-row sm:items-center sm:justify-between">
-                <h3 className="text-lg font-bold text-navy">{mod.title}</h3>
-                <span className={mod.fixed ? 'badge-done self-start' : 'badge-pending self-start'}>
-                  {mod.range}
-                </span>
-              </div>
-              <ul className="mt-4 grid gap-x-6 gap-y-2 sm:grid-cols-2 lg:grid-cols-3">
-                {mod.items.map((item) => (
-                  <li key={item} className="flex gap-2 text-sm text-navy-600">
-                    <span className="text-teal">&middot;</span>{item}
-                  </li>
-                ))}
-              </ul>
-            </div>
-          ))}
+        <div className="mt-10 grid gap-6 lg:grid-cols-2">
+          <div className="card border-t-4 border-t-teal p-6 sm:p-8">
+            <span className="badge-done">Stage one</span>
+            <h3 className="mt-3 text-xl font-bold text-navy">The course</h3>
+            <p className="mt-2 text-sm text-navy-500">
+              Live instructor-led classes working through the syllabus for your track.
+              Each session has a defined topic, a recording, notes and tracked attendance.
+            </p>
+            <ul className="mt-4 space-y-2 text-sm text-navy-600">
+              {['Live instructor-led sessions',
+                'Recordings and notes for every class',
+                'Attendance and progress tracking',
+                'Doubt support between classes'].map((i) => (
+                <li key={i} className="flex gap-2"><span className="text-teal">&#10003;</span>{i}</li>
+              ))}
+            </ul>
+          </div>
+
+          <div className="card border-t-4 border-t-orange p-6 sm:p-8">
+            <span className="badge-warn">Stage two</span>
+            <h3 className="mt-3 text-xl font-bold text-navy">The internship</h3>
+            <p className="mt-2 text-sm text-navy-500">
+              A hands-on internship applying what you learned to real project work,
+              running alongside placement preparation.
+            </p>
+            <ul className="mt-4 space-y-2 text-sm text-navy-600">
+              {['Project work with code review',
+                'ATS resume builder and scoring',
+                'AI-assisted mock interviews',
+                'Placement assistance and referrals'].map((i) => (
+                <li key={i} className="flex gap-2"><span className="text-orange">&#10003;</span>{i}</li>
+              ))}
+            </ul>
+          </div>
         </div>
+
+        <p className="mt-6 text-sm text-navy-400">
+          Schedules and start dates vary by programme and batch —{' '}
+          <a href="#enquire" className="font-semibold text-teal hover:text-teal-700">
+            get in touch
+          </a>{' '}
+          for current dates.
+        </p>
       </section>
 
       {/* -------------------------------------------------------- outcomes */}
@@ -403,7 +386,7 @@ export default function Landing() {
             {[
               { stat: '6–9 LPA', label: 'Typical fresher package range' },
               { stat: '4', label: 'Interview rounds prepared for' },
-              { stat: '2 weeks', label: 'Average time to first interview' },
+              { stat: '1:1', label: 'Mock interview feedback' },
             ].map((o) => (
               <div key={o.label} className="card p-6 text-center">
                 <p className="text-3xl font-bold text-teal">{o.stat}</p>
@@ -414,10 +397,10 @@ export default function Landing() {
 
           <div className="mt-6 grid gap-4 sm:grid-cols-2">
             {[
-              { role: 'Python Full Stack Developer', where: 'Product and services companies' },
-              { role: 'Backend Developer', where: 'FastAPI, Django and Flask teams' },
+              { role: 'Full Stack Developer', where: 'Product and services companies' },
+              { role: 'Backend Developer', where: 'Python, Java and Spring Boot teams' },
               { role: 'Software Engineer Trainee', where: 'Graduate engineering programmes' },
-              { role: 'Associate Engineer', where: 'Application development teams' },
+              { role: 'AI Application Developer', where: 'Teams building LLM-powered products' },
             ].map((r) => (
               <div key={r.role} className="card flex items-center gap-4 p-5">
                 <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg bg-teal-100 font-bold text-teal">
@@ -439,8 +422,8 @@ export default function Landing() {
           <div>
             <h2 className="text-2xl font-bold text-navy sm:text-3xl">Enquire now</h2>
             <p className="mt-3 text-navy-500">
-              Tell us a bit about yourself and what you&apos;d like to know. Someone from the
-              MOP Careers team will get back to you.
+              Tell us which programme interests you and what you&apos;d like to know.
+              Someone from the MOP Careers team will get back to you.
             </p>
             <div className="mt-6 space-y-3 text-sm text-navy-600">
               {['No prior programming experience required',
@@ -466,7 +449,7 @@ export default function Landing() {
         <div className="mx-auto flex max-w-6xl flex-col gap-4 px-4 sm:px-6 md:flex-row md:items-center md:justify-between">
           <div>
             <Logo variant="light" size="sm" />
-            <p className="mt-2 text-xs">Python Full Stack Development Programme</p>
+            <p className="mt-2 text-xs">Career-track technology programmes</p>
           </div>
           <div className="flex flex-wrap gap-5 text-xs">
             {NAV.map((n) => (

@@ -410,6 +410,7 @@ class EnquiryCreate(BaseModel):
     name: str = Field(min_length=2, max_length=120)
     phone: str = Field(min_length=6, max_length=20)
     email: EmailStr
+    programme: str | None = Field(default=None, max_length=80)
     message: str = Field(min_length=5, max_length=2000)
 
     @field_validator("phone")
@@ -427,6 +428,7 @@ class EnquiryOut(ORMModel):
     name: str
     phone: str
     email: EmailStr
+    programme: str | None = None
     message: str
     status: EnquiryStatus
     created_at: datetime

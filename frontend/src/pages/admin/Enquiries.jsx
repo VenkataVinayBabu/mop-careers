@@ -140,7 +140,14 @@ export default function AdminEnquiries() {
                     </span>
                     <span className="text-xs text-navy-400">{formatDateTime(e.created_at)}</span>
                   </div>
-                  <h3 className="mt-2 font-semibold text-navy">{e.name}</h3>
+                  <h3 className="mt-2 font-semibold text-navy">
+                    {e.name}
+                    {e.programme && (
+                      <span className="ml-2 rounded-full bg-teal-100 px-2.5 py-0.5 text-xs font-semibold text-teal-700">
+                        {e.programme}
+                      </span>
+                    )}
+                  </h3>
                   <p className="text-sm text-navy-500">
                     <a href={`mailto:${e.email}`} className="text-teal hover:text-teal-700">
                       {e.email}

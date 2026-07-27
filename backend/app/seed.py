@@ -282,16 +282,16 @@ def seed_phase2(db: Session, students: list[User], start: date) -> None:
 
 
 ENQUIRIES = [
-    ("Karthik Menon", "9876500011", "karthik.menon@example.com",
+    ("Karthik Menon", "9876500011", "karthik.menon@example.com", "Python Full Stack",
      "I am a final-year student. When does the next Python Full Stack batch start, and what is the fee?",
      "New"),
-    ("Sneha Iyer", "9876500012", "sneha.iyer@example.com",
+    ("Sneha Iyer", "9876500012", "sneha.iyer@example.com", "Java Full Stack",
      "Do you offer weekend batches? I am working full time and can only attend on Saturdays and Sundays.",
      "Contacted"),
-    ("Rahul Verma", "9876500013", "rahul.verma@example.com",
-     "Is the 45-day internship guaranteed, and is it paid?",
+    ("Rahul Verma", "9876500013", "rahul.verma@example.com", "Gen AI",
+     "Is the internship guaranteed, and is it paid?",
      "Converted"),
-    ("Priya Das", "9876500014", "priya.das@example.com",
+    ("Priya Das", "9876500014", "priya.das@example.com", None,
      "Please share the detailed syllabus and placement statistics for last year.",
      "Closed"),
 ]
@@ -315,10 +315,15 @@ DOUBTS = [
 def seed_phase5(db: Session, students: list[User], start: date) -> None:
     """Enquiries and doubts demo data."""
     made_enquiries = 0
-    for name, phone, email, message, status_ in ENQUIRIES:
+    for name, phone, email, programme, message, status_ in ENQUIRIES:
         if db.scalar(select(Enquiry).where(Enquiry.email == email)):
             continue
-        db.add(Enquiry(name=name, phone=phone, email=email, message=message, status=status_))
+        db.add(
+            Enquiry(
+                name=name, phone=phone, email=email, programme=programme,
+                message=message, status=status_,
+            )
+        )
         made_enquiries += 1
 
     made_doubts = 0

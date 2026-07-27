@@ -50,6 +50,7 @@ def submit_enquiry(
         name=payload.name.strip(),
         phone=payload.phone.strip(),
         email=payload.email.lower(),
+        programme=(payload.programme or "").strip() or None,
         message=payload.message.strip(),
     )
     db.add(enquiry)
@@ -58,9 +59,10 @@ def submit_enquiry(
 
     body = f"""New enquiry from the MOP Careers website.
 
-Name:    {enquiry.name}
-Phone:   {enquiry.phone}
-Email:   {enquiry.email}
+Name:      {enquiry.name}
+Phone:     {enquiry.phone}
+Email:     {enquiry.email}
+Programme: {enquiry.programme or 'Not specified'}
 
 Message:
 {enquiry.message}
@@ -68,8 +70,13 @@ Message:
 --
 Enquiry #{enquiry.id}
 """
+    # The programme is in the subject so the team can triage from the inbox.
+    subject = f"[MOP Enquiry] {enquiry.name}"
+    if enquiry.programme:
+        subject += f" — {enquiry.programme}"
+
     # The enquiry is already saved, so a mail failure never loses the lead.
-    send_email(settings.ENQUIRY_EMAIL, f"[MOP Enquiry] {enquiry.name}", body)
+    send_email(settings.ENQUIRY_EMAIL, subject, body)
 
     logger.info("Enquiry #%s received from %s", enquiry.id, enquiry.email)
     return MessageResponse(

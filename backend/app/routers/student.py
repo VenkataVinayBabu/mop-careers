@@ -7,7 +7,11 @@ from fastapi import APIRouter, Depends, HTTPException, Response, status
 from sqlalchemy import func, select
 from sqlalchemy.orm import Session
 
-from app.certificate import COURSE_NAME, build_certificate, linkedin_add_to_profile_url
+from app.certificate import (
+    DEFAULT_COURSE_NAME,
+    build_certificate,
+    linkedin_add_to_profile_url,
+)
 
 from app.database import get_db
 from app.deps import require_student
@@ -185,15 +189,19 @@ def certificate_status(
     """Whether the certificate is unlocked, and the details it will carry."""
     milestone, batch = _certificate_context(db, student)
     completed = milestone.course_completed if milestone else None
+    # The batch's course_type is the source of truth for which programme this is.
+    course = (batch.course_type if batch and batch.course_type else DEFAULT_COURSE_NAME)
 
     return CertificateStatus(
         unlocked=completed is not None,
         student_name=student.name,
-        course_name=COURSE_NAME,
+        course_name=course,
         batch_name=batch.name if batch else None,
         start_date=batch.start_date if batch else None,
         completed_on=completed,
-        linkedin_url=linkedin_add_to_profile_url(completed) if completed else None,
+        linkedin_url=(
+            linkedin_add_to_profile_url(completed, course) if completed else None
+        ),
     )
 
 
@@ -216,6 +224,7 @@ def download_certificate(
         batch_name=batch.name if batch else None,
         start_date=batch.start_date if batch else None,
         completed_on=completed,
+        course_name=(batch.course_type if batch and batch.course_type else None),
     )
     safe_name = "".join(ch for ch in student.name if ch.isalnum() or ch in " -_").strip()
     filename = f"MOP_Certificate_{safe_name.replace(' ', '_') or 'Student'}.pdf"

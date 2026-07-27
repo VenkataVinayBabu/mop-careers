@@ -17,7 +17,9 @@ TEAL = HexColor("#00989D")
 ORANGE = HexColor("#EE5905")
 GREY = HexColor("#5A6B85")
 
-COURSE_NAME = "Python Full Stack Development"
+# Fallback only. The real course name comes from the batch's course_type, so a
+# Java or Gen AI student does not receive a certificate naming Python.
+DEFAULT_COURSE_NAME = "Python Full Stack Development"
 
 
 def _fit_font(c: canvas.Canvas, text: str, font: str, start: int, max_width: float) -> int:
@@ -33,7 +35,9 @@ def build_certificate(
     batch_name: str | None,
     start_date: date | None,
     completed_on: date,
+    course_name: str | None = None,
 ) -> bytes:
+    course = course_name or DEFAULT_COURSE_NAME
     buf = BytesIO()
     width, height = landscape(A4)
     c = canvas.Canvas(buf, pagesize=landscape(A4))
@@ -87,12 +91,12 @@ def build_certificate(
     c.setFillColor(GREY)
     c.setFont("Helvetica", 13)
     c.drawCentredString(
-        width / 2, height - 120 * mm, "has successfully completed the 55-day programme in"
+        width / 2, height - 120 * mm, "has successfully completed the programme in"
     )
 
     c.setFillColor(TEAL)
     c.setFont("Helvetica-Bold", 20)
-    c.drawCentredString(width / 2, height - 133 * mm, COURSE_NAME)
+    c.drawCentredString(width / 2, height - 133 * mm, course)
 
     c.setFillColor(GREY)
     c.setFont("Helvetica", 11)
@@ -127,22 +131,20 @@ def build_certificate(
 
     c.setFont("Helvetica", 8)
     c.setFillColor(HexColor("#95A8CB"))
-    c.drawCentredString(
-        width / 2, 20 * mm, "MOP Careers  ·  Python Full Stack Development Programme"
-    )
+    c.drawCentredString(width / 2, 20 * mm, f"MOP Careers  ·  {course} Programme")
 
     c.showPage()
     c.save()
     return buf.getvalue()
 
 
-def linkedin_add_to_profile_url(completed_on: date) -> str:
+def linkedin_add_to_profile_url(completed_on: date, course_name: str | None = None) -> str:
     """LinkedIn's 'Add to profile' deep link for a certification."""
     from urllib.parse import urlencode
 
     params = {
         "startTask": "CERTIFICATION_NAME",
-        "name": f"{COURSE_NAME} — MOP Careers",
+        "name": f"{course_name or DEFAULT_COURSE_NAME} — MOP Careers",
         "organizationName": "MOP Careers",
         "issueYear": completed_on.year,
         "issueMonth": completed_on.month,
