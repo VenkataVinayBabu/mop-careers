@@ -220,9 +220,14 @@ Python 3.13.2 · Node v22.17.0 (npm 10.9.2) · Git 2.50.1 · PostgreSQL 17.9
     plus batch-wise stats. Student side is a read-only `/student/applications`.
   - Frontend: admin Fees and Placements screens, student My Applications, sidebar
     entries per role, rupee formatting via `Intl.NumberFormat('en-IN')`.
-  - Verification: **83/83 API assertions passed**, plus browser checks of the write
-    paths (recording a payment, the overpayment rejection, editing an application and
-    watching the stats recompute).
+  - Verification: **83/83 API assertions passed**, plus **every Phase 2 write path
+    driven through the browser**: recording a payment, the overpayment rejection,
+    saving a changed total fee, removing a payment, the pending-only filter, the
+    Companies tab, creating a company, creating an application (incl. its
+    "pick both a student and a company" validation), adding an interview round,
+    toggling its result, removing it, deleting an application, and both company-delete
+    outcomes — refused with a count when applications reference it, allowed when unused.
+    Zero console errors.
 
   Decisions worth remembering:
   - **Fees are locked at router level** (`dependencies=[Depends(require_admin)]` on the
