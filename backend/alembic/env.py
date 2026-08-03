@@ -15,7 +15,7 @@ from app.database import Base  # noqa: E402
 from app import models  # noqa: E402,F401  (import registers the tables on Base)
 
 config = context.config
-config.set_main_option("sqlalchemy.url", settings.DATABASE_URL.replace("%", "%%"))
+config.set_main_option("sqlalchemy.url", settings.sqlalchemy_url.replace("%", "%%"))
 
 if config.config_file_name is not None:
     fileConfig(config.config_file_name)

@@ -44,6 +44,19 @@ class Settings(BaseSettings):
     ADMIN_DOUBTS_EMAIL: str = "doubts@mopcareers.com"
 
     @property
+    def sqlalchemy_url(self) -> str:
+        """Managed hosts (Render, Heroku, Railway) hand out URLs starting with
+        `postgres://`, which SQLAlchemy 2.0 no longer recognises. Normalise it
+        here rather than depending on whoever sets the environment variable.
+        """
+        url = self.DATABASE_URL
+        if url.startswith("postgres://"):
+            url = url.replace("postgres://", "postgresql+psycopg2://", 1)
+        elif url.startswith("postgresql://"):
+            url = url.replace("postgresql://", "postgresql+psycopg2://", 1)
+        return url
+
+    @property
     def cors_origin_list(self) -> list[str]:
         return [o.strip() for o in self.CORS_ORIGINS.split(",") if o.strip()]
 

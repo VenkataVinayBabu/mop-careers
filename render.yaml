@@ -1,0 +1,79 @@
+# Render deployment for MOP Careers.
+#
+# Creates three things: a PostgreSQL database, the FastAPI backend, and the
+# React frontend as a static site.
+#
+# After the first deploy you MUST set the values marked `sync: false` in the
+# Render dashboard — they are deliberately not stored in this file.
+
+databases:
+  - name: mop-careers-db
+    databaseName: mop_careers
+    user: mop
+    plan: free
+
+services:
+  # ---------------------------------------------------------------- backend
+  - type: web
+    name: mop-careers-api
+    runtime: python
+    plan: free
+    rootDir: backend
+    buildCommand: pip install -r requirements.txt
+    # Migrations run on every deploy, before the server starts.
+    startCommand: alembic upgrade head && uvicorn app.main:app --host 0.0.0.0 --port $PORT
+    healthCheckPath: /health
+    envVars:
+      - key: PYTHON_VERSION
+        value: "3.13.2"
+      - key: DATABASE_URL
+        fromDatabase:
+          name: mop-careers-db
+          property: connectionString
+      - key: JWT_SECRET
+        generateValue: true          # Render generates a strong secret
+      - key: APP_ENV
+        value: production
+      # Set these two in the dashboard once the frontend URL is known.
+      - key: CORS_ORIGINS
+        sync: false
+      - key: FRONTEND_URL
+        sync: false
+      # Email — leave blank and messages are logged instead of sent.
+      - key: SMTP_HOST
+        sync: false
+      - key: SMTP_PORT
+        value: "587"
+      - key: SMTP_USER
+        sync: false
+      - key: SMTP_PASS
+        sync: false
+      - key: SMTP_FROM
+        value: no-reply@mopcareers.com
+      - key: ENQUIRY_EMAIL
+        sync: false
+      - key: ADMIN_DOUBTS_EMAIL
+        sync: false
+      # Phases 3 and 4 only. Safe to leave empty.
+      - key: ANTHROPIC_API_KEY
+        sync: false
+      - key: ANTHROPIC_MODEL
+        value: claude-sonnet-4-6
+
+  # --------------------------------------------------------------- frontend
+  - type: web
+    name: mop-careers
+    runtime: static
+    rootDir: frontend
+    buildCommand: npm ci && npm run build
+    staticPublishPath: dist
+    envVars:
+      # Set to the backend URL in the dashboard after the API deploys.
+      - key: VITE_API_URL
+        sync: false
+    routes:
+      # Single-page app: every unknown path must serve index.html, or a
+      # refresh on /app/curriculum returns 404.
+      - type: rewrite
+        source: /*
+        destination: /index.html
