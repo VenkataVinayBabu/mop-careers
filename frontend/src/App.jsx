@@ -27,6 +27,7 @@ import StudentDoubts from './pages/student/Doubts';
 import StudentHome from './pages/student/Home';
 import StudentMissed from './pages/student/Missed';
 import ProfileSettings from './pages/student/ProfileSettings';
+import StudentProgress from './pages/student/Progress';
 import StudentSchedule from './pages/student/Schedule';
 
 /** The public landing page, unless you are already signed in — in which case
@@ -117,6 +118,7 @@ export default function App() {
         <Route path="/app/schedule" element={<StudentSchedule />} />
         <Route path="/app/applications" element={<StudentApplications />} />
         <Route path="/app/doubts" element={<StudentDoubts />} />
+        <Route path="/app/progress" element={<StudentProgress />} />
         {/* Reached from the sidebar profile menu, not the main nav. */}
         <Route path="/app/profile" element={<ProfileSettings />} />
       </Route>

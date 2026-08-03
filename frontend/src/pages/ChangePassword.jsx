@@ -3,6 +3,7 @@ import { Navigate, useNavigate } from 'react-router-dom';
 
 import { api, errorMessage } from '../api/client';
 import Logo from '../components/Logo';
+import PasswordInput from '../components/PasswordInput';
 import { HOME_FOR_ROLE } from '../components/ProtectedRoute';
 import { useToast } from '../components/Toast';
 import { Loading, Spinner } from '../components/ui';
@@ -69,30 +70,20 @@ export default function ChangePassword() {
 
           <form onSubmit={submit} noValidate>
             <div className="mb-4">
-              <label className="label" htmlFor="current">
-                {forced ? 'Temporary password' : 'Current password'}
-              </label>
-              <input
+              <PasswordInput
                 id="current"
-                type="password"
+                label={forced ? 'Temporary password' : 'Current password'}
                 autoComplete="current-password"
-                required
-                className="input"
                 value={form.current}
                 onChange={(e) => setForm({ ...form, current: e.target.value })}
               />
             </div>
 
             <div className="mb-4">
-              <label className="label" htmlFor="password">
-                New password
-              </label>
-              <input
+              <PasswordInput
                 id="password"
-                type="password"
+                label="New password"
                 autoComplete="new-password"
-                required
-                className="input"
                 placeholder="At least 8 characters"
                 value={form.password}
                 onChange={(e) => setForm({ ...form, password: e.target.value })}
@@ -100,15 +91,10 @@ export default function ChangePassword() {
             </div>
 
             <div className="mb-5">
-              <label className="label" htmlFor="confirm">
-                Confirm new password
-              </label>
-              <input
+              <PasswordInput
                 id="confirm"
-                type="password"
+                label="Confirm new password"
                 autoComplete="new-password"
-                required
-                className="input"
                 value={form.confirm}
                 onChange={(e) => setForm({ ...form, confirm: e.target.value })}
               />

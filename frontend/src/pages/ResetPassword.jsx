@@ -3,6 +3,7 @@ import { Link, useNavigate, useSearchParams } from 'react-router-dom';
 
 import { api, errorMessage } from '../api/client';
 import Logo from '../components/Logo';
+import PasswordInput from '../components/PasswordInput';
 import { Spinner } from '../components/ui';
 import { useToast } from '../components/Toast';
 
@@ -61,15 +62,10 @@ export default function ResetPassword() {
           ) : (
             <form onSubmit={submit} className="mt-5" noValidate>
               <div className="mb-4">
-                <label className="label" htmlFor="password">
-                  New password
-                </label>
-                <input
+                <PasswordInput
                   id="password"
-                  type="password"
+                  label="New password"
                   autoComplete="new-password"
-                  required
-                  className="input"
                   placeholder="At least 8 characters"
                   value={form.password}
                   onChange={(e) => setForm({ ...form, password: e.target.value })}
@@ -77,15 +73,10 @@ export default function ResetPassword() {
               </div>
 
               <div className="mb-5">
-                <label className="label" htmlFor="confirm">
-                  Confirm new password
-                </label>
-                <input
+                <PasswordInput
                   id="confirm"
-                  type="password"
+                  label="Confirm new password"
                   autoComplete="new-password"
-                  required
-                  className="input"
                   value={form.confirm}
                   onChange={(e) => setForm({ ...form, confirm: e.target.value })}
                 />

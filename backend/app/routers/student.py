@@ -3,7 +3,7 @@ student can never read another student's records.
 """
 from datetime import date
 
-from fastapi import APIRouter, Depends, HTTPException, Response, status
+from fastapi import APIRouter, Depends, HTTPException, Query, Response, status
 from sqlalchemy import func, select
 from sqlalchemy.orm import Session
 
@@ -25,6 +25,8 @@ from app.models import (
     Attendance,
     Batch,
     CurriculumDay,
+    Doubt,
+    InterviewRound,
     Milestone,
     User,
 )
@@ -34,6 +36,8 @@ from app.schemas import (
     InterviewRoundOut,
     MilestoneOut,
     ProfileUpdate,
+    ProgressDayRow,
+    ProgressReport,
     StudentApplicationOut,
     StudentDashboard,
     StudentDayView,
@@ -175,6 +179,82 @@ def my_applications(
         )
         for a in apps
     ]
+
+
+@router.get("/progress", response_model=ProgressReport)
+def progress_report(
+    from_date: date = Query(..., alias="from"),
+    to_date: date = Query(..., alias="to"),
+    db: Session = Depends(get_db),
+    student: User = Depends(require_student),
+) -> ProgressReport:
+    """Progress over a date range, scoped to the authenticated student.
+
+    Class days are matched on their scheduled date, so a day with no date set
+    yet is excluded rather than silently counted as absent.
+    """
+    if to_date < from_date:
+        raise HTTPException(
+            status.HTTP_400_BAD_REQUEST, "The end date must not be before the start date"
+        )
+
+    attendance = _own_attendance_map(db, student)
+
+    in_range = [
+        d
+        for d in _days_for(db, student)
+        if d.scheduled_date and from_date <= d.scheduled_date <= to_date
+    ]
+    held = [d for d in in_range if d.status == DAY_COMPLETED]
+    present = sum(1 for d in held if attendance.get(d.id, False))
+
+    rows = [
+        ProgressDayRow(
+            day_number=d.day_number,
+            topic=d.topic,
+            scheduled_date=d.scheduled_date,
+            present=attendance.get(d.id, False),
+        )
+        for d in held
+    ]
+
+    doubts = db.scalars(
+        select(Doubt).where(
+            Doubt.student_id == student.id,
+            func.date(Doubt.created_at) >= from_date,
+            func.date(Doubt.created_at) <= to_date,
+        )
+    ).all()
+
+    rounds = db.scalars(
+        select(InterviewRound)
+        .join(Application, InterviewRound.application_id == Application.id)
+        .where(
+            Application.student_id == student.id,
+            InterviewRound.scheduled_on.is_not(None),
+            InterviewRound.scheduled_on >= from_date,
+            InterviewRound.scheduled_on <= to_date,
+        )
+    ).all()
+
+    return ProgressReport(
+        from_date=from_date,
+        to_date=to_date,
+        classes_held=len(held),
+        classes_present=present,
+        classes_absent=len(held) - present,
+        attendance_percent=round(present / len(held) * 100, 1) if held else 0.0,
+        topics_covered=len(held),
+        total_days=TOTAL_CURRICULUM_DAYS,
+        doubts_raised=len(doubts),
+        doubts_answered=sum(1 for d in doubts if d.status == "answered"),
+        doubts_open=sum(1 for d in doubts if d.status == "open"),
+        rounds_total=len(rounds),
+        rounds_passed=sum(1 for r in rounds if r.result == "passed"),
+        rounds_failed=sum(1 for r in rounds if r.result == "failed"),
+        rounds_pending=sum(1 for r in rounds if r.result == "pending"),
+        days=rows,
+    )
 
 
 # --- certificate (Phase 5) ------------------------------------------------

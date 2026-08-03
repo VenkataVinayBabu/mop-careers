@@ -4,8 +4,6 @@ import {
   BookOpen,
   Briefcase,
   CalendarDays,
-  ChevronsLeft,
-  ChevronsRight,
   ChevronsUpDown,
   GraduationCap,
   HelpCircle,
@@ -16,6 +14,8 @@ import {
   LayoutDashboard,
   LogOut,
   MessageSquare,
+  PanelLeftClose,
+  PanelLeftOpen,
   Settings,
   TrendingUp,
   UserCog,
@@ -50,6 +50,7 @@ const NAV = {
     { to: '/app/schedule', label: 'Schedule', icon: CalendarDays },
     { to: '/app/applications', label: 'My Applications', icon: Briefcase },
     { to: '/app/doubts', label: 'Doubt Support', icon: MessageSquare },
+    { to: '/app/progress', label: 'Progress Report', icon: TrendingUp },
   ],
 };
 
@@ -121,7 +122,7 @@ function StudentProfileMenu({ user, collapsed, onNavigate, onLogout }) {
           <div className="px-4 pt-3">
             <button
               type="button"
-              onClick={() => go('/app')}
+              onClick={() => go('/app/progress')}
               className="flex w-full flex-col items-center gap-1 rounded-lg bg-teal-50 px-3 py-2.5 text-teal-700 transition hover:bg-teal-100"
             >
               <TrendingUp className="h-4 w-4" aria-hidden="true" />
@@ -234,7 +235,14 @@ export default function Layout() {
         )}
       </div>
 
-      <nav className="flex-1 space-y-1 overflow-y-auto overflow-x-hidden px-3 py-4">
+      {/* When collapsed the nav must not clip, or the hover tooltips get cut
+          off at the rail edge. There are few enough items that it never needs
+          to scroll in that mode. */}
+      <nav
+        className={`flex-1 space-y-1 px-3 py-4 ${
+          railMode ? 'overflow-visible' : 'overflow-y-auto overflow-x-hidden'
+        }`}
+      >
         {links.map((l) => {
           const Icon = l.icon;
           return (
@@ -242,9 +250,8 @@ export default function Layout() {
               key={l.to}
               to={l.to}
               end={l.end}
-              title={railMode ? l.label : undefined}
               className={({ isActive }) =>
-                `flex items-center gap-3 rounded-lg py-2.5 text-sm font-medium transition ${
+                `group relative flex items-center gap-3 rounded-lg py-2.5 text-sm font-medium transition ${
                   railMode ? 'justify-center px-0' : 'px-3.5'
                 } ${
                   isActive
@@ -254,7 +261,16 @@ export default function Layout() {
               }
             >
               <Icon className="h-5 w-5 shrink-0" aria-hidden="true" />
-              {!railMode && <span className="truncate">{l.label}</span>}
+              {railMode ? (
+                <span
+                  role="tooltip"
+                  className="pointer-events-none absolute left-full z-50 ml-3 origin-left scale-95 whitespace-nowrap rounded-lg bg-navy-900 px-3 py-1.5 text-xs font-semibold text-white opacity-0 shadow-lift transition duration-150 group-hover:scale-100 group-hover:opacity-100"
+                >
+                  {l.label}
+                </span>
+              ) : (
+                <span className="truncate">{l.label}</span>
+              )}
             </NavLink>
           );
         })}
@@ -317,12 +333,12 @@ export default function Layout() {
           onClick={() => setCollapsed((v) => !v)}
           aria-label={collapsed ? 'Expand sidebar' : 'Collapse sidebar'}
           title={collapsed ? 'Expand sidebar' : 'Collapse sidebar'}
-          className="absolute -right-3 top-20 flex h-7 w-7 items-center justify-center rounded-full border border-navy-100 bg-white text-navy-600 shadow-card transition hover:bg-navy-50 hover:text-navy"
+          className="group absolute -right-3.5 top-[4.5rem] flex h-8 w-8 items-center justify-center rounded-lg border border-navy-100 bg-white text-navy-500 shadow-card transition hover:border-teal hover:bg-teal hover:text-white"
         >
           {collapsed ? (
-            <ChevronsRight className="h-4 w-4" aria-hidden="true" />
+            <PanelLeftOpen className="h-4 w-4" aria-hidden="true" />
           ) : (
-            <ChevronsLeft className="h-4 w-4" aria-hidden="true" />
+            <PanelLeftClose className="h-4 w-4" aria-hidden="true" />
           )}
         </button>
       </aside>

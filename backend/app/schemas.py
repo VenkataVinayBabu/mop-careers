@@ -472,6 +472,44 @@ class DoubtStatusUpdate(BaseModel):
     status: DoubtStatus
 
 
+class ProgressDayRow(BaseModel):
+    day_number: int
+    topic: str
+    scheduled_date: date | None = None
+    present: bool
+
+
+class ProgressReport(BaseModel):
+    """Everything on the student progress report is derived from data that
+    actually exists: attendance, curriculum, doubts and interview rounds."""
+
+    from_date: date
+    to_date: date
+
+    # Classes
+    classes_held: int
+    classes_present: int
+    classes_absent: int
+    attendance_percent: float
+
+    # Curriculum
+    topics_covered: int
+    total_days: int
+
+    # Doubt support
+    doubts_raised: int
+    doubts_answered: int
+    doubts_open: int
+
+    # Interview rounds
+    rounds_total: int
+    rounds_passed: int
+    rounds_failed: int
+    rounds_pending: int
+
+    days: list[ProgressDayRow] = []
+
+
 class CertificateStatus(BaseModel):
     unlocked: bool
     student_name: str

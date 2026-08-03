@@ -3,6 +3,7 @@ import { Link, Navigate, useNavigate } from 'react-router-dom';
 
 import { errorMessage } from '../api/client';
 import Logo from '../components/Logo';
+import PasswordInput from '../components/PasswordInput';
 import { HOME_FOR_ROLE } from '../components/ProtectedRoute';
 import { Spinner } from '../components/ui';
 import { useAuth } from '../context/AuthContext';
@@ -67,15 +68,10 @@ export default function Login() {
             </div>
 
             <div className="mb-5">
-              <label className="label" htmlFor="password">
-                Password
-              </label>
-              <input
+              <PasswordInput
                 id="password"
-                type="password"
+                label="Password"
                 autoComplete="current-password"
-                required
-                className="input"
                 placeholder="••••••••"
                 value={form.password}
                 onChange={(e) => setForm({ ...form, password: e.target.value })}

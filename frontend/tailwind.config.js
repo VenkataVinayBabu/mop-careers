@@ -11,6 +11,10 @@ export default {
           200: '#C3CFE3',
           300: '#95A8CB',
           400: '#5D77A9',
+          // 500 was originally missing from this ramp, which silently broke every
+          // `text-navy-500` in the app — the class simply didn't exist, so no
+          // colour was applied and the text inherited whatever was around it.
+          500: '#35507F',
           600: '#0E2757',
           700: '#0B1E46',
           800: '#081736',
@@ -23,6 +27,7 @@ export default {
           200: '#9BE5E7',
           300: '#5CD2D6',
           400: '#1FB4BA',
+          500: '#00989D',
           600: '#00898E',
           700: '#00676B',
         },
@@ -33,6 +38,7 @@ export default {
           200: '#FFC1A0',
           300: '#FF9A63',
           400: '#F97316',
+          500: '#EE5905',
           600: '#D44E04',
           700: '#A93E03',
         },
