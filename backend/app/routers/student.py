@@ -33,9 +33,11 @@ from app.schemas import (
     CurriculumDayOut,
     InterviewRoundOut,
     MilestoneOut,
+    ProfileUpdate,
     StudentApplicationOut,
     StudentDashboard,
     StudentDayView,
+    UserOut,
 )
 
 router = APIRouter(prefix="/student", tags=["student"])
@@ -234,6 +236,25 @@ def download_certificate(
         media_type="application/pdf",
         headers={"Content-Disposition": f'attachment; filename="{filename}"'},
     )
+
+
+@router.patch("/profile", response_model=UserOut)
+def update_my_profile(
+    payload: ProfileUpdate,
+    db: Session = Depends(get_db),
+    student: User = Depends(require_student),
+) -> UserOut:
+    """A student updating their own details.
+
+    Only name, phone and years of experience — email, role, batch and blocked
+    status stay under admin control, so this cannot be used to escalate.
+    """
+    student.name = payload.name.strip()
+    student.phone = (payload.phone or "").strip() or None
+    student.yoe_it = payload.yoe_it
+    db.commit()
+    db.refresh(student)
+    return UserOut.model_validate(student)
 
 
 @router.get("/milestones", response_model=MilestoneOut)

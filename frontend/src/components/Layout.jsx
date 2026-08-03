@@ -1,31 +1,55 @@
-import { useEffect, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import { NavLink, Outlet, useLocation, useNavigate } from 'react-router-dom';
+import {
+  BookOpen,
+  Briefcase,
+  CalendarDays,
+  ChevronsLeft,
+  ChevronsRight,
+  ChevronsUpDown,
+  GraduationCap,
+  HelpCircle,
+  Home,
+  IndianRupee,
+  Inbox,
+  KeyRound,
+  LayoutDashboard,
+  LogOut,
+  MessageSquare,
+  Settings,
+  TrendingUp,
+  UserCog,
+  Users,
+  X,
+} from 'lucide-react';
 
 import { useAuth } from '../context/AuthContext';
 import Logo from './Logo';
 
+const COLLAPSE_KEY = 'mop_sidebar_collapsed';
+
 const NAV = {
   admin: [
-    { to: '/admin', label: 'Dashboard', end: true },
-    { to: '/admin/batches', label: 'Batches' },
-    { to: '/admin/accounts', label: 'Accounts' },
-    { to: '/admin/fees', label: 'Fees' },
-    { to: '/admin/placements', label: 'Placements' },
-    { to: '/admin/enquiries', label: 'Enquiries' },
-    { to: '/admin/doubts', label: 'Doubts' },
+    { to: '/admin', label: 'Dashboard', icon: LayoutDashboard, end: true },
+    { to: '/admin/batches', label: 'Batches', icon: GraduationCap },
+    { to: '/admin/accounts', label: 'Accounts', icon: UserCog },
+    { to: '/admin/fees', label: 'Fees', icon: IndianRupee },
+    { to: '/admin/placements', label: 'Placements', icon: Briefcase },
+    { to: '/admin/enquiries', label: 'Enquiries', icon: Inbox },
+    { to: '/admin/doubts', label: 'Doubts', icon: MessageSquare },
   ],
   // Teachers deliberately get no fees, placements or enquiries entries.
   teacher: [
-    { to: '/teacher', label: 'My Batches', end: true },
-    { to: '/teacher/doubts', label: 'Doubts' },
+    { to: '/teacher', label: 'My Batches', icon: GraduationCap, end: true },
+    { to: '/teacher/doubts', label: 'Doubts', icon: MessageSquare },
   ],
   student: [
-    { to: '/app', label: 'Home', end: true },
-    { to: '/app/curriculum', label: 'Curriculum' },
-    { to: '/app/missed', label: 'Missed Classes' },
-    { to: '/app/schedule', label: 'Schedule' },
-    { to: '/app/applications', label: 'My Applications' },
-    { to: '/app/doubts', label: 'Doubt Support' },
+    { to: '/app', label: 'Home', icon: Home, end: true },
+    { to: '/app/curriculum', label: 'Curriculum', icon: BookOpen },
+    { to: '/app/missed', label: 'Missed Classes', icon: HelpCircle },
+    { to: '/app/schedule', label: 'Schedule', icon: CalendarDays },
+    { to: '/app/applications', label: 'My Applications', icon: Briefcase },
+    { to: '/app/doubts', label: 'Doubt Support', icon: MessageSquare },
   ],
 };
 
@@ -40,62 +64,239 @@ function initials(name = '') {
     .join('');
 }
 
+/* ------------------------------------------------------------------ */
+/*  Student profile menu — opens upward from the sidebar footer.       */
+/* ------------------------------------------------------------------ */
+function StudentProfileMenu({ user, collapsed, onNavigate, onLogout }) {
+  const [open, setOpen] = useState(false);
+  const ref = useRef(null);
+
+  // Close on outside click and on Escape.
+  useEffect(() => {
+    if (!open) return undefined;
+    const onDown = (e) => {
+      if (ref.current && !ref.current.contains(e.target)) setOpen(false);
+    };
+    const onKey = (e) => {
+      if (e.key === 'Escape') setOpen(false);
+    };
+    document.addEventListener('mousedown', onDown);
+    document.addEventListener('keydown', onKey);
+    return () => {
+      document.removeEventListener('mousedown', onDown);
+      document.removeEventListener('keydown', onKey);
+    };
+  }, [open]);
+
+  const go = (path) => {
+    setOpen(false);
+    onNavigate(path);
+  };
+
+  return (
+    <div ref={ref} className="relative">
+      {open && (
+        <div
+          role="menu"
+          className="absolute bottom-full left-0 z-50 mb-2 w-[17rem] overflow-hidden rounded-xl border border-navy-100 bg-white shadow-lift"
+        >
+          {/* identity */}
+          <div className="flex items-start gap-3 px-4 pt-4">
+            <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-lg bg-teal text-lg font-bold text-white">
+              {initials(user?.name)[0] || '?'}
+            </div>
+            <div className="min-w-0 flex-1">
+              <p className="truncate text-sm font-semibold text-navy" title={user?.name}>
+                {user?.name}
+              </p>
+              {user?.batch_name && (
+                <span className="mt-1 inline-flex items-center rounded-md bg-navy-50 px-2 py-0.5 text-xs font-medium text-navy-500">
+                  Batch : {user.batch_name}
+                </span>
+              )}
+            </div>
+          </div>
+
+          {/* quick tile — only Progress exists today */}
+          <div className="px-4 pt-3">
+            <button
+              type="button"
+              onClick={() => go('/app')}
+              className="flex w-full flex-col items-center gap-1 rounded-lg bg-teal-50 px-3 py-2.5 text-teal-700 transition hover:bg-teal-100"
+            >
+              <TrendingUp className="h-4 w-4" aria-hidden="true" />
+              <span className="text-xs font-semibold">Progress</span>
+            </button>
+          </div>
+
+          <div className="mt-3 border-t border-navy-100">
+            <button
+              type="button"
+              onClick={() => go('/app/profile')}
+              className="flex w-full items-center gap-3 px-4 py-2.5 text-sm font-medium text-navy-700 transition hover:bg-navy-50"
+            >
+              <Settings className="h-4 w-4 text-navy-400" aria-hidden="true" />
+              Profile Settings
+            </button>
+            <button
+              type="button"
+              onClick={() => go('/change-password')}
+              className="flex w-full items-center gap-3 px-4 py-2.5 text-sm font-medium text-navy-700 transition hover:bg-navy-50"
+            >
+              <KeyRound className="h-4 w-4 text-navy-400" aria-hidden="true" />
+              Reset Password
+            </button>
+          </div>
+
+          <div className="border-t border-navy-100">
+            <button
+              type="button"
+              onClick={() => {
+                setOpen(false);
+                onLogout();
+              }}
+              className="flex w-full items-center gap-3 px-4 py-3 text-sm font-semibold text-orange transition hover:bg-orange-50"
+            >
+              <LogOut className="h-4 w-4" aria-hidden="true" />
+              Sign Out
+            </button>
+          </div>
+        </div>
+      )}
+
+      <button
+        type="button"
+        onClick={() => setOpen((v) => !v)}
+        aria-haspopup="menu"
+        aria-expanded={open}
+        title={collapsed ? user?.name : undefined}
+        className={`flex w-full items-center gap-3 rounded-lg py-2 transition hover:bg-navy-600 ${
+          collapsed ? 'justify-center px-0' : 'px-2'
+        }`}
+      >
+        <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-teal text-xs font-bold text-white">
+          {initials(user?.name)}
+        </div>
+        {!collapsed && (
+          <>
+            <span className="min-w-0 flex-1 text-left">
+              <span className="block truncate text-sm font-semibold text-white">{user?.name}</span>
+              <span className="block text-xs text-navy-300">{ROLE_LABEL[user?.role]}</span>
+            </span>
+            <ChevronsUpDown className="h-4 w-4 shrink-0 text-navy-300" aria-hidden="true" />
+          </>
+        )}
+      </button>
+    </div>
+  );
+}
+
+/* ------------------------------------------------------------------ */
 export default function Layout() {
   const { user, logout } = useAuth();
   const navigate = useNavigate();
   const location = useLocation();
-  const [open, setOpen] = useState(false);
+  const [drawerOpen, setDrawerOpen] = useState(false);
 
-  // Close the mobile drawer whenever the route changes.
-  useEffect(() => setOpen(false), [location.pathname]);
+  // Remembered between visits so it doesn't reset on every page load.
+  const [collapsed, setCollapsed] = useState(
+    () => localStorage.getItem(COLLAPSE_KEY) === '1',
+  );
+
+  useEffect(() => {
+    localStorage.setItem(COLLAPSE_KEY, collapsed ? '1' : '0');
+  }, [collapsed]);
+
+  useEffect(() => setDrawerOpen(false), [location.pathname]);
 
   const links = NAV[user?.role] || [];
 
-  const handleLogout = () => {
+  const handleLogout = useCallback(() => {
     logout();
     navigate('/login', { replace: true });
-  };
+  }, [logout, navigate]);
 
-  const sidebar = (
+  const isStudent = user?.role === 'student';
+
+  // `railMode` collapses the rail on desktop only — the mobile drawer always
+  // shows full labels, since there is room for them there.
+  const sidebar = (railMode) => (
     <div className="flex h-full flex-col bg-navy text-white">
-      <div className="flex h-16 shrink-0 items-center px-5">
-        <Logo variant="light" size="md" />
+      <div
+        className={`flex h-16 shrink-0 items-center ${railMode ? 'justify-center px-0' : 'px-5'}`}
+      >
+        {railMode ? (
+          <span className="flex h-9 w-9 items-center justify-center rounded-lg bg-teal text-sm font-extrabold text-white">
+            M
+          </span>
+        ) : (
+          <Logo variant="light" size="md" />
+        )}
       </div>
 
-      <nav className="flex-1 space-y-1 overflow-y-auto px-3 py-4">
-        {links.map((l) => (
-          <NavLink
-            key={l.to}
-            to={l.to}
-            end={l.end}
-            className={({ isActive }) =>
-              `block rounded-lg px-3.5 py-2.5 text-sm font-medium transition ${
-                isActive ? 'bg-teal text-white' : 'text-navy-200 hover:bg-navy-600 hover:text-white'
-              }`
-            }
-          >
-            {l.label}
-          </NavLink>
-        ))}
+      <nav className="flex-1 space-y-1 overflow-y-auto overflow-x-hidden px-3 py-4">
+        {links.map((l) => {
+          const Icon = l.icon;
+          return (
+            <NavLink
+              key={l.to}
+              to={l.to}
+              end={l.end}
+              title={railMode ? l.label : undefined}
+              className={({ isActive }) =>
+                `flex items-center gap-3 rounded-lg py-2.5 text-sm font-medium transition ${
+                  railMode ? 'justify-center px-0' : 'px-3.5'
+                } ${
+                  isActive
+                    ? 'bg-teal text-white'
+                    : 'text-navy-200 hover:bg-navy-600 hover:text-white'
+                }`
+              }
+            >
+              <Icon className="h-5 w-5 shrink-0" aria-hidden="true" />
+              {!railMode && <span className="truncate">{l.label}</span>}
+            </NavLink>
+          );
+        })}
       </nav>
 
-      <div className="shrink-0 border-t border-navy-600 p-4">
-        <div className="mb-3 flex items-center gap-3">
-          <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-teal text-xs font-bold text-white">
-            {initials(user?.name)}
-          </div>
-          <div className="min-w-0">
-            <p className="truncate text-sm font-semibold text-white">{user?.name}</p>
-            <p className="text-xs text-navy-300">{ROLE_LABEL[user?.role]}</p>
-          </div>
-        </div>
-        <button
-          type="button"
-          onClick={handleLogout}
-          className="w-full rounded-lg border border-navy-400 px-3 py-2 text-xs font-semibold text-navy-100 transition hover:bg-navy-600 hover:text-white"
-        >
-          Sign out
-        </button>
+      <div className={`shrink-0 border-t border-navy-600 ${railMode ? 'px-2 py-3' : 'p-4'}`}>
+        {isStudent ? (
+          <StudentProfileMenu
+            user={user}
+            collapsed={railMode}
+            onNavigate={(p) => navigate(p)}
+            onLogout={handleLogout}
+          />
+        ) : (
+          <>
+            <div
+              className={`mb-3 flex items-center gap-3 ${railMode ? 'justify-center' : ''}`}
+              title={railMode ? user?.name : undefined}
+            >
+              <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-teal text-xs font-bold text-white">
+                {initials(user?.name)}
+              </div>
+              {!railMode && (
+                <div className="min-w-0">
+                  <p className="truncate text-sm font-semibold text-white">{user?.name}</p>
+                  <p className="text-xs text-navy-300">{ROLE_LABEL[user?.role]}</p>
+                </div>
+              )}
+            </div>
+            <button
+              type="button"
+              onClick={handleLogout}
+              title={railMode ? 'Sign out' : undefined}
+              className={`flex w-full items-center justify-center gap-2 rounded-lg border border-navy-400 py-2 text-xs font-semibold text-navy-100 transition hover:bg-navy-600 hover:text-white ${
+                railMode ? 'px-0' : 'px-3'
+              }`}
+            >
+              <LogOut className="h-4 w-4 shrink-0" aria-hidden="true" />
+              {!railMode && 'Sign out'}
+            </button>
+          </>
+        )}
       </div>
     </div>
   );
@@ -103,30 +304,68 @@ export default function Layout() {
   return (
     <div className="min-h-screen bg-navy-50">
       {/* Desktop sidebar */}
-      <aside className="fixed inset-y-0 left-0 hidden w-64 lg:block">{sidebar}</aside>
+      <aside
+        className={`fixed inset-y-0 left-0 z-30 hidden transition-[width] duration-200 lg:block ${
+          collapsed ? 'w-20' : 'w-64'
+        }`}
+      >
+        {sidebar(collapsed)}
+
+        {/* Collapse toggle, straddling the sidebar edge */}
+        <button
+          type="button"
+          onClick={() => setCollapsed((v) => !v)}
+          aria-label={collapsed ? 'Expand sidebar' : 'Collapse sidebar'}
+          title={collapsed ? 'Expand sidebar' : 'Collapse sidebar'}
+          className="absolute -right-3 top-20 flex h-7 w-7 items-center justify-center rounded-full border border-navy-100 bg-white text-navy-600 shadow-card transition hover:bg-navy-50 hover:text-navy"
+        >
+          {collapsed ? (
+            <ChevronsRight className="h-4 w-4" aria-hidden="true" />
+          ) : (
+            <ChevronsLeft className="h-4 w-4" aria-hidden="true" />
+          )}
+        </button>
+      </aside>
 
       {/* Mobile drawer */}
-      {open && (
+      {drawerOpen && (
         <div className="fixed inset-0 z-40 lg:hidden">
           <div
             className="absolute inset-0 bg-navy-900/50"
-            onClick={() => setOpen(false)}
+            onClick={() => setDrawerOpen(false)}
             aria-hidden="true"
           />
-          <aside className="absolute inset-y-0 left-0 w-64 shadow-lift">{sidebar}</aside>
+          <aside className="absolute inset-y-0 left-0 w-64 shadow-lift">
+            <button
+              type="button"
+              onClick={() => setDrawerOpen(false)}
+              aria-label="Close navigation menu"
+              className="absolute right-2 top-4 z-10 flex h-9 w-9 items-center justify-center rounded-lg text-navy-200 transition hover:bg-navy-600 hover:text-white"
+            >
+              <X className="h-5 w-5" aria-hidden="true" />
+            </button>
+            {sidebar(false)}
+          </aside>
         </div>
       )}
 
-      <div className="lg:pl-64">
+      <div className={`transition-[padding] duration-200 ${collapsed ? 'lg:pl-20' : 'lg:pl-64'}`}>
         {/* Mobile top bar */}
-        <header className="sticky top-0 z-30 flex h-16 items-center gap-3 border-b border-navy-100 bg-white px-4 lg:hidden">
+        <header className="sticky top-0 z-20 flex h-16 items-center gap-3 border-b border-navy-100 bg-white px-4 lg:hidden">
           <button
             type="button"
-            onClick={() => setOpen(true)}
+            onClick={() => setDrawerOpen(true)}
             aria-label="Open navigation menu"
             className="flex h-10 w-10 items-center justify-center rounded-lg text-navy-600 transition hover:bg-navy-50"
           >
-            <svg className="h-5 w-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+            <svg
+              className="h-5 w-5"
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="currentColor"
+              strokeWidth="2"
+              aria-hidden="true"
+            >
               <path d="M4 6h16M4 12h16M4 18h16" strokeLinecap="round" />
             </svg>
           </button>

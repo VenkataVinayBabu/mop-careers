@@ -55,6 +55,16 @@ class UserOut(ORMModel):
     must_change_password: bool
     yoe_it: float | None = None
     batch_id: int | None = None
+    batch_name: str | None = None
+
+
+class ProfileUpdate(BaseModel):
+    """What a student may change about their own account. Deliberately excludes
+    email, role, batch and blocked status — those stay with the admin."""
+
+    name: str = Field(min_length=2, max_length=120)
+    phone: str | None = Field(default=None, max_length=20)
+    yoe_it: float | None = Field(default=None, ge=0, le=50)
 
 
 class UserCreate(BaseModel):

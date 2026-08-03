@@ -26,6 +26,7 @@ import StudentCurriculum from './pages/student/Curriculum';
 import StudentDoubts from './pages/student/Doubts';
 import StudentHome from './pages/student/Home';
 import StudentMissed from './pages/student/Missed';
+import ProfileSettings from './pages/student/ProfileSettings';
 import StudentSchedule from './pages/student/Schedule';
 
 /** The public landing page, unless you are already signed in — in which case
@@ -116,6 +117,8 @@ export default function App() {
         <Route path="/app/schedule" element={<StudentSchedule />} />
         <Route path="/app/applications" element={<StudentApplications />} />
         <Route path="/app/doubts" element={<StudentDoubts />} />
+        {/* Reached from the sidebar profile menu, not the main nav. */}
+        <Route path="/app/profile" element={<ProfileSettings />} />
       </Route>
 
       <Route path="*" element={<NotFound />} />

@@ -113,6 +113,12 @@ class User(Base):
     )
 
     @property
+    def batch_name(self) -> str | None:
+        """Convenience for UserOut, so the UI can show a student's batch without
+        a second request."""
+        return self.batch.name if self.batch else None
+
+    @property
     def is_admin(self) -> bool:
         return self.role == ROLE_ADMIN
 
