@@ -1,7 +1,16 @@
 # MOP Careers — Project Spec & Working Agreement
 
-Web platform for **MOP Careers**, a Python Full Stack bootcamp. Two faces: a public
+Web platform for **MOP Careers**, a technology training institute. Two faces: a public
 marketing site (no auth) and an authenticated platform (admin / teacher / student).
+
+> **Read this first if you are picking the project up.** Phases 1, 2 and 5 are built,
+> verified and **deployed live**. The current open work is a public-website redesign.
+> Jump to **"Open threads"** at the bottom — that is the live to-do list.
+>
+> - Live site: <https://mop-careers.onrender.com>
+> - Live API: <https://mop-careers-api.onrender.com> (`/docs` for the API browser)
+> - Repo: <https://github.com/VenkataVinayBabu/mop-careers> (private, branch `master`)
+> - Deployment: see `DEPLOY.md`
 
 ---
 
@@ -302,5 +311,115 @@ Python 3.13.2 · Node v22.17.0 (npm 10.9.2) · Git 2.50.1 · PostgreSQL 17.9
   was consciously deferred. The user also noted "every course is 45 days" for later;
   the platform still assumes 55.
 
-- **Next: Phase 3 — ATS Resume Builder (needs `ANTHROPIC_API_KEY` in `backend/.env`),
-  then Phase 4 — AI Interviewer.**
+- **UI pass — collapsible sidebar, student profile menu, progress report ✅.**
+  - Sidebar collapses to an 80px icon rail on all three roles, with `lucide-react`
+    icons (an agreed new dependency), hover tooltips, and the state remembered in
+    localStorage. The mobile drawer always shows full labels regardless.
+  - Student sidebar footer opens a profile menu upward: avatar, name, batch chip,
+    a Progress tile, Profile Settings, Reset Password, Sign Out. Teachers and admins
+    keep the plain card.
+  - New `/app/profile` (student edits own name, phone, experience only — email, role,
+    batch and blocked status stay with admin; verified an admin gets 403) and
+    `/app/progress` (date range, four summary cards, day-by-day detail).
+  - Password fields across login / forced change / voluntary change / reset now have a
+    show-hide toggle via a shared `PasswordInput`.
+
+  **A bug worth remembering:** the Tailwind navy ramp defined 50-400 and 600-900 but
+  **skipped 500**. Every `text-navy-500` was therefore a class that did not exist — no
+  colour applied, text inherited whatever surrounded it. It looked fine in most places
+  by luck and rendered near-invisible in the profile menu. 21 usages across 9 files
+  were affected. Fixed by adding 500 to navy, teal and orange. If a colour ever looks
+  wrong, check the shade actually exists in `tailwind.config.js`.
+
+- **Deployed to Render ✅.** `render.yaml` at the repo root defines all three services
+  (PostgreSQL, FastAPI backend, React static site). Migrations run on every deploy via
+  the start command. Pushing to `master` auto-deploys.
+  - Managed hosts hand out `DATABASE_URL` as `postgres://`, which SQLAlchemy 2.0
+    rejects. `settings.sqlalchemy_url` normalises it — do not remove that.
+  - The live database was seeded from a laptop against Render's External Database URL,
+    then the published `Admin@123` was replaced. **Admin@123 no longer works in
+    production**; teacher and student demo passwords are unchanged.
+
+---
+
+## Open threads
+
+Everything below is decided-but-not-built, or known-but-unresolved. This is the
+to-do list.
+
+### 1. Public website redesign — the current work
+
+The user's words: *"Need lot of changes in public website."* Details were still being
+gathered when the previous session ended. What is already known:
+
+- **A logo exists** and needs adding. `frontend/src/components/Logo.jsx` has a marked
+  swap slot — drop the file in `frontend/src/assets/` and flip `USE_IMAGE_LOGO`.
+  Every screen picks it up at once.
+- The logo carries the tagline **"Your Future. Our Priority."**, which appears nowhere
+  on the site yet.
+- The logo's blue/teal differs slightly from the brand navy `#0B1E46` — worth
+  reconciling rather than having two blues.
+- **The Java Full Stack and Gen AI content is invented.** It was drafted as a
+  placeholder and flagged in `frontend/src/data/programmes.js`. It has never been
+  confirmed by MOP and must not go in front of real visitors as-is.
+- Outcomes figures (6-9 LPA, 4 interview rounds) are clearly-labelled placeholders.
+- The site has **no** photos, testimonials, address, phone number, map, social links,
+  trainer profiles or FAQ.
+- **Durations and start dates are deliberately absent** from the public site, per
+  instruction. Do not reintroduce them without asking.
+
+### 2. Six roles — blocked on Bala
+
+Three roles exist (admin, teacher, student). Three more are specified but not built:
+
+- **Viewer** — read-only; student count, tech stack, experience. Described as "HR".
+- **Contributor** — updates next scheduled class, curriculum, placement details, and
+  possibly public website content.
+- **Member** — reviews and approves what a Contributor entered.
+
+Confirmed: all sit under admin; one role per person (only admin acts across roles, and
+never as a student); the three new roles are organisation-wide, not batch-scoped.
+
+**Two decisions block this work**, and both determine whether the stated one-week
+launch is achievable:
+
+1. Does approval **block** the change, or happen **after** it? Review-after is a
+   fraction of the work; approval-first does not fit in a week.
+2. Does a Contributor need to edit **public website copy**? That means building a
+   content editor — likely the largest single item, and it does not fit in a week.
+
+Also unresolved: whether Viewers are MOP staff or external company HR (a privacy
+question, not just permissions — recommend an anonymised or opt-in view if external),
+and whether teachers keep attendance.
+
+A shareable summary of all six roles was produced for Bala:
+<https://claude.ai/code/artifact/2fa3f337-6e8b-40bf-a65f-2283840a9d35>
+
+### 3. Before real students use the live site
+
+- **Change `Teacher@123` and `Student@123`.** They are guessable and the site is on
+  the public internet. Remove the demo accounts entirely before enrolment.
+- **SMTP is unconfigured**, so password resets and notifications only reach the Render
+  logs. Nobody can actually recover an account.
+- **Uploaded notes PDFs vanish on redeploy** — Render's free tier has no persistent
+  disk. Needs a paid disk or object storage (S3 / Cloudflare R2).
+- The free database is time-limited and the free web service sleeps when idle, so the
+  first request after a quiet period takes 30-60 seconds.
+- A test enquiry named **"Deploy Check"** may still be in Admin > Enquiries.
+
+### 4. Still single-programme internally
+
+`TOTAL_CURRICULUM_DAYS` is a global 55 and `curriculum.py` seeds the Python day 1-11
+topics into *every* new batch regardless of course type. **A Java batch created today
+gets 55 days of Python topics.** The public site advertises three programmes, so this
+is the gap between what is sold and what the platform does. Fixing it needs a `Course`
+entity, per-course curriculum templates and a per-course day count. The user also
+noted "every course is 45 days" for later.
+
+### 5. Phases 3 and 4 — no longer being built
+
+The ATS resume builder and AI interviewer are **being bought in externally** and will
+be connected rather than built. The student dashboard still shows "Mock interviews"
+and "Resume score" placeholder cards pointing at those phases.
+
+`ANTHROPIC_API_KEY` remains empty and is no longer on the critical path.
