@@ -42,13 +42,27 @@ export default {
           600: '#D44E04',
           700: '#A93E03',
         },
+        // Warm off-white ground for the public site, carried over from the
+        // reference design. The signed-in app stays on navy-50.
+        paper: '#FAFAF7',
+        // Brand teal and orange both fall below 4.5:1 against that ground at
+        // small sizes, so these deepened variants carry small text and filled
+        // buttons. The brand values stay for display type, where 3:1 is the bar.
+        'teal-ink': '#00787C',
+        'orange-ink': '#C24A04',
       },
       fontFamily: {
         sans: ['Inter', 'Segoe UI', 'system-ui', '-apple-system', 'sans-serif'],
+        // Instrument Serif italic is the public site's accent face. It has four
+        // jobs and no others: the second clause of a section heading, course
+        // card index numerals, display statistics, and statistic suffixes.
+        // It never sets body copy — quotes included.
+        serif: ['Instrument Serif', 'Georgia', 'Times New Roman', 'serif'],
       },
       boxShadow: {
         card: '0 1px 3px rgba(11,30,70,0.08), 0 1px 2px rgba(11,30,70,0.04)',
         lift: '0 4px 16px rgba(11,30,70,0.10)',
+        pop: '0 14px 34px rgba(11,30,70,0.08)',
       },
     },
   },

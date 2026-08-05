@@ -1,46 +1,50 @@
 /*
  * ============================================================================
- *  LOGO SLOT — swap the text mark for an image here.
+ *  LOGO — the real mark, in three variants.
  * ============================================================================
- *  Right now this renders the text wordmark "MOP CAREERS".
+ *  All three are derived from the single supplied artwork:
  *
- *  To use a real logo instead:
- *    1. Drop the file at  frontend/src/assets/logo.png  (or .svg)
- *    2. Uncomment the import below.
- *    3. Set USE_IMAGE_LOGO = true.
+ *    logo.png        full lockup, cropped tight, transparent
+ *    logo-white.png  navy recoloured to white, for dark grounds
+ *    logo-mark.png   the M-O-P rocket alone, no wordmark
  *
- *  Nothing else in the app needs to change — every screen renders <Logo />.
+ *  Pick with `variant`:
+ *    dark   (default) full colour lockup — use on white/paper
+ *    light            reversed lockup — use on navy
+ *    mark             icon only — tight spaces and favicons
+ *
+ *  The lockup is roughly 3.6:1, so it is sized by HEIGHT everywhere and the
+ *  width follows. The tagline inside the artwork stops being readable below
+ *  about 36px tall — use `mark` rather than shrinking the lockup further.
  * ============================================================================
  */
 
-// import logoImage from '../assets/logo.png';
-const logoImage = null;
-const USE_IMAGE_LOGO = false;
+import logoColour from '../assets/logo.png';
+import logoWhite from '../assets/logo-white.png';
+import logoMark from '../assets/logo-mark.png';
 
 const SIZES = {
-  sm: { text: 'text-base', img: 'h-7' },
-  md: { text: 'text-xl', img: 'h-9' },
-  lg: { text: 'text-3xl sm:text-4xl', img: 'h-12' },
+  sm: 'h-7',
+  md: 'h-9',
+  lg: 'h-12 sm:h-14',
+  xl: 'h-16 sm:h-20',
+};
+
+const SOURCES = {
+  dark: logoColour,
+  light: logoWhite,
+  mark: logoMark,
 };
 
 export default function Logo({ size = 'md', variant = 'dark', className = '' }) {
-  const s = SIZES[size] || SIZES.md;
-
-  if (USE_IMAGE_LOGO && logoImage) {
-    return <img src={logoImage} alt="MOP Careers" className={`${s.img} w-auto ${className}`} />;
-  }
-
-  // "MOP" takes the accent colour, "CAREERS" the neutral one.
-  const mop = variant === 'light' ? 'text-white' : 'text-navy';
-  const careers = variant === 'light' ? 'text-teal-200' : 'text-teal';
+  const height = SIZES[size] || SIZES.md;
+  const src = SOURCES[variant] || SOURCES.dark;
 
   return (
-    <span
-      className={`font-extrabold tracking-tight ${s.text} ${className}`}
-      aria-label="MOP Careers"
-    >
-      <span className={mop}>MOP</span>
-      <span className={careers}> CAREERS</span>
-    </span>
+    <img
+      src={src}
+      alt="MOP Careers — Your Future. Our Priority."
+      className={`${height} w-auto ${className}`}
+    />
   );
 }

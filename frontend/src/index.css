@@ -1,6 +1,41 @@
+/*
+ * Self-hosted fonts. Both are SIL Open Font License, latin subset, served from
+ * our own bundle rather than a CDN — no third-party request on page load and
+ * nothing to break if Google Fonts is blocked.
+ *
+ * Inter is a VARIABLE font: this one file covers weights 400-800, which is why
+ * there is a single @font-face rather than five. Note that `Inter` was already
+ * named in tailwind.config.js before this existed, so every screen in the app
+ * had been silently falling back to Segoe UI.
+ */
+@font-face {
+  font-family: 'Inter';
+  font-style: normal;
+  font-weight: 400 800;
+  font-display: swap;
+  src: url('./assets/fonts/inter-latin-var.woff2') format('woff2');
+}
+@font-face {
+  font-family: 'Instrument Serif';
+  font-style: italic;
+  font-weight: 400;
+  font-display: swap;
+  src: url('./assets/fonts/instrumentserif-italic-latin.woff2') format('woff2');
+}
+
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
+
+/*
+ * Placements ticker. The track holds the list twice, so translating by exactly
+ * -50% lands on an identical frame and the loop has no visible seam.
+ * Applied with `motion-safe:` so it never runs for reduced-motion visitors.
+ */
+@keyframes mop-ticker {
+  from { transform: translateX(0); }
+  to   { transform: translateX(-50%); }
+}
 
 @layer base {
   html {
@@ -61,6 +96,41 @@
   }
   .badge-warn {
     @apply badge bg-orange-100 text-orange-700;
+  }
+
+  /* ---------------------------------------------------------------------
+   * Public marketing site only. The signed-in app keeps the classes above.
+   * ------------------------------------------------------------------ */
+
+  /* The accent face. Kept as one class so its four uses stay consistent. */
+  .ser {
+    @apply font-serif italic font-normal tracking-normal;
+  }
+
+  .eyebrow {
+    @apply inline-flex items-center gap-2 text-[0.7rem] font-bold uppercase
+           tracking-[0.14em] text-orange-ink;
+  }
+  .eyebrow::before {
+    @apply h-0.5 w-[18px] rounded-sm bg-orange content-[''];
+  }
+
+  .pbtn {
+    @apply inline-flex items-center justify-center gap-2 whitespace-nowrap rounded-full
+           border border-transparent px-6 py-3 text-sm font-semibold transition
+           hover:-translate-y-px disabled:cursor-not-allowed disabled:opacity-50;
+  }
+  .pbtn-primary  { @apply pbtn bg-orange-ink text-white hover:bg-orange-700; }
+  .pbtn-navy     { @apply pbtn bg-navy text-white hover:bg-navy-600; }
+  .pbtn-outline  { @apply pbtn border-navy-100 bg-white text-navy hover:border-teal hover:text-teal-ink; }
+  .pbtn-white    { @apply pbtn bg-white text-navy hover:bg-navy-50; }
+  .pbtn-clear    { @apply pbtn border-white/25 text-white hover:bg-white/10; }
+  .pbtn-wa       { @apply pbtn bg-[#1DA851] text-white hover:bg-[#16883F]; }
+  .pbtn-sm       { @apply px-4 py-2 text-[0.85rem]; }
+
+  .pcard {
+    @apply flex h-full flex-col rounded-[22px] border border-navy-100 bg-white p-6
+           transition hover:-translate-y-0.5 hover:border-teal hover:shadow-pop;
   }
 
   .table-wrap {

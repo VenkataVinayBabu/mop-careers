@@ -16,6 +16,7 @@ import AdminEnquiries from './pages/admin/Enquiries';
 import AdminFees from './pages/admin/Fees';
 import AdminPlacements from './pages/admin/Placements';
 import DoubtsInbox from './pages/staff/DoubtsInbox';
+import Courses from './pages/public/Courses';
 import Landing from './pages/public/Landing';
 
 import BatchWorkspace from './pages/teacher/BatchWorkspace';
@@ -67,6 +68,9 @@ export default function App() {
       {/* Public marketing site — no auth. Signed-in users get sent to their
           own home so the landing page is not a dead end for them. */}
       <Route path="/" element={<PublicHome />} />
+      {/* Courses stays reachable whether or not you are signed in — unlike the
+          landing page, it is a destination rather than a dead end. */}
+      <Route path="/courses" element={<Courses />} />
       <Route path="/login" element={<Login />} />
       <Route path="/forgot-password" element={<ForgotPassword />} />
       <Route path="/reset-password" element={<ResetPassword />} />
