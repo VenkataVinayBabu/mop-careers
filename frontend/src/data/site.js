@@ -75,7 +75,7 @@ export const MENTORS = [
   { name: 'Balaram', former: 'Ex-TCS · 8 yrs', focus: 'Full stack development. Mentors the web and Java tracks.' },
   { name: 'Kuppola Rajesh', former: 'Ex-AT&T · 6 yrs', focus: 'Python full stack — backend, APIs and deployment.' },
   { name: 'Josna P', former: 'Ex-Infosys · 8 yrs', focus: 'Data analysis. SQL, reporting and analytics workflows.' },
-  { name: 'Bharath David', former: '10 yrs experience', focus: 'Data science and machine learning.' },
+  { name: 'Bharath David', former: '10 yrs experience', focus: 'Data science and machine learning, from fundamentals to deployment.' },
 ];
 
 /* ----------------------------------------------------------------- stories */

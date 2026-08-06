@@ -62,7 +62,7 @@ const STEP_TINTS = [
 ];
 
 const PILLARS = [
-  { t: 'Live mentor-led classes', d: 'Taught live by working engineers, with recordings, notes and doubt support between sessions.',
+  { t: 'Live mentor-led classes', d: 'Taught live by working engineers, with recordings, notes and doubt support between sessions so a missed class is never a lost one.',
     icon: 'M12 3 2 8l10 5 10-5-10-5ZM6 10.5V16c0 1.5 3 3 6 3s6-1.5 6-3v-5.5', tint: 'bg-teal-50 text-teal-ink' },
   { t: 'AI mock interviews', d: 'Practise as often as you like against real hiring rounds, then sit live mocks with a mentor before the real thing.',
     icon: 'M12 2a3 3 0 0 0-3 3v6a3 3 0 0 0 6 0V5a3 3 0 0 0-3-3ZM19 10v1a7 7 0 0 1-14 0v-1M12 18v4', tint: 'bg-orange-50 text-orange-ink' },
@@ -285,7 +285,10 @@ export default function Landing() {
                   </svg>
                 </span>
                 <h3 className="text-[1.05rem] font-bold tracking-tight text-navy">{p.t}</h3>
-                <p className="mt-2 text-[0.87rem] text-navy-500">{p.d}</p>
+                {/* Four lines reserved. Copy is written to fill four at desktop
+                    width, but line counts move with viewport and font size, so
+                    copy length alone will not hold the cards level. */}
+                <p className="mt-2 text-[0.87rem] text-navy-500 sm:min-h-[5.22rem]">{p.d}</p>
               </div>
             ))}
           </div>
@@ -318,7 +321,9 @@ export default function Landing() {
                 <div className="p-5">
                   <p className="text-[0.68rem] font-bold uppercase tracking-[0.1em] text-teal-ink">{m.former}</p>
                   <h3 className="mt-1.5 text-base font-bold tracking-tight text-navy">{m.name}</h3>
-                  <p className="mt-1.5 text-[0.81rem] text-navy-500">{m.focus}</p>
+                  {/* Two lines reserved, so a mentor with a shorter speciality
+                      does not leave their card looking half-finished. */}
+                  <p className="mt-1.5 text-[0.81rem] text-navy-500 sm:min-h-[2.43rem]">{m.focus}</p>
                 </div>
               </article>
             ))}
@@ -342,8 +347,15 @@ export default function Landing() {
                 <div className="text-[0.82rem] tracking-[0.12em] text-orange" aria-label="Five out of five">
                   &#9733;&#9733;&#9733;&#9733;&#9733;
                 </div>
-                {/* Quotes stay in the sans — the serif is for headings and figures. */}
-                <blockquote className="mt-3.5 text-[0.9rem] text-navy">&ldquo;{s.quote}&rdquo;</blockquote>
+                {/* Quotes stay in the sans — the serif is for headings and figures.
+                    Height is RESERVED rather than the copy being padded: these are
+                    words attributed to named people, and stretching someone's
+                    testimonial to fill a layout is putting words in their mouth.
+                    Real quotes will arrive at whatever length they arrive at, so
+                    the card has to absorb that. */}
+                <blockquote className="mt-3.5 text-[0.9rem] text-navy sm:min-h-[5.4rem]">
+                  &ldquo;{s.quote}&rdquo;
+                </blockquote>
                 <div className="mt-auto flex items-center gap-3 pt-6">
                   <span className="grid h-10 w-10 shrink-0 place-items-center rounded-full bg-navy-100 text-[0.78rem] font-bold text-navy-500">
                     {s.initials}
