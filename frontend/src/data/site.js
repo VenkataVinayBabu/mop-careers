@@ -26,15 +26,19 @@
    then, a blank value makes the UI fall back gracefully rather than render a
    broken link. */
 export const SITE = {
-  // Digits only, including country code, e.g. '919876543210'.
-  // EMPTY until MOP supplies the real number — the WhatsApp buttons fall back
-  // to the enquiry form rather than opening a chat with nobody.
+  // Digits only, including country code, e.g. '919890813235'.
+  // EMPTY until MOP confirms which number takes WhatsApp — the buttons fall
+  // back to the enquiry form rather than opening a chat with nobody. Do not
+  // assume it is the phone number below; a landline or a number without
+  // WhatsApp installed gives the visitor a dead end.
   whatsapp: '',
   whatsappMessage: "Hi MOP Careers, I'd like to know more about your courses.",
 
-  phone: '',
-  email: '',
-  address: '',
+  // Supplied by MOP. Note these differ from what mopcareers.in currently
+  // publishes (hello@mopcareers.in, Whitefield) — worth reconciling.
+  phone: '+91 98908 13235',
+  email: 'hello@mopcareers.com',
+  address: 'HSR Layout, Bengaluru — Karnataka 560102',
 
   announcement: 'Applications open for the next cohort',
   announcementTag: 'Now enrolling',

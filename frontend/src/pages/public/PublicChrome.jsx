@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react';
 import { Link, useLocation, useNavigate } from 'react-router-dom';
 
 import Logo from '../../components/Logo';
+import { LIVE_COURSES } from '../../data/courses';
 import { SITE, whatsappLink } from '../../data/site';
 
 /*
@@ -159,12 +160,23 @@ export function PublicFooter() {
             <h4 className="mb-4 text-[0.7rem] font-semibold uppercase tracking-[0.13em] text-white">
               Courses
             </h4>
+            {/* Driven from the catalogue rather than hand-listed, so adding or
+                unpublishing a course updates the footer on its own. Every entry
+                points at /courses today; once the detail pages land these become
+                /courses/{slug} and nothing else here changes. */}
             <ul className="grid gap-2.5">
-              <li><Link to="/courses" className="transition hover:text-teal-300">All courses</Link></li>
-              <li><Link to="/courses" className="transition hover:text-teal-300">Data Science with AI</Link></li>
-              <li><Link to="/courses" className="transition hover:text-teal-300">Gen AI &amp; Agentic AI</Link></li>
-              <li><Link to="/courses" className="transition hover:text-teal-300">Full Stack Web Dev</Link></li>
-              <li><Link to="/courses" className="transition hover:text-teal-300">Java Full Stack</Link></li>
+              {LIVE_COURSES.map((c) => (
+                <li key={c.slug}>
+                  <Link to="/courses" className="transition hover:text-teal-300">
+                    {c.name}
+                  </Link>
+                </li>
+              ))}
+              <li className="pt-1">
+                <Link to="/courses" className="font-semibold text-white transition hover:text-teal-300">
+                  All courses &rarr;
+                </Link>
+              </li>
             </ul>
           </div>
 
@@ -184,11 +196,31 @@ export function PublicFooter() {
             <h4 className="mb-4 text-[0.7rem] font-semibold uppercase tracking-[0.13em] text-white">
               Contact
             </h4>
-            {/* Blank values render as "pending" rather than an empty line or a
-                link that goes nowhere. */}
+            {/* Email and phone are real links, not plain text — on a phone that
+                is the difference between one tap and copying it out by hand.
+                A blank value still renders as "pending" rather than a dead link. */}
             <ul className="grid gap-2.5">
-              <li>{SITE.email || 'Email — pending'}</li>
-              <li>{SITE.phone || 'Phone — pending'}</li>
+              <li>
+                {SITE.email ? (
+                  <a href={`mailto:${SITE.email}`} className="transition hover:text-teal-300">
+                    {SITE.email}
+                  </a>
+                ) : (
+                  'Email — pending'
+                )}
+              </li>
+              <li>
+                {SITE.phone ? (
+                  <a
+                    href={`tel:${SITE.phone.replace(/[^\d+]/g, '')}`}
+                    className="transition hover:text-teal-300"
+                  >
+                    {SITE.phone}
+                  </a>
+                ) : (
+                  'Phone — pending'
+                )}
+              </li>
               <li>
                 {wa ? (
                   <a href={wa} target="_blank" rel="noreferrer" className="transition hover:text-teal-300">
