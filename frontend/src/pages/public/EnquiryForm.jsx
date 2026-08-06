@@ -3,6 +3,7 @@ import { useState } from 'react';
 import { api, errorMessage } from '../../api/client';
 import { Spinner } from '../../components/ui';
 import { COURSE_OPTIONS } from '../../data/courses';
+import useSlowRequest from '../../hooks/useSlowRequest';
 
 /*
  * The only unauthenticated write on the API. The endpoint saves the enquiry
@@ -16,6 +17,7 @@ export default function EnquiryForm() {
     name: '', phone: '', email: '', programme: '', message: '',
   });
   const [status, setStatus] = useState({ state: 'idle', text: '' });
+  const slow = useSlowRequest(status.state === 'sending');
 
   const set = (k) => (e) => setForm({ ...form, [k]: e.target.value });
 
@@ -102,6 +104,15 @@ export default function EnquiryForm() {
         <div role="alert"
              className="mt-4 rounded-lg border border-orange-200 bg-orange-50 px-4 py-3 text-sm font-medium text-orange-700">
           {status.text}
+        </div>
+      )}
+
+      {/* The API sleeps when idle; a silent minute reads as a broken form. */}
+      {slow && (
+        <div role="status"
+             className="mt-4 rounded-lg border border-teal-200 bg-teal-50 px-4 py-3 text-sm text-teal-700">
+          Still sending — the first message after a quiet period can take up to a minute.
+          Your enquiry has not been lost.
         </div>
       )}
 

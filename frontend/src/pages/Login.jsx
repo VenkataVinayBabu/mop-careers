@@ -1,12 +1,13 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { Link, Navigate, useNavigate } from 'react-router-dom';
 
-import { errorMessage } from '../api/client';
+import { errorMessage, warmUp } from '../api/client';
 import Logo from '../components/Logo';
 import PasswordInput from '../components/PasswordInput';
 import { HOME_FOR_ROLE } from '../components/ProtectedRoute';
 import { Spinner } from '../components/ui';
 import { useAuth } from '../context/AuthContext';
+import useSlowRequest from '../hooks/useSlowRequest';
 
 export default function Login() {
   const { login, user, loading } = useAuth();
@@ -14,6 +15,13 @@ export default function Login() {
   const [form, setForm] = useState({ email: '', password: '' });
   const [error, setError] = useState('');
   const [busy, setBusy] = useState(false);
+  const slow = useSlowRequest(busy);
+
+  // Start waking the API while the user is still typing, so signing in does
+  // not have to pay for the cold start.
+  useEffect(() => {
+    warmUp();
+  }, []);
 
   if (loading) return null;
   // Already signed in — bounce to the right home.
@@ -84,6 +92,18 @@ export default function Login() {
                 className="mb-5 rounded-lg border border-orange-200 bg-orange-50 px-4 py-3 text-sm font-medium text-orange-700"
               >
                 {error}
+              </div>
+            )}
+
+            {/* The API sleeps when idle. Say so, rather than leaving someone
+                staring at a spinner wondering if it has broken. */}
+            {slow && !error && (
+              <div
+                role="status"
+                className="mb-5 rounded-lg border border-teal-200 bg-teal-50 px-4 py-3 text-sm text-teal-700"
+              >
+                Waking up the server — the first sign-in after a quiet period can take up to
+                a minute. Please hold on.
               </div>
             )}
 

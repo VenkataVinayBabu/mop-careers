@@ -1,6 +1,7 @@
 import { useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 
+import { warmUp } from '../../api/client';
 import CountUp from '../../components/CountUp';
 import { FEATURED_COURSES, LIVE_COURSES, OTHER_COURSES } from '../../data/courses';
 import {
@@ -77,6 +78,9 @@ export default function Landing() {
 
   useEffect(() => {
     document.title = 'MOP Careers — Your Future. Our Priority.';
+    // Wake the sleeping API while the visitor reads, so the enquiry form does
+    // not have to pay for the cold start when they get to it.
+    warmUp();
   }, []);
 
   const openCourses = () => navigate('/courses');
