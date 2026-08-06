@@ -85,6 +85,9 @@ export default function Courses() {
                   index={LIVE_COURSES.indexOf(c)}
                   onOpen={toEnquiry}
                   actionLabel="Enquire"
+                  /* Every card here is the reason for the page, so all of them
+                     keep a named action rather than a bare arrow. */
+                  showActionLabel
                 />
               ))}
             </div>

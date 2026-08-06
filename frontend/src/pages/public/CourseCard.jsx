@@ -17,6 +17,11 @@ export default function CourseCard({
   featured = false,
   onOpen,
   actionLabel = 'Course details',
+  // The two lead courses carry a written link; the rest are arrow-only, so the
+  // eye lands on the two MOP wants to sell. Defaults to whether the card is
+  // featured, but the courses page overrides it — there, every card is the
+  // point of the page and deserves a named action.
+  showActionLabel = featured,
 }) {
   const tint = featured ? TINTS[index % 2] : '';
 
@@ -57,9 +62,23 @@ export default function CourseCard({
         {course.name}
       </h3>
 
-      <p className="mt-2.5 text-[0.89rem] text-navy-500">{course.summary}</p>
+      {/* Reserve three lines on the grid cards. Copy is written to fill three
+          at desktop width, but the count shifts with viewport and font size —
+          the floor keeps every card's pills row on the same line regardless,
+          so a short description can never leave one card looking clipped. */}
+      <p
+        className={`mt-2.5 text-[0.89rem] text-navy-500 ${
+          featured ? '' : 'sm:min-h-[4.3rem]'
+        }`}
+      >
+        {course.summary}
+      </p>
 
-      <div className="mt-4 flex flex-wrap gap-1.5">
+      {/* On arrow-only cards the arrow rides in the skills row rather than
+          being pinned to the card's foot. Cards in a grid stretch to a common
+          height, so a pinned footer left a hole between the pills and the
+          arrow on every short card. */}
+      <div className="mt-4 flex flex-wrap items-center gap-1.5">
         {course.skills.map((s) => (
           <span
             key={s}
@@ -68,23 +87,42 @@ export default function CourseCard({
             {s}
           </span>
         ))}
+
+        {!showActionLabel && (
+          /* With no label the arrow IS the control, so it carries the course
+             name — otherwise this is six identical unlabelled arrows to anyone
+             using a keyboard or a screen reader. */
+          <button
+            type="button"
+            onClick={onOpen}
+            aria-label={`${actionLabel}: ${course.name}`}
+            className="ml-auto grid h-9 w-9 shrink-0 place-items-center rounded-full border border-navy-100 bg-white text-navy transition hover:border-navy hover:bg-navy hover:text-white"
+          >
+            <span aria-hidden="true">&rarr;</span>
+          </button>
+        )}
       </div>
 
-      <div className="mt-auto flex items-center justify-between gap-4 pt-6">
+      {showActionLabel && (
+        /* Label and arrow are ONE button, so the arrow is clickable too — as a
+           separate element it either did nothing on hover, or became a second
+           tab stop doing the same job. The whole row is the target. */
         <button
           type="button"
           onClick={onOpen}
-          className="text-[0.84rem] font-semibold text-teal-ink transition hover:text-teal-700"
+          className="group/action mt-auto flex w-full items-center justify-between gap-4 pt-6 text-left"
         >
-          {actionLabel}
+          <span className="text-[0.84rem] font-semibold text-teal-ink transition group-hover/action:text-teal-700">
+            {actionLabel}
+          </span>
+          <span
+            aria-hidden="true"
+            className="grid h-9 w-9 shrink-0 place-items-center rounded-full border border-navy-100 bg-white text-navy transition group-hover/action:border-navy group-hover/action:bg-navy group-hover/action:text-white"
+          >
+            &rarr;
+          </span>
         </button>
-        <span
-          aria-hidden="true"
-          className="grid h-9 w-9 shrink-0 place-items-center rounded-full border border-navy-100 bg-white text-navy"
-        >
-          &rarr;
-        </span>
-      </div>
+      )}
     </article>
   );
 }

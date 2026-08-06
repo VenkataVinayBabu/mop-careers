@@ -87,7 +87,10 @@ export const COURSES = [
     ctcHigh: null,
     summary:
       'Core Java and Spring Boot with a modern front end — the stack the large services companies hire on.',
-    skills: ['Java', 'Spring Boot', 'React', 'Microservices'],
+    // 'Microservices' is long enough to wrap this row onto two lines, which
+    // pushed the card's arrow onto a line of its own. MySQL is shorter, and
+    // the database belongs in a full stack list anyway.
+    skills: ['Java', 'Spring Boot', 'React', 'MySQL'],
     forWhom: 'Freshers targeting enterprise and services-company roles.',
   },
   {
@@ -133,7 +136,7 @@ export const COURSES = [
     ctcAvg: '₹9 LPA avg',
     ctcHigh: null,
     summary:
-      'Penetration testing, security operations and the certification groundwork employers screen for.',
+      'Penetration testing, security operations and incident response, plus the certification groundwork employers screen for.',
     skills: ['Pentesting', 'SOC', 'SIEM', 'Networking'],
     forWhom: 'Freshers and IT staff moving into security roles.',
   },
