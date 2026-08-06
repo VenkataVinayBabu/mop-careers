@@ -4,8 +4,10 @@ Web platform for **MOP Careers**, a technology training institute. Two faces: a 
 marketing site (no auth) and an authenticated platform (admin / teacher / student).
 
 > **Read this first if you are picking the project up.** Phases 1, 2 and 5 are built,
-> verified and **deployed live**. The current open work is a public-website redesign.
-> Jump to **"Open threads"** at the bottom — that is the live to-do list.
+> verified and **deployed live**, and the public site has been rebuilt to a new design.
+> The current open work is course detail pages and an admin area for managing the
+> public site's content. Jump to **"Open threads"** at the bottom — that is the live
+> to-do list.
 >
 > - Live site: <https://mop-careers.onrender.com>
 > - Live API: <https://mop-careers-api.onrender.com> (`/docs` for the API browser)
@@ -293,7 +295,8 @@ Python 3.13.2 · Node v22.17.0 (npm 10.9.2) · Git 2.50.1 · PostgreSQL 17.9
   programme. MOP actually runs several — confirmed so far: **Python Full Stack, Java
   Full Stack, Gen AI** (DevOps was mentioned but not confirmed, so it is not listed).
   - The public site now lists all three, each with its own description, topic list and
-    "who it's for". The catalogue lives in one file, `frontend/src/data/programmes.js` —
+    "who it's for". The catalogue lived in one file, `frontend/src/data/programmes.js`
+    (since replaced by `courses.js` in the site rebuild below) —
     adding a programme is a single entry, nothing else changes.
   - **Durations and start dates are deliberately not shown anywhere on the public
     site**, per instruction. Verified with a regex sweep of the rendered page.
@@ -340,6 +343,97 @@ Python 3.13.2 · Node v22.17.0 (npm 10.9.2) · Git 2.50.1 · PostgreSQL 17.9
     then the published `Admin@123` was replaced. **Admin@123 no longer works in
     production**; teacher and student demo passwords are unchanged.
 
+- **Public site rebuilt to a new design ✅ live.** MOP supplied the real logo and an
+  AI-generated prototype (Emergent) as the design direction, of which the
+  `index-home.html` variant was chosen. The structure and typography follow it; the
+  colour does not.
+  - **Colour was remapped to MOP's brand.** The reference runs blue `#2563EB` and
+    amber `#F59E0B` on warm off-white. Keeping that would have put the navy-and-teal
+    logo on a borrowed palette, so: near-black → navy, blue → teal, amber → orange.
+    The warm ground `#FAFAF7` was kept and is the new `paper` token.
+  - **Two deepened variants exist purely for contrast**: `teal-ink #00787C` and
+    `orange-ink #C24A04`. Brand teal and brand orange both fall below 4.5:1 against
+    the cream ground at small sizes, so small text and filled buttons use these; the
+    brand values stay for display type, where 3:1 is the bar. Fourteen pairings were
+    checked and all pass.
+  - **Typography: Inter (variable, 400–800) + Instrument Serif italic**, both
+    self-hosted `.woff2` under `src/assets/fonts` — latin subset, SIL OFL, no CDN
+    request and no npm dependency. The serif has **four jobs and no others**: the
+    second clause of a section heading, course card index numerals, display
+    statistics, and statistic suffixes. It never sets body copy — quotes included.
+  - **`Inter` had never actually been loading.** It was named in `tailwind.config.js`
+    from the start with no `@font-face` anywhere, so every screen in the app —
+    including all three dashboards — had been silently falling back to Segoe UI.
+  - **The logo is one supplied PNG, turned into three variants** (`logo.png`,
+    `logo-white.png`, `logo-mark.png`) plus a favicon. Background removal was done by
+    treating each pixel as a blend along one of two lines in colour space
+    (background→navy, background→teal) and recovering the coverage, which gives true
+    alpha and no grey fringing — a plain colour-key leaves halos. The tagline's left
+    rule runs *underneath* the P and overlaps it horizontally, so the mark could not
+    be isolated with a vertical crop; it was removed as a connected component
+    instead. `index.html` had never linked a favicon at all.
+  - New public routes: `/` and `/courses`. Shared header/footer live in
+    `pages/public/PublicChrome.jsx`.
+  - Requested changes, all live: only the nav is sticky (it was pinned at `top:36px`
+    to clear the announcement bar, which left it visibly misaligned on scroll-up);
+    WhatsApp removed from the navbar but kept as the floating button and in the
+    contact block; Login routes to `/login` and on to each role's home; statistics
+    count up from zero on scroll into view; the two lead courses carry a written
+    "Course details" link while the other six are arrow-only.
+
+  Decisions worth remembering:
+  - **Content lives in `src/data/courses.js` and `src/data/site.js`, deliberately
+    shaped like the API rows they will become.** When courses and site settings move
+    into the database, the swap is a change of import, not a rewrite of the pages.
+  - **`published: false` on a course removes it everywhere** — listing, filter,
+    enquiry dropdown, and every count, which are all derived rather than hardcoded.
+    That is the escape hatch for anything MOP turns out not to run.
+  - **Card heights are reserved with `min-h`, scoped to `sm:` and up.** Copy length
+    alone cannot hold a row level, because line counts move with viewport width and
+    font size. Below `sm` everything is single column, where there is nothing to
+    align against and a reservation only adds dead space.
+  - **A reservation is a floor, not a ceiling.** Measured: a 300-character
+    testimonial takes the stories row from 238px to 368px and opens a 130px gap under
+    the shorter cards. Nothing breaks; it just looks sparse. The fix belongs at the
+    input — a ~200 character limit with a live counter — not at the render.
+  - **Learner quotes are never padded to fit.** Those are words attributed to named
+    people; stretching a testimonial to fill a layout is inventing what they said.
+    Pillar and mentor copy *was* lengthened, because MOP owns those words.
+  - **`line-clamp` was rejected for testimonials.** Silently swallowing half of what
+    someone typed looks like a broken site to whoever entered it.
+  - **The arrow on a card is a real button whenever the text label is absent**, and
+    carries the course name — otherwise it is six identical unlabelled arrows to
+    anyone using a keyboard or screen reader. On the two lead cards the label and
+    arrow are a single button, so the arrow is clickable without adding a second tab
+    stop.
+
+  Bugs found and fixed along the way:
+  - **Login always failed on the first attempt after a quiet period.** The axios
+    client had a 20s timeout; the free Render backend takes 30–60s to wake. The retry
+    only ever worked because the failed attempt had woken the server. Timeout is now
+    75s, `warmUp()` pings `/health` from the landing and login pages so the server
+    starts waking while the visitor reads, and a notice appears after 6s explaining
+    the wait. A silent minute in front of a spinner reads as broken.
+  - **`CountUp` sat at zero forever in dev.** It used a `useRef` as a run-once guard,
+    but refs survive StrictMode's mount→unmount→remount: the first pass claimed the
+    guard and started the animation, the cleanup cancelled it, and the second pass
+    refused to run. `observer.disconnect()` inside the callback already gives
+    run-once semantics, so the ref just had to go.
+  - **A second `colors` key in `tailwind.config.js` silently wiped the brand
+    palette** — a duplicate key in the same object literal, so navy/teal/orange
+    vanished and the build failed on `bg-navy-50`. Merge into the existing block.
+
+  Verification: build clean; no horizontal overflow at 375, 768, 1280 or 1440; both
+  fonts confirmed genuinely loading rather than falling back (the serif measures
+  220.5px where Georgia would be 282.6px); count-up lands exactly on its targets;
+  course filter tested across every category including the singular "1 course";
+  mobile menu, floating WhatsApp and the mobile CTA bar checked for collision; all
+  card sections confirmed uniform **on the deployed site**, not just locally.
+
+  A note on verifying deploys: matching the live bundle filename against a local
+  build hash does **not** work — Render compiles its own bundle and line-ending
+  conversion alone changes the hash. Check the deployed bundle's *contents* instead.
+
 ---
 
 ## Open threads
@@ -347,28 +441,90 @@ Python 3.13.2 · Node v22.17.0 (npm 10.9.2) · Git 2.50.1 · PostgreSQL 17.9
 Everything below is decided-but-not-built, or known-but-unresolved. This is the
 to-do list.
 
-### 1. Public website redesign — the current work
+### 1. Course detail pages — the next piece of work
 
-The user's words: *"Need lot of changes in public website."* Details were still being
-gathered when the previous session ended. What is already known:
+Clicking a course should open its own page, structured like
+`https://ai-data-science-3.preview.emergentagent.com/data-science-with-ai.html`.
+That preview had gone to sleep and served only a loading shell, so **the reference
+was never actually seen** — wake it before starting.
 
-- **A logo exists** and needs adding. `frontend/src/components/Logo.jsx` has a marked
-  swap slot — drop the file in `frontend/src/assets/` and flip `USE_IMAGE_LOGO`.
-  Every screen picks it up at once.
-- The logo carries the tagline **"Your Future. Our Priority."**, which appears nowhere
-  on the site yet.
-- The logo's blue/teal differs slightly from the brand navy `#0B1E46` — worth
-  reconciling rather than having two blues.
-- **The Java Full Stack and Gen AI content is invented.** It was drafted as a
-  placeholder and flagged in `frontend/src/data/programmes.js`. It has never been
-  confirmed by MOP and must not go in front of real visitors as-is.
-- Outcomes figures (6-9 LPA, 4 interview rounds) are clearly-labelled placeholders.
-- The site has **no** photos, testimonials, address, phone number, map, social links,
-  trainer profiles or FAQ.
-- **Durations and start dates are deliberately absent** from the public site, per
-  instruction. Do not reintroduce them without asking.
+Eight pages at `/courses/{slug}`. The card action already routes through a single
+`onOpen` handler, and the footer's course list is generated, so wiring the slugs is
+a small change. The expensive part is content: overview, who it is for, module
+breakdown, tools, projects, eligibility, target roles and per-course FAQs, times
+eight. That is writing, not code, and it has to come from MOP.
 
-### 2. Six roles — blocked on Bala
+**Sequencing note:** if courses are going to be admin-managed (thread 2), build the
+detail page as a template driven by the same data shape rather than eight hardcoded
+pages, or the work gets done twice.
+
+### 2. Admin content management — Bala's request
+
+Bala's words, via the user: he wants to *"just fill a form"* to add or remove a
+course, a trainer or a story, change the fees, the WhatsApp number or the enquiry
+email. He does not write code. This is a normal thing to build: a **Website** section
+in the admin sidebar backed by real tables.
+
+Scope, in the order it should be built:
+
+1. **Site settings** — WhatsApp number, enquiry email, phone, address, socials,
+   announcement text. Small, low risk, and it proves the idea to Bala quickly.
+   (`ENQUIRY_EMAIL` is currently an env var, so changing it today needs a redeploy.)
+2. **Courses** — the biggest entity, and it carries the detail pages above.
+3. **Mentors, stories, companies** — same shape as each other, one pass.
+4. **Photos** — blocked on the storage decision below.
+
+Three things decided by this, not yet answered:
+
+- **The public site would start depending on the backend, which sleeps.** Today the
+  homepage is static and loads instantly. If it fetches content, the first visitor
+  after an idle period waits 30–60s at a blank page. Either the backend moves to a
+  paid always-on instance (~$7/mo), or we serve a last-known snapshot and refresh in
+  the background — more moving parts. **Recommended: pay the $7 when this is built.**
+- **Photos need object storage.** Mentor and student portraits, company logos.
+  Uploads currently go to local disk, which Render's free tier wipes on every deploy
+  — already true of the notes PDFs, and far more visible on a marketing site.
+  Cloudflare R2's free tier covers it.
+- **Live edits go live instantly.** Every item needs a published/unpublished switch
+  at minimum. This is also the natural home for the "Member approves what a
+  Contributor entered" idea in thread 3.
+
+**Also decided for this work:** the testimonial field gets a ~200 character limit
+with a live counter. A longer quote does not break the layout but drags the row
+taller and hollows out the other cards — constrain the input rather than truncating
+what someone wrote.
+
+### 3. Content that is live but unconfirmed
+
+The public site currently publishes several things nobody has verified:
+
+- **Cloud Computing and Cyber Security** appear only in the Emergent prototype. They
+  are **not** on mopcareers.in and MOP has not confirmed it runs them. Both are
+  flagged `confirmed: false` in `courses.js`; set `published: false` to remove them.
+- **Mentors, learner quotes and the placement figures** (1,050+ placements, ₹47.6L
+  highest, 500+ partners, 87%) are taken from mopcareers.in — MOP's own existing
+  claims, not invented here, but unverified against records. No student has been
+  asked for consent to be quoted on a new site.
+- **Contact details conflict across MOP's own properties.** The site now shows
+  `hello@mopcareers.com`, `+91 98908 13235`, HSR Layout Bengaluru. mopcareers.in
+  publishes `hello@mopcareers.in` and a Whitefield address. Both are live and
+  disagreeing.
+- **The WhatsApp number is still unknown.** `SITE.whatsapp` is empty, so the buttons
+  fall back to the enquiry form. Do **not** assume the phone number above takes
+  WhatsApp — a landline or a number without it hands the visitor a dead end.
+
+### 4. Domain
+
+MOP owns **mopcareers.com** — currently a GoDaddy "Launching Soon" placeholder. The
+decision between pointing that at Render, keeping mopcareers.in, or running both was
+deferred. Whenever it happens, three env vars must move with it or the site breaks
+quietly: backend `CORS_ORIGINS` and `FRONTEND_URL` (the latter appears in password
+reset emails), and frontend `VITE_API_URL` — which is **baked in at build time**, so
+saving it in the dashboard does nothing until the frontend is redeployed.
+
+Auto-deploy is confirmed **On Commit** for both `mop-careers` and `mop-careers-api`.
+
+### 5. Six roles — blocked on Bala
 
 Three roles exist (admin, teacher, student). Three more are specified but not built:
 
@@ -395,19 +551,27 @@ and whether teachers keep attendance.
 A shareable summary of all six roles was produced for Bala:
 <https://claude.ai/code/artifact/2fa3f337-6e8b-40bf-a65f-2283840a9d35>
 
-### 3. Before real students use the live site
+### 6. Before real students use the live site
 
+- **The free PostgreSQL database expires.** This is the only item here with an actual
+  deadline, and when it lapses the database is *deleted* — students, batches,
+  attendance, fees, placements, enquiries, all of it. Find the expiry date in the
+  Render dashboard under `mop-careers-db` and either upgrade or take backups. Treat
+  this as the most urgent thing on the whole list.
 - **Change `Teacher@123` and `Student@123`.** They are guessable and the site is on
   the public internet. Remove the demo accounts entirely before enrolment.
 - **SMTP is unconfigured**, so password resets and notifications only reach the Render
   logs. Nobody can actually recover an account.
 - **Uploaded notes PDFs vanish on redeploy** — Render's free tier has no persistent
   disk. Needs a paid disk or object storage (S3 / Cloudflare R2).
-- The free database is time-limited and the free web service sleeps when idle, so the
-  first request after a quiet period takes 30-60 seconds.
+- **The backend sleeps when idle** (30–60s to wake). Mitigated in the frontend — 75s
+  timeout, a warm-up ping, and a notice after 6s — but not solved. A free uptime
+  monitor hitting `/health` every 10 minutes keeps it awake; note Render allows 750
+  free instance-hours a month and 24/7 uptime burns about 730 of them. The static
+  site itself is CDN-served and does **not** sleep.
 - A test enquiry named **"Deploy Check"** may still be in Admin > Enquiries.
 
-### 4. Still single-programme internally
+### 7. Still single-programme internally
 
 `TOTAL_CURRICULUM_DAYS` is a global 55 and `curriculum.py` seeds the Python day 1-11
 topics into *every* new batch regardless of course type. **A Java batch created today
@@ -416,7 +580,7 @@ is the gap between what is sold and what the platform does. Fixing it needs a `C
 entity, per-course curriculum templates and a per-course day count. The user also
 noted "every course is 45 days" for later.
 
-### 5. Phases 3 and 4 — no longer being built
+### 8. Phases 3 and 4 — no longer being built
 
 The ATS resume builder and AI interviewer are **being bought in externally** and will
 be connected rather than built. The student dashboard still shows "Mock interviews"

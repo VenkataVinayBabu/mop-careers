@@ -1,14 +1,19 @@
 # MOP Careers
 
-Learning and placement platform for **MOP Careers**, a Python Full Stack bootcamp
-(45-day course + 45-day internship, 55 class days).
+Learning and placement platform for **MOP Careers**, a technology training institute
+running several career-track programmes with placement support.
 
 Two faces:
 
-- **Public site** at `/` — programme info, 55-day curriculum outline, outcomes and an
-  enquiry form. No login required.
+- **Public site** at `/` and `/courses` — the course catalogue, how Pay After
+  Placement works, outcomes, mentors, learner stories and an enquiry form. No login
+  required.
 - **Platform** — role-based app for admins, teachers and students. Login and
   forgot-password only; **there is no self-registration.**
+
+> The platform behind the login is still built around a single 55-day Python
+> curriculum, while the public site advertises eight courses. Closing that gap needs a
+> `Course` entity — see the open threads in [CLAUDE.md](CLAUDE.md).
 
 | | |
 |---|---|
@@ -193,9 +198,18 @@ frontend/
 **Secrets.** `.env` is gitignored; only `.env.example` is committed. No key is ever
 hardcoded.
 
-**Swapping in a logo.** The wordmark lives in one place —
-`frontend/src/components/Logo.jsx`. Drop an image at `src/assets/logo.png`,
-uncomment the import, and set `USE_IMAGE_LOGO = true`. Nothing else changes.
+**The logo.** `frontend/src/components/Logo.jsx` renders it everywhere, in three
+variants — `dark` (full colour lockup), `light` (reversed, for navy grounds) and
+`mark` (the rocket alone). All three are derived from one supplied file and live in
+`src/assets/`. The lockup is about 3.6:1, so it is sized by **height** and the width
+follows; below roughly 36px tall the tagline stops being readable, so use `mark`
+rather than shrinking the lockup further.
+
+**Fonts are self-hosted.** Inter (variable, 400–800) and Instrument Serif italic as
+`.woff2` under `src/assets/fonts` — latin subset, SIL Open Font License. No CDN
+request, no npm dependency. Instrument Serif is the public site's accent face and has
+four jobs only: the second clause of a section heading, course card index numerals,
+display statistics, and statistic suffixes. It never sets body copy.
 
 **Emails in dev.** With `APP_ENV=dev` (or no `SMTP_HOST`), `app/mail.py` prints
 messages to the backend console instead of sending them. Password reset links appear
