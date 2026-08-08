@@ -1,4 +1,4 @@
-import { useEffect } from 'react';
+import { useEffect, useState } from 'react';
 import { Navigate, useParams } from 'react-router-dom';
 
 import { warmUp } from '../../api/client';
@@ -44,6 +44,30 @@ function SectionHead({ eyebrow, title, accent, lede, className = '' }) {
 export default function ProgramDetail() {
   const { slug } = useParams();
   const program = programBySlug(slug);
+
+  /*
+   * One phase open at a time. The four titles are the outline of the whole
+   * program; with everything expanded that outline disappears into several
+   * screens of detail, which is the opposite of what someone skimming wants.
+   * -1 means all closed.
+   */
+  const [openPhase, setOpenPhase] = useState(0);
+
+  /*
+   * Collapsing a phase ABOVE the one you just clicked pulls everything below
+   * it upwards, so the header you aimed at jumps out from under the cursor.
+   * Measure where it was, let React repaint, then put it back.
+   */
+  const togglePhase = (i) => (e) => {
+    e.preventDefault(); // `open` is driven by state, not the native toggle
+    const summary = e.currentTarget;
+    const before = summary.getBoundingClientRect().top;
+    setOpenPhase((current) => (current === i ? -1 : i));
+    requestAnimationFrame(() => {
+      const after = summary.getBoundingClientRect().top;
+      if (after !== before) window.scrollBy(0, after - before);
+    });
+  };
 
   useEffect(() => {
     if (program) document.title = `${program.name} — MOP Careers`;
@@ -273,10 +297,13 @@ export default function ProgramDetail() {
               {d.syllabus.map((phase, i) => (
                 <details
                   key={phase.title}
-                  open={i === 0}
+                  open={openPhase === i}
                   className="group rounded-[20px] border border-navy-100 bg-white px-6"
                 >
-                  <summary className="flex cursor-pointer list-none items-center gap-4 py-5 [&::-webkit-details-marker]:hidden">
+                  <summary
+                    onClick={togglePhase(i)}
+                    className="flex cursor-pointer list-none items-center gap-4 py-5 [&::-webkit-details-marker]:hidden"
+                  >
                     <span className="ser shrink-0 text-[1.6rem] leading-none text-navy-200">
                       {String(i + 1).padStart(2, '0')}
                     </span>
