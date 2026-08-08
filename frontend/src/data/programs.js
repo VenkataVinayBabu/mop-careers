@@ -43,6 +43,115 @@ export const PROGRAMS = [
       'Python, machine learning, deep learning and MLOps — finishing job-ready with a capstone you can walk an interviewer through line by line.',
     skills: ['Python', 'ML', 'Deep Learning', 'MLOps'],
     forWhom: 'Graduates and career switchers moving into data and AI roles.',
+
+    /*
+     * Everything the program's own page renders. Every field is OPTIONAL — a
+     * section whose data is missing does not render at all, so a program can
+     * be published with nothing but the basics above and filled in over time
+     * without ever looking half-built.
+     *
+     * Shaped like the API row this becomes once Bala manages programs from
+     * the admin screens, so that swap is an import change, not a rewrite.
+     */
+    detail: {
+      headline: 'Become a job-ready Data Scientist, and pay after you are placed.',
+      intro:
+        'A live, mentor-led program for freshers and career switchers moving into data and AI. ' +
+        'Python and statistics through machine learning and deep learning to production MLOps — ' +
+        'finishing with capstones you can walk an interviewer through line by line.',
+      highlights: [
+        'Pay a small registration fee and start learning.',
+        'The rest of the tuition is due only after you are placed.',
+        'Master Python, ML, deep learning, generative AI and MLOps.',
+      ],
+
+      why: [
+        { title: 'Modern data science stack',
+          body: 'Python, Pandas, NumPy, scikit-learn, PyTorch and TensorFlow — the tools every data team actually asks for.' },
+        { title: 'Generative AI and LLMs',
+          body: 'Retrieval over your own data, vector databases and evaluation — shipping real AI features, not toy notebooks.' },
+        { title: 'Machine and deep learning',
+          body: 'Regression, trees, ensembles, CNNs and transformers, end to end on real datasets rather than tidy examples.' },
+        { title: '1:1 mentorship',
+          body: 'A mentor assigned to you for the whole program, with weekly time set aside for your work specifically.' },
+        { title: 'Real project review',
+          body: 'Your code is read and critiqued every week. That feedback loop is what separates a course from a portfolio.' },
+        { title: 'Career tooling',
+          body: 'ATS resume scoring, LinkedIn review and unlimited mock interviews tuned to data science hiring rounds.' },
+      ],
+
+      roles: [
+        { title: 'Data Scientist', salary: '₹8L – ₹18L',
+          body: 'Builds models that answer business questions — churn, ranking, forecasting, personalisation.',
+          companies: ['Flipkart', 'Amazon', 'Swiggy', 'Meesho'] },
+        { title: 'ML Engineer', salary: '₹10L – ₹22L',
+          body: 'Takes models to production — pipelines, serving, monitoring and drift detection at scale.',
+          companies: ['Razorpay', 'Cred', 'PhonePe', 'Uber'] },
+        { title: 'AI / GenAI Engineer', salary: '₹12L – ₹28L',
+          body: 'Builds LLM-powered products — retrieval, agents, fine-tuning, evaluation and prompt design.',
+          companies: ['Microsoft', 'Adobe', 'Freshworks'] },
+        { title: 'Applied Scientist', salary: '₹18L – ₹42L',
+          body: 'Sits between research and engineering — designs novel models and ships them.',
+          companies: ['Amazon', 'Meta', 'Netflix', 'Google'] },
+      ],
+
+      /*
+       * Phases are labelled "Phase 1..4" and carry no month. The reference
+       * pinned them to JAN/APR/JUL/OCT, which only holds if there is one
+       * intake a year — someone joining in May would be told they are
+       * starting "Phase 1 · JAN". Dates get added per batch later.
+       *
+       * `exit` is the Placements Exit: the calibre of employer a learner is
+       * ready for at the end of that phase. It rises through the program,
+       * which is a far better argument than "finish and hope".
+       */
+      syllabus: [
+        { title: 'Python, SQL and statistics foundations',
+          body: 'The bedrock. Every hiring round for a data role tests these first, whatever else is on your CV.',
+          topics: ['Python', 'Pandas', 'NumPy', 'SQL', 'Window functions', 'Statistics', 'Probability', 'Hypothesis testing'],
+          exit: ['TCS', 'Infosys', 'Capgemini', 'Cognizant', 'Accenture', 'Deloitte'] },
+        { title: 'Machine learning and data storytelling',
+          body: 'End-to-end ML pipelines — regression, classification, ensembles and explainability — plus how to present results to people who are not analysts.',
+          topics: ['scikit-learn', 'XGBoost', 'LightGBM', 'SHAP', 'Feature engineering', 'A/B testing', 'Tableau', 'Power BI'],
+          exit: ['PhonePe', 'Swiggy', 'Razorpay', 'Paytm', 'Flipkart', 'Amazon'] },
+        { title: 'Deep learning and generative AI',
+          body: 'Neural networks from first principles through transformers to LLMs, then production retrieval applications and agentic workflows.',
+          topics: ['PyTorch', 'TensorFlow', 'Hugging Face', 'Transformers', 'LangChain', 'RAG', 'Vector DBs', 'Fine-tuning'],
+          exit: ['Microsoft', 'Adobe', 'Cred', 'Freshworks', 'Groww', 'Dream11'] },
+        { title: 'MLOps and capstone projects',
+          body: 'Deployment with CI/CD, monitoring and drift detection, two capstones, and mock interviews with hiring managers.',
+          topics: ['Docker', 'FastAPI', 'MLflow', 'SageMaker', 'CI/CD', 'Capstones', 'Mock interviews', 'Portfolio'],
+          exit: ['Google', 'Meta', 'Amazon', 'Netflix', 'Uber'] },
+      ],
+
+      technologies: [
+        'Python', 'SQL', 'Pandas', 'NumPy', 'scikit-learn', 'XGBoost', 'PyTorch', 'TensorFlow',
+        'Hugging Face', 'LangChain', 'MLflow', 'Docker', 'FastAPI', 'AWS', 'GCP', 'SageMaker',
+        'Airflow', 'Spark', 'Tableau', 'Power BI', 'Git', 'Jupyter', 'Streamlit',
+      ],
+
+      projects: [
+        { title: 'Credit risk scoring and fraud detection',
+          body: 'Score loan applications for a lending startup, deploy it as a real-time API, and monitor for drift over three months.',
+          tech: ['Python', 'XGBoost', 'SHAP', 'FastAPI'] },
+        { title: 'Demand forecasting across 12,000 SKUs',
+          body: 'Forecast weekly demand for a retail chain, then present the result as something an operations team can act on.',
+          tech: ['LightGBM', 'Time series', 'SQL', 'Tableau'] },
+        { title: 'Medical image triage',
+          body: 'Fine-tune a vision model to classify chest X-rays, with explainability output for clinical review.',
+          tech: ['PyTorch', 'CNNs', 'Grad-CAM', 'Streamlit'] },
+        { title: 'AI research assistant with retrieval',
+          body: 'An assistant that searches a large document set, cites its sources, and evaluates its own answers.',
+          tech: ['LangChain', 'Vector DB', 'RAG', 'Evals'] },
+      ],
+
+      faq: [
+        ['How much maths do I need?',
+         'School-level algebra is enough to start. The statistics you need is taught in phase one, from the beginning.'],
+        ['Will I build a portfolio?',
+         'Yes — four guided projects plus two capstones, all reviewed. That portfolio is what you take into interviews.'],
+      ],
+    },
   },
   {
     slug: 'gen-ai-agentic-ai',
@@ -156,6 +265,16 @@ export const PROGRAMS = [
     forWhom: 'Non-technical graduates who want a route into tech companies.',
   },
 ];
+
+/*
+ * Only Data Science with AI has a populated `detail` block so far. The other
+ * seven render a program page built from the fields above plus every global
+ * section, which is a complete page — just without a syllabus, projects or
+ * role breakdown until that content exists. Nothing looks broken in between.
+ */
+
+/** Look a program up by its URL slug. Returns undefined for an unknown slug. */
+export const programBySlug = (slug) => PROGRAMS.find((p) => p.slug === slug && p.published);
 
 /** Only these ever reach a visitor. Everything on the site counts from here. */
 export const LIVE_PROGRAMS = PROGRAMS.filter((c) => c.published);

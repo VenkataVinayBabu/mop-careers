@@ -1,10 +1,19 @@
+import { Link } from 'react-router-dom';
+
 /*
- * One program card, shared by the landing page and the programs page.
+ * One program card, shared by the landing page and the program pages.
  *
  * `featured` cards carry a tint and larger type; they are the two programs MOP
  * leads with. The index numeral is set in the accent serif — decorative, so it
  * is hidden from assistive tech rather than read out as stray content.
  */
+
+/* A link where there is somewhere to go, a button where the action is only
+   scrolling this page. Same look either way. */
+function Action({ href, onOpen, children, ...rest }) {
+  if (href) return <Link to={href} {...rest}>{children}</Link>;
+  return <button type="button" onClick={onOpen} {...rest}>{children}</button>;
+}
 
 const TINTS = {
   0: 'bg-orange-50 border-orange-200',
@@ -15,6 +24,9 @@ export default function ProgramCard({
   program,
   index,
   featured = false,
+  // `href` makes the card action a real link — right-clickable, openable in a
+  // new tab, and crawlable. `onOpen` remains for the scroll-to-section case.
+  href,
   onOpen,
   actionLabel = 'Program details',
   // The two lead programs carry a written link; the rest are arrow-only, so the
@@ -92,14 +104,14 @@ export default function ProgramCard({
           /* With no label the arrow IS the control, so it carries the program
              name — otherwise this is six identical unlabelled arrows to anyone
              using a keyboard or a screen reader. */
-          <button
-            type="button"
-            onClick={onOpen}
+          <Action
+            href={href}
+            onOpen={onOpen}
             aria-label={`${actionLabel}: ${program.name}`}
             className="ml-auto grid h-9 w-9 shrink-0 place-items-center rounded-full border border-navy-100 bg-white text-navy transition hover:border-navy hover:bg-navy hover:text-white"
           >
             <span aria-hidden="true">&rarr;</span>
-          </button>
+          </Action>
         )}
       </div>
 
@@ -107,9 +119,9 @@ export default function ProgramCard({
         /* Label and arrow are ONE button, so the arrow is clickable too — as a
            separate element it either did nothing on hover, or became a second
            tab stop doing the same job. The whole row is the target. */
-        <button
-          type="button"
-          onClick={onOpen}
+        <Action
+          href={href}
+          onOpen={onOpen}
           className="group/action mt-auto flex w-full items-center justify-between gap-4 pt-6 text-left"
         >
           <span className="text-[0.84rem] font-semibold text-teal-ink transition group-hover/action:text-teal-700">
@@ -121,7 +133,7 @@ export default function ProgramCard({
           >
             &rarr;
           </span>
-        </button>
+        </Action>
       )}
     </article>
   );

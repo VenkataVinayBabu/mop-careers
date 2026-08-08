@@ -161,6 +161,84 @@ export const REFERRAL = {
   cta: 'Refer someone',
 };
 
+/* =========================================================================
+ *  PROGRAM PAGE GLOBALS
+ * =========================================================================
+ *  Everything below is identical on every program page, so it is written once
+ *  here rather than eight times in programs.js. Written naively each program
+ *  page needs ~120 pieces of content; pulling out what does not vary brings
+ *  the per-program authoring down to roughly 40.
+ *
+ *  Change one of these and all eight pages update.
+ * ========================================================================= */
+
+/* Three-step journey shown on every program page. */
+export const ROADMAP = [
+  {
+    title: 'Upskill',
+    body: 'Build job-ready skills with live classes, hands-on projects and an ATS-ready resume.',
+    points: ['Real project work', 'ATS resume preparation', 'AI mock interviews'],
+  },
+  {
+    title: 'Placement readiness test',
+    body: 'Prove those skills through assignments, case studies and mock interviews with hiring managers.',
+    points: ['Technical assignments', 'Live mock interviews', 'Readiness score'],
+  },
+  {
+    title: 'Get hired',
+    body: 'Placement support and interview opportunities across the hiring network — then you pay.',
+    points: ['Placement support', 'Interview opportunities', 'Referrals'],
+  },
+];
+
+/* What every learner gets, whichever program they pick. */
+export const CAREER_SERVICES = [
+  'Hands-on experience with real projects',
+  'Unlimited AI and live mock interviews',
+  '1:1 career mentor sessions',
+  'Career orientation sessions',
+  'ATS resume and LinkedIn profile',
+  'Placement readiness test',
+  'Access to the MOP job portal',
+  'Referrals into the hiring partner network',
+];
+
+/*
+ * Fee structure. These figures come from MOP's own program page and apply to
+ * every program until Bala sets them per program from the admin screens.
+ *
+ * NOT independently verified, and almost certainly not identical across all
+ * eight — a marketing program is unlikely to cost the same as a Data Science
+ * one. A program can override this by setting `detail.fees`.
+ *
+ * `was` values render struck through. Set one to null to hide the strike.
+ */
+export const DEFAULT_FEES = {
+  registration: '₹50,000',
+  registrationWas: '₹90,000',
+  registrationNote: 'Inclusive of taxes · pay to start classes',
+  tuition: '₹1,20,000 + GST',
+  tuitionWas: '₹1,60,000',
+  tuitionNote: 'Payable only after you accept an offer at your agreed CTC. No loans.',
+  emi: '₹5,000 / month',
+};
+
+/* Shown on every program page, beneath any program-specific questions. */
+export const PROGRAM_FAQ = [
+  ['Is placement guaranteed?',
+   'No. We commit to placement support for the stated window — job alerts, referrals, resume reviews and unlimited mock interviews — and you owe no tuition if it does not result in a placement. Anyone promising a guaranteed job is not being straight with you.'],
+  ['Do I need prior programming experience?',
+   'No. Every program starts from fundamentals, and pre-course material is provided before classes begin.'],
+  ['What is Pay After Placement?',
+   'You pay a small registration fee to start. The remaining tuition falls due only after you accept a qualifying offer. It is not a loan, there is no interest, and no third-party lender is involved.'],
+  ['Are the classes live or recorded?',
+   'Live and mentor-led. Every session is recorded with notes, so a missed class is always recoverable.'],
+  ['What support do I get while learning?',
+   'A mentor assigned to you for the whole program, 1:1 doubt support between classes, and code review on project work.'],
+  ['Can I pause if I get busy, or join a later batch?',
+   'Yes. Talk to your mentor and we will move you to the next batch at the same point in the syllabus.'],
+];
+
 /* --------------------------------------------------------------------- faq */
 export const FAQ = [
   ['What is Pay After Placement, really?',

@@ -164,7 +164,7 @@ export default function Landing() {
 
           <div className="mb-4 grid gap-4 lg:grid-cols-2">
             {FEATURED_PROGRAMS.map((c, i) => (
-              <ProgramCard key={c.slug} program={c} index={i} featured onOpen={openPrograms} />
+              <ProgramCard key={c.slug} program={c} index={i} featured href={`/programs/${c.slug}`} />
             ))}
           </div>
 
@@ -174,7 +174,7 @@ export default function Landing() {
                 key={c.slug}
                 program={c}
                 index={FEATURED_PROGRAMS.length + i}
-                onOpen={openPrograms}
+                href={`/programs/${c.slug}`}
               />
             ))}
           </div>

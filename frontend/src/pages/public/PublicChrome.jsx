@@ -136,9 +136,9 @@ export function PublicHeader() {
             <ul>
               {LIVE_PROGRAMS.map((p) => (
                 <li key={p.slug}>
-                  <a
-                    href="/#programs"
-                    onClick={goToSection('programs')}
+                  <Link
+                    to={`/programs/${p.slug}`}
+                    onClick={() => { setMenuOpen(false); setOpen(false); }}
                     className="flex items-center justify-between gap-3 px-5 py-2.5 text-[0.9rem] text-navy transition hover:bg-navy-50 hover:text-teal-ink"
                   >
                     {p.name}
@@ -151,7 +151,7 @@ export function PublicHeader() {
                         {navBadge(p.badge)}
                       </span>
                     )}
-                  </a>
+                  </Link>
                 </li>
               ))}
             </ul>
@@ -235,9 +235,9 @@ export function PublicHeader() {
                   <ul className="mt-2 grid gap-1 border-l border-navy-100 pl-4">
                     {LIVE_PROGRAMS.map((p) => (
                       <li key={p.slug}>
-                        <a
-                          href="/#programs"
-                          onClick={goToSection('programs')}
+                        <Link
+                          to={`/programs/${p.slug}`}
+                          onClick={() => setOpen(false)}
                           className="flex items-center justify-between gap-2 py-1.5 text-[0.85rem] text-navy-500"
                         >
                           {p.name}
@@ -250,7 +250,7 @@ export function PublicHeader() {
                               {navBadge(p.badge)}
                             </span>
                           )}
-                        </a>
+                        </Link>
                       </li>
                     ))}
                   </ul>
@@ -292,7 +292,7 @@ export function PublicFooter() {
             <ul className="grid gap-2.5">
               {LIVE_PROGRAMS.map((c) => (
                 <li key={c.slug}>
-                  <Link to="/#programs" className="transition hover:text-teal-300">
+                  <Link to={`/programs/${c.slug}`} className="transition hover:text-teal-300">
                     {c.name}
                   </Link>
                 </li>

@@ -17,6 +17,7 @@ import AdminFees from './pages/admin/Fees';
 import AdminPlacements from './pages/admin/Placements';
 import DoubtsInbox from './pages/staff/DoubtsInbox';
 import Landing from './pages/public/Landing';
+import ProgramDetail from './pages/public/ProgramDetail';
 
 import BatchWorkspace from './pages/teacher/BatchWorkspace';
 import TeacherBatches from './pages/teacher/Batches';
@@ -71,6 +72,8 @@ export default function App() {
           page. Both former paths redirect to that section so nothing already
           linking here (a shared link, a bookmark, a search result) breaks. */}
       <Route path="/programs" element={<Navigate to={{ pathname: '/', hash: '#programs' }} replace />} />
+      {/* Each program's own page. An unknown slug redirects to the list. */}
+      <Route path="/programs/:slug" element={<ProgramDetail />} />
       <Route path="/courses" element={<Navigate to={{ pathname: '/', hash: '#programs' }} replace />} />
       <Route path="/login" element={<Login />} />
       <Route path="/forgot-password" element={<ForgotPassword />} />
