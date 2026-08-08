@@ -2,9 +2,10 @@ import { useEffect, useState } from 'react';
 import { Navigate, useParams } from 'react-router-dom';
 
 import { warmUp } from '../../api/client';
+import Avatar from '../../components/Avatar';
 import { LIVE_PROGRAMS, programBySlug } from '../../data/programs';
 import {
-  CAREER_SERVICES, COMPANIES, DEFAULT_FEES, PROGRAM_FAQ, ROADMAP,
+  CAREER_SERVICES, COMPANIES, DEFAULT_FEES, PROGRAM_FAQ, ROADMAP, mentorsFor,
 } from '../../data/site';
 import EnquiryForm from './EnquiryForm';
 import ProgramCard from './ProgramCard';
@@ -80,6 +81,7 @@ export default function ProgramDetail() {
 
   const d = program.detail || {};
   const fees = d.fees || DEFAULT_FEES;
+  const mentors = mentorsFor(program.slug);
   const related = LIVE_PROGRAMS.filter((p) => p.slug !== program.slug).slice(0, 3);
 
   return (
@@ -400,6 +402,42 @@ export default function ProgramDetail() {
                       ))}
                     </div>
                   )}
+                </article>
+              ))}
+            </div>
+          </div>
+        </section>
+      )}
+
+      {/* ------------------------------------------------------- mentors */}
+      {/* Who actually teaches this program. Drawn from the shared mentor list
+          and filtered by slug, so a mentor is written once and appears on each
+          program they teach. Absent entirely when nobody is assigned — better
+          an omission than a section implying we cannot say who teaches it. */}
+      {mentors.length > 0 && (
+        <section id="mentors" className="py-16 sm:py-20">
+          <div className="mx-auto max-w-[1240px] px-6">
+            <SectionHead
+              eyebrow="Who teaches this"
+              title="Learn from people who have"
+              accent="done the job."
+              lede="You are matched with a mentor for the whole program — not a support queue."
+            />
+            <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+              {mentors.map((m, i) => (
+                <article key={m.name} className="overflow-hidden rounded-[20px] border border-navy-100 bg-white">
+                  <Avatar
+                    name={m.name}
+                    photo={m.photo}
+                    index={i}
+                    className="aspect-square w-full"
+                    textClassName="text-[2.4rem]"
+                  />
+                  <div className="p-5">
+                    <p className="text-[0.68rem] font-bold uppercase tracking-[0.1em] text-teal-ink">{m.former}</p>
+                    <h3 className="mt-1.5 text-base font-bold tracking-tight text-navy">{m.name}</h3>
+                    <p className="mt-1.5 text-[0.81rem] text-navy-500 sm:min-h-[2.43rem]">{m.focus}</p>
+                  </div>
                 </article>
               ))}
             </div>

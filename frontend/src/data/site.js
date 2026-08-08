@@ -78,12 +78,34 @@ export const OUTCOMES = [
 /* `photo` is the slot for a real portrait: drop a file in src/assets/people/
    and import it here. Until then the card shows a monogram — deliberately not
    a stock photo of someone else, since these are real named people. */
+/*
+ * `programs` lists the slugs a mentor teaches, which is what puts them on that
+ * program's page. A mentor can teach several; a program with no matching
+ * mentor simply has no mentors section rather than an empty one.
+ *
+ * THESE ASSIGNMENTS ARE INFERRED from each mentor's stated speciality, not
+ * confirmed by MOP. Bala should check them — and the four programs with nobody
+ * assigned (Gen AI, Cloud, Cyber Security, Digital Marketing) currently show no
+ * mentor at all, which is honest but is also a gap a visitor will notice.
+ */
 export const MENTORS = [
-  { name: 'Balaram', photo: null, former: 'Ex-TCS · 8 yrs', focus: 'Full stack development. Mentors the web and Java tracks.' },
-  { name: 'Kuppola Rajesh', photo: null, former: 'Ex-AT&T · 6 yrs', focus: 'Python full stack — backend, APIs and deployment.' },
-  { name: 'Josna P', photo: null, former: 'Ex-Infosys · 8 yrs', focus: 'Data analysis. SQL, reporting and analytics workflows.' },
-  { name: 'Bharath David', photo: null, former: '10 yrs experience', focus: 'Data science and machine learning, from fundamentals to deployment.' },
+  { name: 'Balaram', photo: null, former: 'Ex-TCS · 8 yrs',
+    focus: 'Full stack development. Mentors the web and Java tracks.',
+    programs: ['full-stack-web-development', 'java-full-stack'] },
+  { name: 'Kuppola Rajesh', photo: null, former: 'Ex-AT&T · 6 yrs',
+    focus: 'Python full stack — backend, APIs and deployment.',
+    programs: ['python-full-stack', 'full-stack-web-development'] },
+  { name: 'Josna P', photo: null, former: 'Ex-Infosys · 8 yrs',
+    focus: 'Data analysis. SQL, reporting and analytics workflows.',
+    programs: ['data-science-with-ai'] },
+  { name: 'Bharath David', photo: null, former: '10 yrs experience',
+    focus: 'Data science and machine learning, from fundamentals to deployment.',
+    programs: ['data-science-with-ai'] },
 ];
+
+/** The mentors teaching a given program. Empty when nobody is assigned. */
+export const mentorsFor = (slug) =>
+  MENTORS.filter((m) => (m.programs || []).includes(slug));
 
 /* ----------------------------------------------------------------- stories */
 /* Same as mentors: `photo` stays null until MOP supplies a real portrait AND
