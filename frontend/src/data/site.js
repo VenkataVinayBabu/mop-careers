@@ -92,7 +92,7 @@ export const MENTORS = [
   { name: 'Balaram', photo: null, former: 'Ex-TCS · 8 yrs',
     focus: 'Full stack development. Mentors the web and Java tracks.',
     programs: ['full-stack-web-development', 'java-full-stack'] },
-  { name: 'Kuppola Rajesh', photo: null, former: 'Ex-AT&T · 6 yrs',
+  { name: 'Vinay K', photo: null, former: 'Ex-AT&T · 6 yrs',
     focus: 'Python full stack — backend, APIs and deployment.',
     programs: ['python-full-stack', 'full-stack-web-development'] },
   { name: 'Josna P', photo: null, former: 'Ex-Infosys · 8 yrs',

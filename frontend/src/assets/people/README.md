@@ -9,15 +9,15 @@ stock photo of a stranger standing in for a real named person.
 1. **Crop it square.** The mentor cards are square; a portrait-shaped image will
    be cropped to the centre, which often clips foreheads and chins.
 2. **Save it here** as `firstname-lastname.jpg`, lower case, hyphenated —
-   e.g. `kuppola-rajesh.jpg`.
+   e.g. `vinay-k.jpg`.
 3. **Point the data at it.** In `src/data/site.js`, add the import at the top and
    set the person's `photo`:
 
    ```js
-   import photoKuppolaRajesh from '../assets/people/kuppola-rajesh.jpg';
+   import photoVinayK from '../assets/people/vinay-k.jpg';
 
    // ...then in MENTORS:
-   { name: 'Kuppola Rajesh', photo: photoKuppolaRajesh, ... }
+   { name: 'Vinay K', photo: photoVinayK, ... }
    ```
 
 That is the whole change. No component edits.
