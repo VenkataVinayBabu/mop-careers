@@ -1,4 +1,5 @@
-import { Navigate, Route, Routes } from 'react-router-dom';
+import { useEffect } from 'react';
+import { Navigate, Route, Routes, useLocation, useNavigationType } from 'react-router-dom';
 
 import Layout from './components/Layout';
 import ProtectedRoute, { HOME_FOR_ROLE } from './components/ProtectedRoute';
@@ -47,6 +48,33 @@ function PublicHome() {
   return <Landing />;
 }
 
+/*
+ * Reset the scroll position when the route changes.
+ *
+ * React Router does not do this on its own: the browser keeps whatever offset
+ * you were already at, so clicking a programme card halfway down the home page
+ * opened its detail page halfway down too — landing you in the middle of a
+ * section instead of at the top.
+ *
+ * Two deliberate exceptions:
+ *  - a URL with a hash is asking to land at a section, so leave it alone and
+ *    let the page's own hash effect do the scrolling;
+ *  - only PUSH navigations reset. On back/forward the browser restores the
+ *    position you left, which is exactly what someone pressing Back expects.
+ */
+function ScrollToTop() {
+  const { pathname, hash } = useLocation();
+  const navigationType = useNavigationType();
+
+  useEffect(() => {
+    if (hash) return;
+    if (navigationType === 'POP') return;
+    window.scrollTo({ top: 0, left: 0, behavior: 'instant' });
+  }, [pathname, hash, navigationType]);
+
+  return null;
+}
+
 function NotFound() {
   return (
     <div className="flex min-h-screen flex-col items-center justify-center px-4 text-center">
@@ -64,7 +92,9 @@ function NotFound() {
 
 export default function App() {
   return (
-    <Routes>
+    <>
+      <ScrollToTop />
+      <Routes>
       {/* Public marketing site — no auth. Signed-in users get sent to their
           own home so the landing page is not a dead end for them. */}
       <Route path="/" element={<PublicHome />} />
@@ -131,7 +161,8 @@ export default function App() {
         <Route path="/app/profile" element={<ProfileSettings />} />
       </Route>
 
-      <Route path="*" element={<NotFound />} />
-    </Routes>
+        <Route path="*" element={<NotFound />} />
+      </Routes>
+    </>
   );
 }
