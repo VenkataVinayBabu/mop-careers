@@ -16,7 +16,6 @@ import AdminEnquiries from './pages/admin/Enquiries';
 import AdminFees from './pages/admin/Fees';
 import AdminPlacements from './pages/admin/Placements';
 import DoubtsInbox from './pages/staff/DoubtsInbox';
-import Courses from './pages/public/Courses';
 import Landing from './pages/public/Landing';
 
 import BatchWorkspace from './pages/teacher/BatchWorkspace';
@@ -68,9 +67,11 @@ export default function App() {
       {/* Public marketing site — no auth. Signed-in users get sent to their
           own home so the landing page is not a dead end for them. */}
       <Route path="/" element={<PublicHome />} />
-      {/* Courses stays reachable whether or not you are signed in — unlike the
-          landing page, it is a destination rather than a dead end. */}
-      <Route path="/courses" element={<Courses />} />
+      {/* There is no separate programmes page — all of them live on the home
+          page. Both former paths redirect to that section so nothing already
+          linking here (a shared link, a bookmark, a search result) breaks. */}
+      <Route path="/programs" element={<Navigate to={{ pathname: '/', hash: '#programs' }} replace />} />
+      <Route path="/courses" element={<Navigate to={{ pathname: '/', hash: '#programs' }} replace />} />
       <Route path="/login" element={<Login />} />
       <Route path="/forgot-password" element={<ForgotPassword />} />
       <Route path="/reset-password" element={<ResetPassword />} />

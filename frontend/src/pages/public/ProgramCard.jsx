@@ -1,7 +1,7 @@
 /*
- * One course card, shared by the landing page and the courses page.
+ * One program card, shared by the landing page and the programs page.
  *
- * `featured` cards carry a tint and larger type; they are the two courses MOP
+ * `featured` cards carry a tint and larger type; they are the two programs MOP
  * leads with. The index numeral is set in the accent serif — decorative, so it
  * is hidden from assistive tech rather than read out as stray content.
  */
@@ -11,15 +11,15 @@ const TINTS = {
   1: 'bg-teal-50 border-teal-200',
 };
 
-export default function CourseCard({
-  course,
+export default function ProgramCard({
+  program,
   index,
   featured = false,
   onOpen,
-  actionLabel = 'Course details',
-  // The two lead courses carry a written link; the rest are arrow-only, so the
+  actionLabel = 'Program details',
+  // The two lead programs carry a written link; the rest are arrow-only, so the
   // eye lands on the two MOP wants to sell. Defaults to whether the card is
-  // featured, but the courses page overrides it — there, every card is the
+  // featured, but the programs page overrides it — there, every card is the
   // point of the page and deserves a named action.
   showActionLabel = featured,
 }) {
@@ -35,23 +35,23 @@ export default function CourseCard({
       </span>
 
       <div className="flex flex-wrap items-center gap-2 pr-12">
-        {course.badge && (
+        {program.badge && (
           <span
             className={`rounded-full px-2.5 py-1 text-[0.6rem] font-extrabold uppercase tracking-[0.1em] text-white ${
-              course.badge === 'New' ? 'bg-teal' : 'bg-navy'
+              program.badge === 'New' ? 'bg-teal' : 'bg-navy'
             }`}
           >
-            {course.badge}
+            {program.badge}
           </span>
         )}
         <span className="rounded-full bg-navy/5 px-3 py-1 text-[0.72rem] font-medium text-navy-500">
-          {course.duration}
+          {program.duration}
         </span>
       </div>
 
       <p className="mt-4 text-[0.7rem] font-bold uppercase tracking-[0.08em] text-orange-ink">
-        {course.ctcAvg}
-        {course.ctcHigh ? ` · ${course.ctcHigh}` : ''}
+        {program.ctcAvg}
+        {program.ctcHigh ? ` · ${program.ctcHigh}` : ''}
       </p>
 
       <h3
@@ -59,7 +59,7 @@ export default function CourseCard({
           featured ? 'text-[1.45rem] leading-tight' : 'text-[1.05rem] leading-snug'
         }`}
       >
-        {course.name}
+        {program.name}
       </h3>
 
       {/* Reserve three lines on the grid cards. Copy is written to fill three
@@ -71,7 +71,7 @@ export default function CourseCard({
           featured ? '' : 'sm:min-h-[4.3rem]'
         }`}
       >
-        {course.summary}
+        {program.summary}
       </p>
 
       {/* On arrow-only cards the arrow rides in the skills row rather than
@@ -79,7 +79,7 @@ export default function CourseCard({
           height, so a pinned footer left a hole between the pills and the
           arrow on every short card. */}
       <div className="mt-4 flex flex-wrap items-center gap-1.5">
-        {course.skills.map((s) => (
+        {program.skills.map((s) => (
           <span
             key={s}
             className="rounded-full bg-navy/[0.04] px-2.5 py-1 text-[0.72rem] text-navy-500"
@@ -89,13 +89,13 @@ export default function CourseCard({
         ))}
 
         {!showActionLabel && (
-          /* With no label the arrow IS the control, so it carries the course
+          /* With no label the arrow IS the control, so it carries the program
              name — otherwise this is six identical unlabelled arrows to anyone
              using a keyboard or a screen reader. */
           <button
             type="button"
             onClick={onOpen}
-            aria-label={`${actionLabel}: ${course.name}`}
+            aria-label={`${actionLabel}: ${program.name}`}
             className="ml-auto grid h-9 w-9 shrink-0 place-items-center rounded-full border border-navy-100 bg-white text-navy transition hover:border-navy hover:bg-navy hover:text-white"
           >
             <span aria-hidden="true">&rarr;</span>

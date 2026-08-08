@@ -1,8 +1,8 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { Link, useLocation, useNavigate } from 'react-router-dom';
 
 import Logo from '../../components/Logo';
-import { LIVE_COURSES } from '../../data/courses';
+import { LIVE_PROGRAMS } from '../../data/programs';
 import { SITE, whatsappLink } from '../../data/site';
 
 /*
@@ -14,14 +14,27 @@ import { SITE, whatsappLink } from '../../data/site';
  * misaligned while scrolling back up. Only one thing sticks now.
  */
 
+/*
+ * Every item is a section on the landing page — there is no separate programs
+ * page any more, since all of them already appear on the home page and a second
+ * copy was only somewhere else to maintain.
+ *
+ * `home` scrolls to the top; `menu` opens the programme dropdown but still
+ * scrolls to the section when its own label is activated.
+ */
 const NAV = [
-  { id: 'courses', label: 'Courses', to: '/courses' },
+  { id: 'top', label: 'Home' },
+  { id: 'programs', label: 'Programs', menu: true },
   { id: 'process', label: 'How it works' },
   { id: 'outcomes', label: 'Outcomes' },
   { id: 'mentors', label: 'Mentors' },
   { id: 'stories', label: 'Stories' },
   { id: 'faq', label: 'FAQ' },
 ];
+
+/* 'Most popular' is too long for a dropdown pill; the card keeps the full
+   wording. Anything else shows as-is. */
+const navBadge = (badge) => (badge === 'Most popular' ? 'Hot' : badge);
 
 function WhatsAppIcon({ className = 'h-4 w-4' }) {
   return (
@@ -37,39 +50,122 @@ export function contactHref() {
 }
 
 export function PublicHeader() {
-  const [open, setOpen] = useState(false);
+  const [open, setOpen] = useState(false);          // mobile drawer
+  const [menuOpen, setMenuOpen] = useState(false);  // programmes dropdown
+  const menuRef = useRef(null);
   const navigate = useNavigate();
   const { pathname } = useLocation();
 
-  // Section anchors live on the landing page. From /courses we route home
-  // first, then let the landing page's hash effect do the scrolling.
+  /* Close the dropdown on Escape or on a click outside it. Without the outside
+     click it stays open behind whatever you click next, which feels stuck. */
+  useEffect(() => {
+    if (!menuOpen) return undefined;
+    const onKey = (e) => e.key === 'Escape' && setMenuOpen(false);
+    const onDown = (e) => {
+      if (menuRef.current && !menuRef.current.contains(e.target)) setMenuOpen(false);
+    };
+    document.addEventListener('keydown', onKey);
+    document.addEventListener('pointerdown', onDown);
+    return () => {
+      document.removeEventListener('keydown', onKey);
+      document.removeEventListener('pointerdown', onDown);
+    };
+  }, [menuOpen]);
+
+  /* Sections all live on the landing page. From anywhere else, route home and
+     let the landing page's hash effect do the scrolling. `top` scrolls up
+     rather than looking for an element. */
   const goToSection = (id) => (e) => {
-    e.preventDefault();
+    if (e) e.preventDefault();
     setOpen(false);
-    if (pathname === '/') {
-      document.getElementById(id)?.scrollIntoView({ behavior: 'smooth' });
+    setMenuOpen(false);
+    if (pathname !== '/') {
+      navigate({ pathname: '/', hash: `#${id}` });
       return;
     }
-    navigate({ pathname: '/', hash: `#${id}` });
+    if (id === 'top') {
+      window.scrollTo({ top: 0, behavior: 'smooth' });
+      return;
+    }
+    document.getElementById(id)?.scrollIntoView({ behavior: 'smooth' });
   };
 
+  const linkClass = 'text-sm font-medium text-navy transition hover:text-teal-ink';
+
+  /*
+   * Inlined rather than declared as its own component inside this one. A
+   * component defined in a render body gets a new identity on every state
+   * change, so React tears the subtree down and rebuilds it — which fires
+   * mouseleave on the node being removed and closes the menu the instant
+   * hovering opens it.
+   */
+  const programsMenu = (
+    <div
+      key="programs"
+      ref={menuRef}
+      className="relative"
+      onMouseEnter={() => setMenuOpen(true)}
+      onMouseLeave={() => setMenuOpen(false)}
+      /* Focus opens it too, or the menu is unreachable by keyboard — hover is
+         not an interaction everyone has. Closes only when focus leaves the
+         whole group, so tabbing through the entries keeps it open. */
+      onFocus={() => setMenuOpen(true)}
+      onBlur={(e) => {
+        if (!e.currentTarget.contains(e.relatedTarget)) setMenuOpen(false);
+      }}
+    >
+      <button
+        type="button"
+        aria-expanded={menuOpen}
+        aria-haspopup="true"
+        onClick={goToSection('programs')}
+        className={`${linkClass} inline-flex items-center gap-1`}
+      >
+        Programs
+        <svg className="h-3.5 w-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5">
+          <path d="m6 9 6 6 6-6" strokeLinecap="round" strokeLinejoin="round" />
+        </svg>
+      </button>
+
+      {menuOpen && (
+        <div className="absolute left-1/2 top-full z-50 w-[19rem] -translate-x-1/2 pt-3">
+          <div className="overflow-hidden rounded-2xl border border-navy-100 bg-white py-3 shadow-pop">
+            <p className="px-5 pb-2 text-[0.66rem] font-bold uppercase tracking-[0.13em] text-teal-ink">
+              Pay After Placement
+            </p>
+            <ul>
+              {LIVE_PROGRAMS.map((p) => (
+                <li key={p.slug}>
+                  <a
+                    href="/#programs"
+                    onClick={goToSection('programs')}
+                    className="flex items-center justify-between gap-3 px-5 py-2.5 text-[0.9rem] text-navy transition hover:bg-navy-50 hover:text-teal-ink"
+                  >
+                    {p.name}
+                    {p.badge && (
+                      <span
+                        className={`shrink-0 rounded-full px-2 py-0.5 text-[0.6rem] font-extrabold uppercase tracking-[0.08em] text-white ${
+                          p.badge === 'New' ? 'bg-teal' : 'bg-navy'
+                        }`}
+                      >
+                        {navBadge(p.badge)}
+                      </span>
+                    )}
+                  </a>
+                </li>
+              ))}
+            </ul>
+          </div>
+        </div>
+      )}
+    </div>
+  );
+
   const linkFor = (item) =>
-    item.to ? (
-      <Link
-        key={item.id}
-        to={item.to}
-        onClick={() => setOpen(false)}
-        className="text-sm font-medium text-navy transition hover:text-teal-ink"
-      >
-        {item.label}
-      </Link>
+    item.menu ? (
+      programsMenu
     ) : (
-      <a
-        key={item.id}
-        href={`/#${item.id}`}
-        onClick={goToSection(item.id)}
-        className="text-sm font-medium text-navy transition hover:text-teal-ink"
-      >
+      <a key={item.id} href={`/#${item.id}`} onClick={goToSection(item.id)} className={linkClass}>
         {item.label}
       </a>
     );
@@ -125,11 +221,40 @@ export function PublicHeader() {
           </div>
         </div>
 
+        {/* Mobile drawer. The programmes list is expanded inline rather than
+            hidden behind a hover dropdown, which does not exist on touch. */}
         {open && (
-          <nav className="flex flex-col gap-1 border-t border-navy-100 bg-white px-6 py-3 lg:hidden">
+          <nav className="flex max-h-[70vh] flex-col gap-1 overflow-y-auto border-t border-navy-100 bg-white px-6 py-3 lg:hidden">
             {NAV.map((item) => (
               <div key={item.id} className="py-1.5">
-                {linkFor(item)}
+                <a href={`/#${item.id}`} onClick={goToSection(item.id)} className={linkClass}>
+                  {item.label}
+                </a>
+
+                {item.menu && (
+                  <ul className="mt-2 grid gap-1 border-l border-navy-100 pl-4">
+                    {LIVE_PROGRAMS.map((p) => (
+                      <li key={p.slug}>
+                        <a
+                          href="/#programs"
+                          onClick={goToSection('programs')}
+                          className="flex items-center justify-between gap-2 py-1.5 text-[0.85rem] text-navy-500"
+                        >
+                          {p.name}
+                          {p.badge && (
+                            <span
+                              className={`shrink-0 rounded-full px-2 py-0.5 text-[0.58rem] font-extrabold uppercase tracking-[0.08em] text-white ${
+                                p.badge === 'New' ? 'bg-teal' : 'bg-navy'
+                              }`}
+                            >
+                              {navBadge(p.badge)}
+                            </span>
+                          )}
+                        </a>
+                      </li>
+                    ))}
+                  </ul>
+                )}
               </div>
             ))}
             <Link to="/login" onClick={() => setOpen(false)} className="py-1.5 text-sm font-medium text-navy sm:hidden">
@@ -158,23 +283,23 @@ export function PublicFooter() {
 
           <div>
             <h4 className="mb-4 text-[0.7rem] font-semibold uppercase tracking-[0.13em] text-white">
-              Courses
+              Programs
             </h4>
             {/* Driven from the catalogue rather than hand-listed, so adding or
-                unpublishing a course updates the footer on its own. Every entry
-                points at /courses today; once the detail pages land these become
-                /courses/{slug} and nothing else here changes. */}
+                unpublishing a program updates the footer on its own. Every entry
+                points at the home page's programmes section today; once the
+                detail pages land these become /programs/{slug}. */}
             <ul className="grid gap-2.5">
-              {LIVE_COURSES.map((c) => (
+              {LIVE_PROGRAMS.map((c) => (
                 <li key={c.slug}>
-                  <Link to="/courses" className="transition hover:text-teal-300">
+                  <Link to="/#programs" className="transition hover:text-teal-300">
                     {c.name}
                   </Link>
                 </li>
               ))}
               <li className="pt-1">
-                <Link to="/courses" className="font-semibold text-white transition hover:text-teal-300">
-                  All courses &rarr;
+                <Link to="/#programs" className="font-semibold text-white transition hover:text-teal-300">
+                  All programs &rarr;
                 </Link>
               </li>
             </ul>

@@ -1,13 +1,14 @@
 import { useEffect } from 'react';
-import { useNavigate } from 'react-router-dom';
 
 import { warmUp } from '../../api/client';
+import Avatar from '../../components/Avatar';
 import CountUp from '../../components/CountUp';
-import { FEATURED_COURSES, LIVE_COURSES, OTHER_COURSES } from '../../data/courses';
+import { FEATURED_PROGRAMS, LIVE_PROGRAMS, OTHER_PROGRAMS } from '../../data/programs';
 import {
-  COMPANIES, FAQ, MENTORS, OUTCOMES, PLACEMENTS_TICKER, PROCESS, STATS, STORIES,
+  COMPANIES, FAQ, MENTORS, OUTCOMES, PAP_EXPLAINER, PAP_FEATURES, PAP_STEPS,
+  PLACEMENTS_TICKER, REFERRAL, STATS, STORIES,
 } from '../../data/site';
-import CourseCard from './CourseCard';
+import ProgramCard from './ProgramCard';
 import EnquiryForm from './EnquiryForm';
 import {
   PublicFloats, PublicFooter, PublicHeader, WhatsAppIcon, contactHref, useHashScroll,
@@ -18,13 +19,16 @@ import {
  * network call is the enquiry POST.
  *
  * The accent serif (`.ser`) has four jobs here and no others: the second
- * clause of a section heading, course card index numerals, display statistics,
+ * clause of a section heading, program card index numerals, display statistics,
  * and statistic suffixes. Quotes stay in the sans.
  */
 
-function Eyebrow({ children, center = false }) {
+/* `tone="light"` for the navy cards — the default orange-ink fails against
+   navy, so the rule and the text both lift to teal-300 there. */
+function Eyebrow({ children, center = false, tone = 'dark' }) {
+  const light = tone === 'light' ? '!text-teal-300 before:!bg-teal-300' : '';
   return (
-    <span className={`eyebrow ${center ? 'justify-center' : ''}`}>{children}</span>
+    <span className={`eyebrow ${center ? 'justify-center' : ''} ${light}`}>{children}</span>
   );
 }
 
@@ -46,21 +50,6 @@ function Stat({ stat }) {
   );
 }
 
-const STEP_ICONS = [
-  'M9 2h6v2h3v18H6V4h3V2Zm0 8h6M9 14h6',
-  'M11 4a7 7 0 1 0 0 14 7 7 0 0 0 0-14ZM20 20l-4-4',
-  'M12 3 2 8l10 5 10-5-10-5ZM6 11v5c0 1.4 2.7 2.6 6 2.6s6-1.2 6-2.6v-5',
-  'M12 3a6 6 0 0 0-3 11v3h6v-3a6 6 0 0 0-3-11ZM10 21h4',
-  'M3 5h18v12H3zM8 21h8M12 17v4',
-  'M4 5h16v14H4zM8 9h8M8 13h5',
-  'M20 6 9 17l-5-5',
-];
-const STEP_TINTS = [
-  'bg-teal-50 text-teal-ink', 'bg-teal-50 text-teal-ink', 'bg-navy-50 text-navy',
-  'bg-orange-50 text-orange-ink', 'bg-teal-50 text-teal-ink', 'bg-navy-50 text-navy',
-  'bg-orange-50 text-orange-ink',
-];
-
 const PILLARS = [
   { t: 'Live mentor-led classes', d: 'Taught live by working engineers, with recordings, notes and doubt support between sessions so a missed class is never a lost one.',
     icon: 'M12 3 2 8l10 5 10-5-10-5ZM6 10.5V16c0 1.5 3 3 6 3s6-1.5 6-3v-5.5', tint: 'bg-teal-50 text-teal-ink' },
@@ -73,7 +62,6 @@ const PILLARS = [
 ];
 
 export default function Landing() {
-  const navigate = useNavigate();
   useHashScroll();
 
   useEffect(() => {
@@ -83,7 +71,10 @@ export default function Landing() {
     warmUp();
   }, []);
 
-  const openCourses = () => navigate('/courses');
+  /* All eight programmes are on this page, so these scroll rather than
+     navigate — there is no separate programmes page any more. */
+  const openPrograms = () =>
+    document.getElementById('programs')?.scrollIntoView({ behavior: 'smooth' });
 
   return (
     <div className="min-h-screen bg-paper">
@@ -130,8 +121,8 @@ export default function Landing() {
 
           <div className="mt-8 flex flex-wrap justify-center gap-3">
             <a href="#enquire" className="pbtn-primary">Book a free 1:1 call &rarr;</a>
-            <button type="button" onClick={openCourses} className="pbtn-outline">
-              Explore all {LIVE_COURSES.length} courses
+            <button type="button" onClick={openPrograms} className="pbtn-outline">
+              Explore all {LIVE_PROGRAMS.length} programs
             </button>
           </div>
 
@@ -155,80 +146,100 @@ export default function Landing() {
         </div>
       </div>
 
-      {/* ------------------------------------------------------- courses */}
-      <section id="courses" className="py-16 sm:py-24">
+      {/* ------------------------------------------------------- programs */}
+      <section id="programs" className="py-16 sm:py-24">
         <div className="mx-auto max-w-[1240px] px-6">
           <div className="mb-11 grid gap-6 lg:grid-cols-[1.35fr_1fr] lg:items-end lg:gap-12">
             <div>
-              <Eyebrow>All {LIVE_COURSES.length} courses</Eyebrow>
+              <Eyebrow>All {LIVE_PROGRAMS.length} programs</Eyebrow>
               <h2 className="mt-3.5 text-[clamp(1.85rem,4vw,2.9rem)] font-extrabold leading-[1.05] tracking-tight text-navy">
                 Career launchpads. <span className="ser text-teal">Built for hiring.</span>
               </h2>
             </div>
             <p className="text-[1.02rem] text-navy-500">
-              Every course is designed with input from senior engineers and hiring managers.
+              Every program is designed with input from senior engineers and hiring managers.
               Real projects, real referrals.
             </p>
           </div>
 
           <div className="mb-4 grid gap-4 lg:grid-cols-2">
-            {FEATURED_COURSES.map((c, i) => (
-              <CourseCard key={c.slug} course={c} index={i} featured onOpen={openCourses} />
+            {FEATURED_PROGRAMS.map((c, i) => (
+              <ProgramCard key={c.slug} program={c} index={i} featured onOpen={openPrograms} />
             ))}
           </div>
 
           <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
-            {OTHER_COURSES.map((c, i) => (
-              <CourseCard
+            {OTHER_PROGRAMS.map((c, i) => (
+              <ProgramCard
                 key={c.slug}
-                course={c}
-                index={FEATURED_COURSES.length + i}
-                onOpen={openCourses}
+                program={c}
+                index={FEATURED_PROGRAMS.length + i}
+                onOpen={openPrograms}
               />
             ))}
           </div>
 
-          <div className="mt-9 text-center">
-            <button type="button" onClick={openCourses} className="pbtn-outline">
-              View all {LIVE_COURSES.length} courses &rarr;
-            </button>
-          </div>
         </div>
       </section>
 
-      {/* ------------------------------------------------------- process */}
+      {/* ----------------------------------------------- pay after placement */}
+      {/* Replaced a seven-step "process" strip that told the same story. Two
+          numbered walkthroughs on one page read as padding, and this version
+          keeps the step that matters commercially: you pay at the end. */}
       <section id="process" className="bg-white py-16 sm:py-24">
         <div className="mx-auto max-w-[1240px] px-6">
-          <div className="mb-11 text-center">
-            <Eyebrow center>Step-by-step overview</Eyebrow>
-            <h2 className="mt-3.5 text-[clamp(1.85rem,4vw,2.9rem)] font-extrabold leading-[1.05] tracking-tight text-navy">
-              <span className="text-teal-ink">Pay After Placement</span> <span className="ser">Process</span>
-            </h2>
-            <p className="mx-auto mt-4 max-w-2xl text-[1.02rem] text-navy-500">
-              From application to your first day on the job — here&apos;s exactly how it works.
-            </p>
-          </div>
+          <div className="relative overflow-hidden rounded-[28px] bg-navy-900 px-6 py-12 text-white sm:px-12 sm:py-16">
+            <div
+              aria-hidden="true"
+              className="pointer-events-none absolute inset-0"
+              style={{
+                background:
+                  'radial-gradient(ellipse 46% 62% at 92% 8%, rgba(0,152,157,.26), transparent 62%),' +
+                  'radial-gradient(ellipse 40% 60% at 4% 96%, rgba(238,89,5,.16), transparent 64%)',
+              }}
+            />
+            <div className="relative grid gap-10 lg:grid-cols-[1fr_1fr] lg:gap-14">
+              <div>
+                <Eyebrow tone="light">The MOP Careers PAP model</Eyebrow>
+                <h2 className="mt-3.5 text-[clamp(1.85rem,4vw,2.9rem)] font-extrabold leading-[1.05] tracking-tight">
+                  What is Pay After Placement, <span className="ser text-teal-300">really?</span>
+                </h2>
+                <p className="mt-5 max-w-xl text-navy-200">{PAP_EXPLAINER}</p>
 
-          <ol className="grid list-none gap-3.5 sm:grid-cols-2 lg:grid-cols-4 xl:grid-cols-7">
-            {PROCESS.map(([title, caption], i) => (
-              <li key={title} className="rounded-[18px] border border-navy-100 bg-white p-5 text-center">
-                <span className={`relative mx-auto mb-3.5 grid h-12 w-12 place-items-center rounded-[14px] ${STEP_TINTS[i]}`}>
-                  <svg className="h-5 w-5" viewBox="0 0 24 24" fill="none" stroke="currentColor"
-                       strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
-                    <path d={STEP_ICONS[i]} />
-                  </svg>
-                  <b className="absolute -right-1.5 -top-1.5 grid h-[21px] w-[21px] place-items-center rounded-full bg-navy text-[0.67rem] font-bold tabular-nums text-white">
-                    {i + 1}
-                  </b>
-                </span>
-                <h3 className="text-[0.88rem] font-bold text-teal-ink">{title}</h3>
-                <p className="mt-1 text-[0.75rem] text-navy-400">{caption}</p>
-              </li>
-            ))}
-          </ol>
+                <ul className="mt-6 flex flex-wrap gap-2">
+                  {PAP_FEATURES.map((f) => (
+                    <li
+                      key={f}
+                      className="rounded-full border border-white/20 px-3 py-1.5 text-[0.76rem] font-medium text-navy-200"
+                    >
+                      {f}
+                    </li>
+                  ))}
+                </ul>
 
-          <div className="mt-10 text-center">
-            <a href="#enquire" className="pbtn-primary">Start your application &rarr;</a>
+                <div className="mt-8 flex flex-wrap gap-3">
+                  <a href="#enquire" className="pbtn-primary">Book a free 1:1 call &rarr;</a>
+                  <button type="button" onClick={openPrograms} className="pbtn-clear">
+                    Compare programs
+                  </button>
+                </div>
+              </div>
+
+              <ol className="grid list-none gap-4 sm:grid-cols-2">
+                {PAP_STEPS.map(([title, caption], i) => (
+                  <li
+                    key={title}
+                    className="rounded-[20px] border border-white/10 bg-white/[0.04] p-6"
+                  >
+                    <span className="block text-[1.6rem] font-extrabold leading-none tracking-tight text-teal-300 tabular-nums">
+                      {String(i + 1).padStart(2, '0')}
+                    </span>
+                    <h3 className="mt-3 text-[1rem] font-bold tracking-tight text-white">{title}</h3>
+                    <p className="mt-1.5 text-[0.84rem] text-navy-200 sm:min-h-[4.2rem]">{caption}</p>
+                  </li>
+                ))}
+              </ol>
+            </div>
           </div>
         </div>
       </section>
@@ -312,12 +323,17 @@ export default function Landing() {
           </div>
 
           <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
-            {MENTORS.map((m) => (
+            {MENTORS.map((m, i) => (
               <article key={m.name} className="overflow-hidden rounded-[20px] border border-navy-100 bg-white">
-                {/* Photo slot — a placeholder until real portraits are supplied. */}
-                <div className="grid aspect-square place-items-center bg-gradient-to-br from-navy-50 to-navy-100 text-[0.68rem] font-bold uppercase tracking-[0.12em] text-navy-300">
-                  Photo
-                </div>
+                {/* Real portrait when one exists, otherwise a monogram. Never
+                    a stock photo of someone else — these are real people. */}
+                <Avatar
+                  name={m.name}
+                  photo={m.photo}
+                  index={i}
+                  className="aspect-square w-full"
+                  textClassName="text-[2.4rem]"
+                />
                 <div className="p-5">
                   <p className="text-[0.68rem] font-bold uppercase tracking-[0.1em] text-teal-ink">{m.former}</p>
                   <h3 className="mt-1.5 text-base font-bold tracking-tight text-navy">{m.name}</h3>
@@ -342,7 +358,7 @@ export default function Landing() {
           </div>
 
           <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
-            {STORIES.map((s) => (
+            {STORIES.map((s, i) => (
               <article key={s.name} className="flex flex-col rounded-[20px] border border-navy-100 bg-white p-6">
                 <div className="text-[0.82rem] tracking-[0.12em] text-orange" aria-label="Five out of five">
                   &#9733;&#9733;&#9733;&#9733;&#9733;
@@ -357,9 +373,12 @@ export default function Landing() {
                   &ldquo;{s.quote}&rdquo;
                 </blockquote>
                 <div className="mt-auto flex items-center gap-3 pt-6">
-                  <span className="grid h-10 w-10 shrink-0 place-items-center rounded-full bg-navy-100 text-[0.78rem] font-bold text-navy-500">
-                    {s.initials}
-                  </span>
+                  <Avatar
+                    name={s.name}
+                    photo={s.photo}
+                    index={i}
+                    className="h-10 w-10 shrink-0 rounded-full"
+                  />
                   <span>
                     <b className="block text-[0.85rem] font-bold text-navy">{s.name}</b>
                     <small className="text-[0.73rem] text-navy-400">{s.role}</small>
@@ -459,32 +478,49 @@ export default function Landing() {
         </div>
       </section>
 
-      {/* ----------------------------------------------------- final CTA */}
+      {/* ------------------------------------------ refer & earn + final CTA */}
       <section className="pb-16 sm:pb-24">
         <div className="mx-auto max-w-[1240px] px-6">
-          <div className="relative overflow-hidden rounded-[28px] bg-navy-900 px-6 py-14 text-center text-white sm:py-20">
-            <div
-              aria-hidden="true"
-              className="pointer-events-none absolute inset-0"
-              style={{
-                background:
-                  'radial-gradient(ellipse 52% 78% at 88% 20%, rgba(238,89,5,.30), transparent 62%),' +
-                  'radial-gradient(ellipse 44% 66% at 8% 92%, rgba(0,152,157,.24), transparent 64%)',
-              }}
-            />
-            <div className="relative">
-              <h2 className="mx-auto max-w-3xl text-[clamp(1.85rem,4vw,2.9rem)] font-extrabold leading-[1.05] tracking-tight">
-                Ready to <span className="ser text-[1.06em] text-orange-300">learn now</span> and pay later?
-              </h2>
-              <p className="mx-auto mt-5 max-w-xl text-navy-200">
-                Book a free 1:1 call and we&apos;ll help you pick the course that fits your
-                goals, background and timeline.
-              </p>
-              <div className="mt-8 flex flex-wrap justify-center gap-3">
-                <a href="#enquire" className="pbtn-white">Book a free 1:1 call &rarr;</a>
-                <button type="button" onClick={openCourses} className="pbtn-clear">
-                  Explore courses
-                </button>
+          <div className={`grid gap-5 ${REFERRAL.enabled ? 'lg:grid-cols-2' : ''}`}>
+            {REFERRAL.enabled && (
+              <div className="flex flex-col rounded-[28px] border border-navy-100 bg-white px-7 py-10 sm:px-9">
+                <Eyebrow>Refer &amp; earn</Eyebrow>
+                <h2 className="mt-3.5 text-[clamp(1.6rem,3.2vw,2.3rem)] font-extrabold leading-[1.06] tracking-tight text-navy">
+                  Earn <span className="ser text-teal">{REFERRAL.amount}</span> {REFERRAL.headline}
+                </h2>
+                <p className="mt-4 max-w-md text-[0.98rem] text-navy-500">{REFERRAL.body}</p>
+                <div className="mt-auto pt-8">
+                  <a href="#enquire" className="pbtn-outline">{REFERRAL.cta} &rarr;</a>
+                </div>
+              </div>
+            )}
+
+            <div className="relative overflow-hidden rounded-[28px] bg-navy-900 px-7 py-10 text-white sm:px-9">
+              <div
+                aria-hidden="true"
+                className="pointer-events-none absolute inset-0"
+                style={{
+                  background:
+                    'radial-gradient(ellipse 52% 78% at 88% 20%, rgba(238,89,5,.30), transparent 62%),' +
+                    'radial-gradient(ellipse 44% 66% at 8% 92%, rgba(0,152,157,.24), transparent 64%)',
+                }}
+              />
+              <div className="relative flex h-full flex-col">
+                <Eyebrow tone="light">Kickstart your career</Eyebrow>
+                <h2 className="mt-3.5 text-[clamp(1.6rem,3.2vw,2.3rem)] font-extrabold leading-[1.06] tracking-tight">
+                  Ready to <span className="ser text-orange-300">learn now</span> and pay after
+                  you&apos;re placed?
+                </h2>
+                <p className="mt-4 max-w-md text-[0.98rem] text-navy-200">
+                  Book a free 1:1 call and we&apos;ll help you pick the program that fits your
+                  goals, background and timeline.
+                </p>
+                <div className="mt-auto flex flex-wrap gap-3 pt-8">
+                  <a href="#enquire" className="pbtn-white">Book a free 1:1 call &rarr;</a>
+                  <button type="button" onClick={openPrograms} className="pbtn-clear">
+                    Explore programs
+                  </button>
+                </div>
               </div>
             </div>
           </div>

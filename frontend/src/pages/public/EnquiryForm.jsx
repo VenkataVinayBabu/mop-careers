@@ -2,7 +2,7 @@ import { useState } from 'react';
 
 import { api, errorMessage } from '../../api/client';
 import { Spinner } from '../../components/ui';
-import { COURSE_OPTIONS } from '../../data/courses';
+import { PROGRAM_OPTIONS } from '../../data/programs';
 import useSlowRequest from '../../hooks/useSlowRequest';
 
 /*
@@ -84,10 +84,10 @@ export default function EnquiryForm() {
       </div>
 
       <div className="mt-4">
-        <label className="label" htmlFor="en-course">Which course?</label>
-        <select id="en-course" className="input" value={form.programme} onChange={set('programme')}>
-          <option value="">Select a course…</option>
-          {COURSE_OPTIONS.map((o) => (
+        <label className="label" htmlFor="en-program">Which program?</label>
+        <select id="en-program" className="input" value={form.programme} onChange={set('programme')}>
+          <option value="">Select a program…</option>
+          {PROGRAM_OPTIONS.map((o) => (
             <option key={o.value} value={o.value}>{o.label}</option>
           ))}
         </select>

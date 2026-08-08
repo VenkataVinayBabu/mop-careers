@@ -1,17 +1,17 @@
 /*
  * ============================================================================
- *  COURSE CATALOGUE
+ *  PROGRAM CATALOGUE
  * ============================================================================
- *  This is the public site's course list. Editing this file and pushing is
+ *  This is the public site's program list. Editing this file and pushing is
  *  currently the only way to change it.
  *
  *  SHAPE MATTERS. Every object here is deliberately shaped like the row the
- *  API will return once courses move into the database and Bala manages them
+ *  API will return once programs move into the database and Bala manages them
  *  from an admin form. Keeping the shape identical means the swap is a change
  *  of import, not a rewrite of the pages. If you add a field here, add it in
  *  the same shape you would want it on the server.
  *
- *  `published: false` hides a course from the site completely — it will not
+ *  `published: false` hides a program from the site completely — it will not
  *  appear in the listing, the enquiry dropdown, or any count.
  *
  *  ---------------------------------------------------------------------------
@@ -27,7 +27,7 @@
  * ============================================================================
  */
 
-export const COURSES = [
+export const PROGRAMS = [
   {
     slug: 'data-science-with-ai',
     name: 'Data Science with AI',
@@ -158,13 +158,13 @@ export const COURSES = [
 ];
 
 /** Only these ever reach a visitor. Everything on the site counts from here. */
-export const LIVE_COURSES = COURSES.filter((c) => c.published);
+export const LIVE_PROGRAMS = PROGRAMS.filter((c) => c.published);
 
-export const FEATURED_COURSES = LIVE_COURSES.filter((c) => c.featured);
-export const OTHER_COURSES = LIVE_COURSES.filter((c) => !c.featured);
+export const FEATURED_PROGRAMS = LIVE_PROGRAMS.filter((c) => c.featured);
+export const OTHER_PROGRAMS = LIVE_PROGRAMS.filter((c) => !c.featured);
 
 export const CATEGORIES = [
-  { id: 'all', label: 'All courses' },
+  { id: 'all', label: 'All programs' },
   { id: 'ai', label: 'Data & AI' },
   { id: 'dev', label: 'Development' },
   { id: 'infra', label: 'Cloud & Security' },
@@ -173,7 +173,7 @@ export const CATEGORIES = [
 
 /* The enquiry form's dropdown. `programme` crosses the API as free text, so
    this list can change without a migration. */
-export const COURSE_OPTIONS = [
-  ...LIVE_COURSES.map((c) => ({ value: c.name, label: c.name })),
+export const PROGRAM_OPTIONS = [
+  ...LIVE_PROGRAMS.map((c) => ({ value: c.name, label: c.name })),
   { value: 'Not sure yet', label: 'Not sure yet' },
 ];

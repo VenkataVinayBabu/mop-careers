@@ -1,8 +1,8 @@
 /*
  * ============================================================================
- *  PUBLIC SITE CONTENT — everything that is not a course.
+ *  PUBLIC SITE CONTENT — everything that is not a program.
  * ============================================================================
- *  Same principle as courses.js: shaped like the API rows these will become
+ *  Same principle as programs.js: shaped like the API rows these will become
  *  once Bala manages them from an admin form, so the swap is an import change.
  *
  *  ---------------------------------------------------------------------------
@@ -32,7 +32,7 @@ export const SITE = {
   // assume it is the phone number below; a landline or a number without
   // WhatsApp installed gives the visitor a dead end.
   whatsapp: '',
-  whatsappMessage: "Hi MOP Careers, I'd like to know more about your courses.",
+  whatsappMessage: "Hi MOP Careers, I'd like to know more about your programs.",
 
   // Supplied by MOP. Note these differ from what mopcareers.in currently
   // publishes (hello@mopcareers.in, Whitefield) — worth reconciling.
@@ -75,29 +75,35 @@ export const OUTCOMES = [
 ];
 
 /* ----------------------------------------------------------------- mentors */
+/* `photo` is the slot for a real portrait: drop a file in src/assets/people/
+   and import it here. Until then the card shows a monogram — deliberately not
+   a stock photo of someone else, since these are real named people. */
 export const MENTORS = [
-  { name: 'Balaram', former: 'Ex-TCS · 8 yrs', focus: 'Full stack development. Mentors the web and Java tracks.' },
-  { name: 'Kuppola Rajesh', former: 'Ex-AT&T · 6 yrs', focus: 'Python full stack — backend, APIs and deployment.' },
-  { name: 'Josna P', former: 'Ex-Infosys · 8 yrs', focus: 'Data analysis. SQL, reporting and analytics workflows.' },
-  { name: 'Bharath David', former: '10 yrs experience', focus: 'Data science and machine learning, from fundamentals to deployment.' },
+  { name: 'Balaram', photo: null, former: 'Ex-TCS · 8 yrs', focus: 'Full stack development. Mentors the web and Java tracks.' },
+  { name: 'Kuppola Rajesh', photo: null, former: 'Ex-AT&T · 6 yrs', focus: 'Python full stack — backend, APIs and deployment.' },
+  { name: 'Josna P', photo: null, former: 'Ex-Infosys · 8 yrs', focus: 'Data analysis. SQL, reporting and analytics workflows.' },
+  { name: 'Bharath David', photo: null, former: '10 yrs experience', focus: 'Data science and machine learning, from fundamentals to deployment.' },
 ];
 
 /* ----------------------------------------------------------------- stories */
+/* Same as mentors: `photo` stays null until MOP supplies a real portrait AND
+   the learner has consented to appear. `initials` is now derived from the
+   name, so it cannot drift out of sync. */
 export const STORIES = [
   {
-    initials: 'SP', name: 'Sivaprasad', role: 'Software Developer',
+    photo: null, name: 'Sivaprasad', role: 'Software Developer',
     quote: 'I came in from a non-technical degree and finished able to build and deploy an application on my own.',
   },
   {
-    initials: 'BP', name: 'Bharath P', role: 'Data Analyst',
+    photo: null, name: 'Bharath P', role: 'Data Analyst',
     quote: 'The mock interviews were the difference. By the real one I had already answered most of those questions out loud.',
   },
   {
-    initials: 'RK', name: 'Raji K', role: 'Data Analyst',
+    photo: null, name: 'Raji K', role: 'Data Analyst',
     quote: 'Classes were live and recorded, so missing one for a shift at work never meant falling behind.',
   },
   {
-    initials: 'BK', name: 'Bavana K', role: 'Data Scientist',
+    photo: null, name: 'Bavana K', role: 'Data Scientist',
     quote: 'Not paying tuition up front is what made it possible for me to start at all.',
   },
 ];
@@ -115,18 +121,45 @@ export const PLACEMENTS_TICKER = [
   ['Flipkart', '₹22 LPA'], ['EY', '₹11 LPA'],
 ];
 
-/* ----------------------------------------------------------------- process */
-/* Pay After Placement genuinely is an ordered sequence — a learner passes each
-   stage before the next — which is what earns the numbering. */
-export const PROCESS = [
-  ['Apply', 'Submit the application form'],
-  ['Screening', 'A short call to check the track fits'],
-  ['Onboard', 'Join the programme and platform'],
-  ['Learn live', 'Live mentor-led training sessions'],
-  ['Set up', 'Tools, environment and access'],
-  ['Build', 'Daily project work and reviews'],
-  ['Get placed', 'Referrals, interviews, then you pay'],
+/* --------------------------------------------------------- Pay After Placement */
+/*
+ * This replaced an earlier seven-step "process" strip. Both described the same
+ * journey, and two numbered walkthroughs on one page read as padding. These
+ * four keep the step that actually matters commercially — you pay at the end —
+ * which the operational version buried in the middle.
+ *
+ * Numbered because it genuinely is a sequence: a learner passes each stage
+ * before the next.
+ */
+export const PAP_EXPLAINER =
+  'Simple idea: you learn now, we work with hiring partners to place you, and you pay ' +
+  'the tuition only after your first offer. No loans. No interest. If we cannot place ' +
+  'you within the programme window, you owe us nothing beyond the small registration fee.';
+
+export const PAP_STEPS = [
+  ['Apply & enrol', 'A small registration fee, a short screening call, then onboarding onto the platform.'],
+  ['Learn live', 'Months of live classes with a mentor assigned to you, and real project work.'],
+  ['Get interview-ready', 'Placement readiness test, mock interviews and referrals into the hiring network.'],
+  ['Get placed & pay', 'Tuition becomes payable only once you have accepted your first offer.'],
 ];
+
+export const PAP_FEATURES = [
+  'Live training', 'Industry mentors', '1:1 doubt support', 'Real projects',
+  'AI mock interviews', 'ATS resume', 'Placement readiness test', 'Job portal access',
+];
+
+/* ---------------------------------------------------------------- referral */
+/* The ₹10,000 figure comes from the prototype and has NOT been confirmed by
+   MOP. Set `enabled: false` to hide the whole section rather than deleting it. */
+export const REFERRAL = {
+  enabled: true,
+  amount: '₹10,000',
+  headline: 'for every friend you refer.',
+  body:
+    'Refer a candidate to any MOP Careers Pay After Placement programme. When they enrol ' +
+    'and start classes, the reward is yours.',
+  cta: 'Refer someone',
+};
 
 /* --------------------------------------------------------------------- faq */
 export const FAQ = [
@@ -140,6 +173,6 @@ export const FAQ = [
    'No honest institute can guarantee a job. What is committed is placement support for the stated window — and that you owe no tuition if it does not result in a placement.'],
   ['Are classes live?',
    'Yes, live and mentor-led, with recordings and notes afterwards so a missed class is always recoverable.'],
-  ['Can I switch courses after enrolling?',
+  ['Can I switch programs after enrolling?',
    'Yes, within the first 30 days, at no additional cost.'],
 ];

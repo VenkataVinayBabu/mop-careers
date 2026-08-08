@@ -41,6 +41,12 @@
   html {
     -webkit-text-size-adjust: 100%;
   }
+  /* The public header is sticky and 71px tall, so a section scrolled to with
+     scrollIntoView lands with its heading hidden underneath it. Reserve the
+     header's height plus a little breathing room. */
+  section[id] {
+    scroll-margin-top: 88px;
+  }
   body {
     @apply bg-navy-50 text-navy-800 font-sans antialiased;
   }
