@@ -16,6 +16,7 @@ import AdminDashboard from './pages/admin/Dashboard';
 import AdminEnquiries from './pages/admin/Enquiries';
 import AdminFees from './pages/admin/Fees';
 import AdminPlacements from './pages/admin/Placements';
+import AdminWebsite from './pages/admin/Website';
 import DoubtsInbox from './pages/staff/DoubtsInbox';
 import Landing from './pages/public/Landing';
 import ProgramDetail from './pages/public/ProgramDetail';
@@ -127,6 +128,9 @@ export default function App() {
         <Route path="/admin/placements" element={<AdminPlacements />} />
         <Route path="/admin/enquiries" element={<AdminEnquiries />} />
         <Route path="/admin/doubts" element={<DoubtsInbox />} />
+        {/* Content management for the public site. Admin-only on both sides —
+            the API router carries its own admin dependency. */}
+        <Route path="/admin/website" element={<AdminWebsite />} />
       </Route>
 
       {/* Teacher workspace — admins may open it too, since they can do everything. */}

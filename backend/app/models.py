@@ -380,6 +380,38 @@ class Doubt(Base):
     student: Mapped[User] = relationship()
 
 
+# ==========================================================================
+#  Website content management
+# ==========================================================================
+class SiteSetting(Base):
+    """One editable field of the public website, stored as key/value.
+
+    Key/value rather than a single wide row on purpose. The set of fields the
+    marketing site exposes is still moving, and a key/value store lets a new
+    field ship as a schema change in Pydantic and a form field in React,
+    without a migration each time. The API still presents a typed object, so
+    nothing downstream sees loose keys.
+
+    A missing row means "not set" and the default in SITE_SETTING_DEFAULTS
+    applies — the table only ever holds what an admin has actually changed.
+    """
+
+    __tablename__ = "site_settings"
+
+    key: Mapped[str] = mapped_column(String(60), primary_key=True)
+    value: Mapped[str] = mapped_column(Text, nullable=False, default="")
+    updated_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), server_default=func.now(), onupdate=func.now()
+    )
+    # Who last touched it. SET NULL rather than CASCADE: deleting the admin who
+    # set the phone number must not delete the phone number.
+    updated_by_id: Mapped[int | None] = mapped_column(
+        ForeignKey("users.id", ondelete="SET NULL")
+    )
+
+    updated_by: Mapped[User | None] = relationship()
+
+
 class PasswordResetToken(Base):
     """Single-use, expiring token backing the forgot-password flow.
 

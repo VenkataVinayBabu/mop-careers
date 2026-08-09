@@ -8,6 +8,7 @@ import {
   COMPANIES, FAQ, MENTORS, OUTCOMES, PAP_EXPLAINER, PAP_FEATURES, PAP_STEPS,
   PLACEMENTS_TICKER, REFERRAL, STATS, STORIES,
 } from '../../data/site';
+import { useSite } from '../../data/siteSettings';
 import ProgramCard from './ProgramCard';
 import EnquiryForm from './EnquiryForm';
 import {
@@ -63,6 +64,9 @@ const PILLARS = [
 
 export default function Landing() {
   useHashScroll();
+  /* Subscribed so the WhatsApp CTA below re-renders once the live settings
+     arrive — `contactHref()` reads the store rather than taking a prop. */
+  useSite();
 
   useEffect(() => {
     document.title = 'MOP Careers — Your Future. Our Priority.';

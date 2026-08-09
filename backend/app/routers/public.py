@@ -1,8 +1,8 @@
 """Public, unauthenticated endpoints for the marketing site.
 
-Only the enquiry form lives here. It is the one write path on the whole API
-that anyone on the internet can reach, so it carries its own throttle on top of
-Pydantic validation.
+The enquiry form and the site settings the marketing pages render. The enquiry
+form is the one write path on the whole API that anyone on the internet can
+reach, so it carries its own throttle on top of Pydantic validation.
 """
 import logging
 import time
@@ -11,11 +11,11 @@ from collections import defaultdict
 from fastapi import APIRouter, Depends, HTTPException, Request, status
 from sqlalchemy.orm import Session
 
-from app.config import settings
+from app import site_settings
 from app.database import get_db
 from app.mail import send_email
 from app.models import Enquiry
-from app.schemas import EnquiryCreate, MessageResponse
+from app.schemas import EnquiryCreate, MessageResponse, SiteSettingsPublic
 
 logger = logging.getLogger("mop.public")
 router = APIRouter(prefix="/public", tags=["public"])
@@ -38,6 +38,18 @@ def _rate_limit(request: Request) -> None:
         )
     hits.append(now)
     _recent[ip] = hits
+
+
+@router.get("/site-settings", response_model=SiteSettingsPublic)
+def read_site_settings(db: Session = Depends(get_db)) -> SiteSettingsPublic:
+    """Contact details, announcement and social links for the marketing site.
+
+    Unthrottled and unauthenticated: it is a read of content that is already
+    printed in the page footer. The site renders its own baked-in copy first
+    and overlays this when it arrives, so a slow or failed call here shows a
+    slightly stale footer rather than an empty page.
+    """
+    return SiteSettingsPublic(**site_settings.typed(site_settings.load_public(db)))
 
 
 @router.post("/enquiries", response_model=MessageResponse, status_code=status.HTTP_201_CREATED)
@@ -76,7 +88,10 @@ Enquiry #{enquiry.id}
         subject += f" — {enquiry.programme}"
 
     # The enquiry is already saved, so a mail failure never loses the lead.
-    send_email(settings.ENQUIRY_EMAIL, subject, body)
+    # The address comes from the settings table when an admin has set one,
+    # falling back to ENQUIRY_EMAIL in .env — changing where leads land no
+    # longer needs a redeploy.
+    send_email(site_settings.enquiry_email(db), subject, body)
 
     logger.info("Enquiry #%s received from %s", enquiry.id, enquiry.email)
     return MessageResponse(

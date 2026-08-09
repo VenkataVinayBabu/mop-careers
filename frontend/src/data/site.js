@@ -22,10 +22,24 @@
  */
 
 /* ---------------------------------------------------------------- settings */
-/* These become editable admin fields in the content-management work. Until
-   then, a blank value makes the UI fall back gracefully rather than render a
-   broken link. */
-export const SITE = {
+/*
+ * These are now EDITABLE BY AN ADMIN at /admin/website, and what you see below
+ * is only the starting point: the values baked into the bundle so the page has
+ * something to render on the very first paint.
+ *
+ * Read the live values with `useSite()` from ./siteSettings — never import
+ * SITE_DEFAULTS into a component, or that component will keep showing the
+ * built-in copy after an admin has changed it.
+ *
+ * These MUST match `DEFAULTS` in `backend/app/site_settings.py`. The site
+ * paints this copy immediately and swaps in the API's answer a moment later,
+ * so any disagreement is a visible flicker on a cold visit. Change one, change
+ * the other.
+ *
+ * A blank value is a real value, not a gap to fill: the UI falls back
+ * gracefully rather than rendering a broken link.
+ */
+export const SITE_DEFAULTS = {
   // Digits only, including country code, e.g. '919890813235'.
   // EMPTY until MOP confirms which number takes WhatsApp — the buttons fall
   // back to the enquiry form rather than opening a chat with nobody. Do not
@@ -42,6 +56,10 @@ export const SITE = {
 
   announcement: 'Applications open for the next cohort',
   announcementTag: 'Now enrolling',
+  // The strip is the one piece of chrome with nothing to fall back to when
+  // there is no news, so it gets its own switch rather than relying on an
+  // empty message.
+  announcementEnabled: true,
 
   social: {
     linkedin: '',
@@ -50,12 +68,6 @@ export const SITE = {
     facebook: '',
   },
 };
-
-/** wa.me link, or null when no number is configured. */
-export function whatsappLink() {
-  if (!SITE.whatsapp) return null;
-  return `https://wa.me/${SITE.whatsapp}?text=${encodeURIComponent(SITE.whatsappMessage)}`;
-}
 
 /* ---------------------------------------------------------------- outcomes */
 /* `value` is the number the counter animates to; `suffix` stays static while

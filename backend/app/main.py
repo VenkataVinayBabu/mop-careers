@@ -15,6 +15,7 @@ from app.routers import (
     public,
     student,
     teacher,
+    website,
 )
 
 logging.basicConfig(
@@ -40,6 +41,7 @@ app.add_middleware(
 app.include_router(public.router)
 app.include_router(auth.router)
 app.include_router(admin.router)
+app.include_router(website.router)
 app.include_router(doubts.router)
 app.include_router(fees.router)
 app.include_router(placements.router)

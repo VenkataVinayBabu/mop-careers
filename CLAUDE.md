@@ -7,8 +7,9 @@ marketing site (no auth) and an authenticated platform (admin / teacher / studen
 > verified and **deployed live**. The public site has been rebuilt to a new design and
 > all eight programme pages are complete and live.
 >
-> **The next piece of work is the admin area** so Bala can edit the site's content
-> himself — see Open thread 1. **Read Open thread 2 before touching anything public**:
+> **The admin area so Bala can edit the site himself is under way.** Site settings
+> are built (`Admin > Website`); courses, mentors and stories are next — see Open
+> thread 1. **Read Open thread 2 before touching anything public**:
 > a lot of what is currently live is unverified, and seven of the eight syllabi plus
 > nine mentors were written in-session rather than by MOP.
 >
@@ -517,6 +518,76 @@ Python 3.13.2 · Node v22.17.0 (npm 10.9.2) · Git 2.50.1 · PostgreSQL 17.9
     IntersectionObserver all silently do nothing. Twice this looked like a code bug
     and was not — verify with a full page load before chasing it.
 
+- **Admin content management, part 1 — site settings ✅.** The first piece of
+  Bala's "just fill a form" request. `Admin > Website` now edits the contact
+  details, the WhatsApp number and its pre-filled message, the announcement
+  strip, four social links, and the two addresses notifications are delivered
+  to. 1 new table (`site_settings`), 15 tables total, 4 migrations.
+  - **The public site no longer needs the backend to be awake.** This was the
+    open question that blocked the whole thread, and it is answered without
+    paying for an always-on instance. `SITE_DEFAULTS` is compiled into the
+    bundle and paints on frame one; a localStorage snapshot of the last API
+    answer overlays it synchronously; the API answer overlays that when it
+    arrives. A failed or slow fetch costs a stale footer, never a blank page —
+    **verified with the backend stopped and the cache cleared**, where the
+    whole site still rendered with only network errors in the console.
+  - `ENQUIRY_EMAIL` and `ADMIN_DOUBTS_EMAIL` are no longer redeploy-only. The
+    settings row wins when set and the `.env` value is the fallback, so
+    nothing breaks for an install that never touches the screen.
+
+  Decisions worth remembering:
+  - **`site_settings` is key/value, not a wide row.** The set of fields the
+    marketing site exposes is still moving, and key/value lets a new field ship
+    as a Pydantic field plus a form entry instead of a migration each time. The
+    API still presents a typed object, so no loose keys escape. A missing row
+    means "never set" and the default applies.
+  - **The public payload and the admin payload are different schemas.**
+    `enquiry_email` and `doubts_email` are internal delivery addresses and are
+    not in `GET /public/site-settings` at all — the site publishes `email`
+    (hello@…), which is a different thing. Asserted in the suite.
+  - **The form sends only what changed**, and the API treats an absent field as
+    "leave alone". A stale tab saving one field cannot blank the rest.
+  - **Backend `DEFAULTS` and frontend `SITE_DEFAULTS` must stay identical.**
+    The page paints the frontend copy and swaps in the API's answer a moment
+    later, so any disagreement is a visible flicker on a cold visit. Both files
+    say so at the top.
+  - **Live settings are read through `useSite()`, never by importing
+    `SITE_DEFAULTS`.** A component importing the defaults keeps showing the
+    built-in copy after an admin edits it. The store is a plain
+    `useSyncExternalStore` rather than context, because `whatsappLink()` and
+    `contactHref()` are called from ordinary functions, not only components.
+  - **The admin router carries its own `require_admin` dependency**, the same
+    way fees does. Everything on it edits what the whole internet sees, which
+    is the wrong place to forget a guard.
+  - **The announcement strip got an on/off switch** rather than relying on an
+    empty message, and the tag pill is dropped when cleared so the strip never
+    carries a stray orange pill with nothing in it.
+  - **Every input on the form is `type="text"`, including the email fields.**
+    `type="email"` hands the browser its own validation, which blocks submit
+    with a native bubble, bypasses the inline messages, and disagrees with the
+    API about whether blank is allowed. One validator.
+
+  Verification: **55/55 API assertions passed** — the public/admin payload
+  split, 401/403 for anonymous, teacher and student on both read and write,
+  eight rejected values and four accepted blanks, WhatsApp normalised to digits
+  for `wa.me`, emails trimmed and lowercased, partial update leaving untouched
+  fields alone, booleans round-tripping, unknown keys ignored, an empty body
+  being a no-op rather than a wipe, `updated_by`/`updated_at` recorded, and
+  enquiry mail falling back to `.env` when the setting is blank. In the browser:
+  the form loading real values, typing updating the dirty counter, a 422
+  rendering its message under the offending field with an orange border and
+  `aria-invalid`, a successful save clearing the dirty state, and the public
+  site then serving real `wa.me` links and a LinkedIn icon that were not there
+  before. Clean console in a fresh tab; one settings fetch, not two, despite
+  StrictMode's double mount.
+
+  A verification note: **do not `resize_window` the automated pane wider than
+  it really is.** Emulating 1280 on a ~540px pane left the layout stretched but
+  the paint clipped, so screenshots showed a stale frame and coordinate clicks
+  landed nowhere. At native width everything worked. Even then the pane's
+  synthetic clicks and key presses land only intermittently — pressing Enter in
+  a focused field submitted the form when six clicks on the button did not.
+
 ---
 
 ## Open threads
@@ -533,26 +604,33 @@ in the admin sidebar backed by real tables.
 
 Scope, in the order it should be built:
 
-1. **Site settings** — WhatsApp number, enquiry email, phone, address, socials,
-   announcement text. Small, low risk, and it proves the idea to Bala quickly.
-   (`ENQUIRY_EMAIL` is currently an env var, so changing it today needs a redeploy.)
+1. ~~**Site settings**~~ — **built.** See the progress log entry above.
 2. **Courses** — the biggest entity, and it carries the detail pages above.
+   `programs.js` is ~900 lines of nested content per program (syllabus phases,
+   projects, roles, FAQs), so this one does *not* fit the flat key/value shape
+   site settings used. It needs real tables.
 3. **Mentors, stories, companies** — same shape as each other, one pass.
+   Smaller than courses and higher value: deleting a fake mentor is currently a
+   git push, and there are nine of them live (thread 2).
 4. **Photos** — blocked on the storage decision below.
 
-Three things decided by this, not yet answered:
+The decisions this raised:
 
-- **The public site would start depending on the backend, which sleeps.** Today the
-  homepage is static and loads instantly. If it fetches content, the first visitor
-  after an idle period waits 30–60s at a blank page. Either the backend moves to a
-  paid always-on instance (~$7/mo), or we serve a last-known snapshot and refresh in
-  the background — more moving parts. **Recommended: pay the $7 when this is built.**
+- ~~**The public site would start depending on the backend, which sleeps.**~~
+  **Answered.** Baked-in defaults paint first, a localStorage snapshot of the
+  last API answer overlays them synchronously, and the API answer overlays that
+  when it arrives — so there is no blank page even with the backend fully down.
+  Verified. The same pattern carries the remaining entities, which makes the
+  ~$7/mo always-on instance a **nice-to-have rather than a prerequisite**. It is
+  still worth paying for once real students are enrolled, because the *signed-in*
+  app has no such fallback and eats the cold start on every login.
 - **Photos need object storage.** Mentor and student portraits, company logos.
   Uploads currently go to local disk, which Render's free tier wipes on every deploy
   — already true of the notes PDFs, and far more visible on a marketing site.
   Cloudflare R2's free tier covers it.
-- **Live edits go live instantly.** Every item needs a published/unpublished switch
-  at minimum. This is also the natural home for the "Member approves what a
+- **Live edits go live instantly.** Site settings ship without a published switch
+  because every field has a graceful blank state; courses, mentors and stories all
+  need one. This is also the natural home for the "Member approves what a
   Contributor entered" idea in thread 3.
 
 **Also decided for this work:** the testimonial field gets a ~200 character limit
@@ -591,9 +669,12 @@ of how much it would matter if wrong:
   `hello@mopcareers.com`, `+91 98908 13235`, HSR Layout Bengaluru. mopcareers.in
   publishes `hello@mopcareers.in` and a Whitefield address. Both are live and
   disagreeing.
-- **The WhatsApp number is still unknown.** `SITE.whatsapp` is empty, so the buttons
+- **The WhatsApp number is still unknown.** The setting is empty, so the buttons
   fall back to the enquiry form. Do **not** assume the phone number above takes
   WhatsApp — a landline or a number without it hands the visitor a dead end.
+  Bala can now fill this in himself at **Admin > Website**, along with the
+  conflicting email, phone and address above — none of those needs a developer
+  any more.
 
 ### 3. Domain
 

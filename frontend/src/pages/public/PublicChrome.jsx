@@ -3,7 +3,7 @@ import { Link, useLocation, useNavigate } from 'react-router-dom';
 
 import Logo from '../../components/Logo';
 import { LIVE_PROGRAMS } from '../../data/programs';
-import { SITE, whatsappLink } from '../../data/site';
+import { refreshSiteSettings, useSite, whatsappLink } from '../../data/siteSettings';
 
 /*
  * Header, footer and the floating actions, shared by every public page.
@@ -55,6 +55,14 @@ export function PublicHeader() {
   const menuRef = useRef(null);
   const navigate = useNavigate();
   const { pathname } = useLocation();
+  const site = useSite();
+
+  /* Every public page renders this header, so this is the one place the live
+     settings need asking for. The call itself is deduplicated, and the page is
+     already showing readable values while it is in flight. */
+  useEffect(() => {
+    refreshSiteSettings();
+  }, []);
 
   /* Close the dropdown on Escape or on a click outside it. Without the outside
      click it stays open behind whatever you click next, which feels stuck. */
@@ -172,24 +180,30 @@ export function PublicHeader() {
 
   return (
     <>
-      {/* Announcement — scrolls away with the page. */}
-      <div className="bg-navy-900 text-[0.78rem] text-navy-200">
-        <div className="mx-auto flex max-w-[1240px] items-center justify-between gap-4 px-6 py-2">
-          <p>
-            <span className="mr-2 rounded-full bg-orange px-2 py-0.5 text-[0.62rem] font-extrabold uppercase tracking-[0.1em] text-white">
-              {SITE.announcementTag}
-            </span>
-            {SITE.announcement}
-          </p>
-          <a
-            href="/#enquire"
-            onClick={goToSection('enquire')}
-            className="hidden font-semibold text-orange-300 transition hover:text-white md:block"
-          >
-            Talk to a counsellor &rarr;
-          </a>
+      {/* Announcement — scrolls away with the page, and an admin can switch it
+          off entirely. The tag is dropped rather than shown empty when it has
+          been cleared, so the strip never carries a stray orange pill. */}
+      {site.announcementEnabled && site.announcement && (
+        <div className="bg-navy-900 text-[0.78rem] text-navy-200">
+          <div className="mx-auto flex max-w-[1240px] items-center justify-between gap-4 px-6 py-2">
+            <p>
+              {site.announcementTag && (
+                <span className="mr-2 rounded-full bg-orange px-2 py-0.5 text-[0.62rem] font-extrabold uppercase tracking-[0.1em] text-white">
+                  {site.announcementTag}
+                </span>
+              )}
+              {site.announcement}
+            </p>
+            <a
+              href="/#enquire"
+              onClick={goToSection('enquire')}
+              className="hidden font-semibold text-orange-300 transition hover:text-white md:block"
+            >
+              Talk to a counsellor &rarr;
+            </a>
+          </div>
         </div>
-      </div>
+      )}
 
       <header className="sticky top-0 z-40 border-b border-navy-100 bg-paper/80 backdrop-blur-md backdrop-saturate-150">
         <div className="mx-auto flex h-[70px] max-w-[1240px] items-center gap-5 px-6">
@@ -267,8 +281,27 @@ export function PublicHeader() {
   );
 }
 
+/* Social icons, drawn inline rather than pulled from lucide-react: brand
+   glyphs are not part of that set, and four <path>s is cheaper than a
+   dependency. Only the links an admin has actually filled in are rendered. */
+const SOCIAL_ICONS = {
+  linkedin: 'M4.98 3.5a2 2 0 1 1-.02 4 2 2 0 0 1 .02-4ZM3 9h4v12H3V9Zm7 0h3.8v1.7h.05c.53-.95 1.83-1.95 3.75-1.95C21.6 8.75 22 11.1 22 14.1V21h-4v-6.1c0-1.45-.03-3.3-2-3.3-2 0-2.3 1.57-2.3 3.2V21h-4V9Z',
+  instagram: 'M12 2.2c3.2 0 3.6 0 4.8.07 1.2.06 1.8.25 2.2.42.6.22 1 .49 1.4.9.42.4.69.8.91 1.4.17.4.36 1 .42 2.2.06 1.2.07 1.6.07 4.8s0 3.6-.07 4.8c-.06 1.2-.25 1.8-.42 2.2-.22.6-.49 1-.9 1.4-.4.42-.8.69-1.4.91-.4.17-1 .36-2.2.42-1.2.06-1.6.07-4.8.07s-3.6 0-4.8-.07c-1.2-.06-1.8-.25-2.2-.42-.6-.22-1-.49-1.4-.9-.42-.4-.69-.8-.91-1.4-.17-.4-.36-1-.42-2.2C2.2 15.6 2.2 15.2 2.2 12s0-3.6.07-4.8c.06-1.2.25-1.8.42-2.2.22-.6.49-1 .9-1.4.4-.42.8-.69 1.4-.91.4-.17 1-.36 2.2-.42C8.4 2.2 8.8 2.2 12 2.2Zm0 3.05A6.75 6.75 0 1 0 18.75 12 6.75 6.75 0 0 0 12 5.25Zm0 11.13A4.38 4.38 0 1 1 16.38 12 4.38 4.38 0 0 1 12 16.38Zm6.95-11.4a1.58 1.58 0 1 1-1.58-1.57 1.58 1.58 0 0 1 1.58 1.57Z',
+  youtube: 'M21.6 7.2a2.5 2.5 0 0 0-1.76-1.77C18.25 5 12 5 12 5s-6.25 0-7.84.43A2.5 2.5 0 0 0 2.4 7.2 26 26 0 0 0 2 12a26 26 0 0 0 .4 4.8 2.5 2.5 0 0 0 1.76 1.77C5.75 19 12 19 12 19s6.25 0 7.84-.43a2.5 2.5 0 0 0 1.76-1.77A26 26 0 0 0 22 12a26 26 0 0 0-.4-4.8ZM10 15.02V8.98L15.2 12 10 15.02Z',
+  facebook: 'M22 12a10 10 0 1 0-11.56 9.88v-6.99H7.9V12h2.54V9.8c0-2.5 1.5-3.89 3.77-3.89 1.1 0 2.24.2 2.24.2v2.46h-1.26c-1.24 0-1.63.77-1.63 1.56V12h2.78l-.45 2.89h-2.33v6.99A10 10 0 0 0 22 12Z',
+};
+
+const SOCIAL_LABELS = {
+  linkedin: 'LinkedIn',
+  instagram: 'Instagram',
+  youtube: 'YouTube',
+  facebook: 'Facebook',
+};
+
 export function PublicFooter() {
+  const site = useSite();
   const wa = whatsappLink();
+  const socials = Object.entries(site.social || {}).filter(([, url]) => url);
   return (
     <footer className="bg-navy-900 py-14 text-[0.86rem] text-navy-300">
       <div className="mx-auto max-w-[1240px] px-6">
@@ -326,21 +359,21 @@ export function PublicFooter() {
                 A blank value still renders as "pending" rather than a dead link. */}
             <ul className="grid gap-2.5">
               <li>
-                {SITE.email ? (
-                  <a href={`mailto:${SITE.email}`} className="transition hover:text-teal-300">
-                    {SITE.email}
+                {site.email ? (
+                  <a href={`mailto:${site.email}`} className="transition hover:text-teal-300">
+                    {site.email}
                   </a>
                 ) : (
                   'Email — pending'
                 )}
               </li>
               <li>
-                {SITE.phone ? (
+                {site.phone ? (
                   <a
-                    href={`tel:${SITE.phone.replace(/[^\d+]/g, '')}`}
+                    href={`tel:${site.phone.replace(/[^\d+]/g, '')}`}
                     className="transition hover:text-teal-300"
                   >
-                    {SITE.phone}
+                    {site.phone}
                   </a>
                 ) : (
                   'Phone — pending'
@@ -355,8 +388,31 @@ export function PublicFooter() {
                   'WhatsApp — pending'
                 )}
               </li>
-              <li>{SITE.address || 'Address — pending'}</li>
+              <li>{site.address || 'Address — pending'}</li>
             </ul>
+
+            {/* Nothing is rendered at all until at least one link exists — a
+                row of dead icons is worse than no row. */}
+            {socials.length > 0 && (
+              <ul className="mt-5 flex gap-2.5">
+                {socials.map(([key, url]) => (
+                  <li key={key}>
+                    <a
+                      href={url}
+                      target="_blank"
+                      rel="noreferrer"
+                      aria-label={SOCIAL_LABELS[key] || key}
+                      title={SOCIAL_LABELS[key] || key}
+                      className="flex h-9 w-9 items-center justify-center rounded-full bg-navy-700 text-navy-200 transition hover:bg-teal hover:text-white"
+                    >
+                      <svg className="h-4 w-4" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
+                        <path d={SOCIAL_ICONS[key]} />
+                      </svg>
+                    </a>
+                  </li>
+                ))}
+              </ul>
+            )}
           </div>
         </div>
 
@@ -370,6 +426,10 @@ export function PublicFooter() {
 
 /** Floating WhatsApp button, plus the persistent call CTA on small screens. */
 export function PublicFloats() {
+  /* Subscribed purely to re-render when the settings land: `whatsappLink()`
+     reads the store directly and would otherwise keep whatever it returned on
+     the first paint. */
+  useSite();
   const wa = whatsappLink();
   const scrollToEnquire = (e) => {
     if (wa) return;

@@ -11,7 +11,7 @@ from fastapi import APIRouter, Depends, HTTPException, Query, status
 from sqlalchemy import select
 from sqlalchemy.orm import Session, selectinload
 
-from app.config import settings
+from app import site_settings
 from app.database import get_db
 from app.deps import get_active_user, require_student, teacher_batch_ids
 from app.mail import send_email
@@ -109,16 +109,19 @@ Doubt #{doubt.id}
 """
 
     # class_doubt goes to the batch's teacher(s); everything else to admin.
+    # The admin address comes from the settings table when one has been set,
+    # falling back to ADMIN_DOUBTS_EMAIL in .env.
+    admin_address = site_settings.doubts_email(db)
     if doubt.query_type == DOUBT_CLASS:
         teachers = _batch_teachers(db, student.batch_id)
-        recipients = [t.email for t in teachers] or [settings.ADMIN_DOUBTS_EMAIL]
+        recipients = [t.email for t in teachers] or [admin_address]
         if not teachers:
             logger.warning(
                 "Doubt #%s is a class doubt but batch %s has no teacher; sent to admin instead",
                 doubt.id, student.batch_id,
             )
     else:
-        recipients = [settings.ADMIN_DOUBTS_EMAIL]
+        recipients = [admin_address]
 
     send_email(recipients, subject, body)
     return _out(db, doubt)

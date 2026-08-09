@@ -531,5 +531,108 @@ class PlacementStats(BaseModel):
     applications: int = 0
 
 
+# --- website content management -------------------------------------------
+class SiteSettingsPublic(BaseModel):
+    """Served unauthenticated to the marketing site.
+
+    Deliberately does NOT carry `enquiry_email` or `doubts_email` — those are
+    internal delivery addresses, not something the site displays.
+    """
+
+    whatsapp: str = ""
+    whatsapp_message: str = ""
+    phone: str = ""
+    email: str = ""
+    address: str = ""
+    announcement: str = ""
+    announcement_tag: str = ""
+    announcement_enabled: bool = True
+    social_linkedin: str = ""
+    social_instagram: str = ""
+    social_youtube: str = ""
+    social_facebook: str = ""
+
+
+class SiteSettingsAdmin(SiteSettingsPublic):
+    enquiry_email: str = ""
+    doubts_email: str = ""
+
+
+def _optional_email(v: str | None) -> str | None:
+    """Blank is a legitimate value on every address field here — it means
+    "fall back to the environment" for the routing addresses, and "not
+    published" for the displayed one. EmailStr rejects '', so validate by
+    hand rather than making blank impossible to enter."""
+    if v is None:
+        return None
+    v = v.strip()
+    if not v:
+        return ""
+    if v.count("@") != 1 or " " in v or "." not in v.split("@")[1]:
+        raise ValueError("Enter a valid email address")
+    return v.lower()
+
+
+def _optional_url(v: str | None) -> str | None:
+    if v is None:
+        return None
+    v = v.strip()
+    if not v:
+        return ""
+    if not v.startswith(("http://", "https://")):
+        raise ValueError("Enter a full link starting with https://")
+    return v
+
+
+class SiteSettingsUpdate(BaseModel):
+    """Every field optional — the admin form sends only what changed, and a
+    field left out keeps its current value rather than being blanked."""
+
+    # Digits only including the country code, e.g. 919890813235. wa.me will not
+    # accept spaces, '+' or dashes, so they are stripped rather than rejected —
+    # nobody types a phone number the way a URL wants it.
+    whatsapp: str | None = Field(default=None, max_length=20)
+    whatsapp_message: str | None = Field(default=None, max_length=300)
+    phone: str | None = Field(default=None, max_length=40)
+    email: str | None = Field(default=None, max_length=255)
+    address: str | None = Field(default=None, max_length=200)
+    announcement: str | None = Field(default=None, max_length=160)
+    announcement_tag: str | None = Field(default=None, max_length=40)
+    announcement_enabled: bool | None = None
+    social_linkedin: str | None = Field(default=None, max_length=255)
+    social_instagram: str | None = Field(default=None, max_length=255)
+    social_youtube: str | None = Field(default=None, max_length=255)
+    social_facebook: str | None = Field(default=None, max_length=255)
+    enquiry_email: str | None = Field(default=None, max_length=255)
+    doubts_email: str | None = Field(default=None, max_length=255)
+
+    @field_validator("whatsapp")
+    @classmethod
+    def _clean_whatsapp(cls, v: str | None) -> str | None:
+        if v is None:
+            return None
+        digits = "".join(c for c in v if c.isdigit())
+        if not digits:
+            return ""
+        if not 8 <= len(digits) <= 15:
+            raise ValueError("Enter the number with its country code, digits only")
+        return digits
+
+    @field_validator("email", "enquiry_email", "doubts_email")
+    @classmethod
+    def _check_emails(cls, v: str | None) -> str | None:
+        return _optional_email(v)
+
+    @field_validator("social_linkedin", "social_instagram", "social_youtube", "social_facebook")
+    @classmethod
+    def _check_socials(cls, v: str | None) -> str | None:
+        return _optional_url(v)
+
+    @field_validator("phone", "address", "announcement", "announcement_tag", "whatsapp_message")
+    @classmethod
+    def _trim(cls, v: str | None) -> str | None:
+        return v.strip() if v is not None else None
+
+
 # Resolve the forward reference in TokenResponse.
 TokenResponse.model_rebuild()

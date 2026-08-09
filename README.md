@@ -147,7 +147,9 @@ Re-seed from scratch with `python -m app.seed --reset` (destructive).
 creation, block/unblock, the full curriculum workspace for any batch, **fees**
 (totals, payments, outstanding balances, batch collection summary), **placements**
 (companies, applications, interview rounds, batch-wise stats), **enquiries** from the
-public site with a status workflow, and the **doubt support** inbox.
+public site with a status workflow, the **doubt support** inbox, and **Website** —
+the public site's contact details, WhatsApp number, announcement bar, social links
+and notification addresses, editable without a deploy.
 
 **Teacher** — *only their assigned batches.* Mark class days complete, set dates,
 paste recording links, upload notes PDFs, take attendance, view their students'
@@ -172,7 +174,7 @@ login.
 backend/
   alembic/            migrations
   app/
-    routers/          auth, admin, teacher, student, files
+    routers/          auth, admin, website, teacher, student, files
     config.py         .env-backed settings
     curriculum.py     55-day template (days 1-11 fixed)
     database.py       engine + session
@@ -182,13 +184,15 @@ backend/
     schemas.py        Pydantic request/response models
     security.py       bcrypt hashing + JWT
     seed.py           demo data
+    site_settings.py  admin-editable public-site settings + their defaults
   uploads/notes/      uploaded notes PDFs (gitignored)
 frontend/
   src/
     api/              axios client + error formatting
     components/       Layout, Logo, ProtectedRoute, Toast, ui primitives
     context/          AuthContext
-    pages/            admin/, teacher/, student/, and the auth screens
+    data/             public-site content + the live site-settings store
+    pages/            admin/, teacher/, student/, public/, and the auth screens
 ```
 
 ---
@@ -228,6 +232,22 @@ server-generated filename.
 **The public enquiry form is the only unauthenticated write.** It carries an
 in-process per-IP throttle (5/hour) on top of validation. Because it is in-process,
 restarting the backend resets it — a multi-process deployment would need Redis.
+
+**The public site never waits for the API.** `GET /public/site-settings` supplies
+the admin-editable contact details, but the page paints `SITE_DEFAULTS` from the
+bundle first, overlays a `localStorage` snapshot of the last answer, then overlays
+the API's answer when it arrives. With the backend asleep — or stopped — the site
+still renders. Read the live values through `useSite()` in
+`src/data/siteSettings.js`; importing `SITE_DEFAULTS` into a component means that
+component ignores whatever the admin has changed. The defaults in that file and
+`DEFAULTS` in `backend/app/site_settings.py` must stay identical, or a cold visit
+visibly flickers from one to the other.
+
+**Where enquiries and doubts are delivered is a setting, not just an env var.**
+`ENQUIRY_EMAIL` and `ADMIN_DOUBTS_EMAIL` remain the fallback; a value saved under
+Admin > Website wins. `enquiry_email` and `doubts_email` are deliberately absent
+from the public payload — the site publishes `email` (hello@…), which is a
+different address.
 
 **Doubt routing.** `class_doubt` emails the batch's teacher(s); `technical` and
 `other` go to `ADMIN_DOUBTS_EMAIL`. If a batch has no teacher assigned, class doubts

@@ -5,6 +5,7 @@ import {
   Briefcase,
   CalendarDays,
   ChevronsUpDown,
+  Globe,
   GraduationCap,
   HelpCircle,
   Home,
@@ -37,6 +38,9 @@ const NAV = {
     { to: '/admin/placements', label: 'Placements', icon: Briefcase },
     { to: '/admin/enquiries', label: 'Enquiries', icon: Inbox },
     { to: '/admin/doubts', label: 'Doubts', icon: MessageSquare },
+    // Content management for the public site. Last, because it is the only
+    // entry that edits what the outside world sees rather than the platform.
+    { to: '/admin/website', label: 'Website', icon: Globe },
   ],
   // Teachers deliberately get no fees, placements or enquiries entries.
   teacher: [
