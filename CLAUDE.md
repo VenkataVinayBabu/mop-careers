@@ -4,10 +4,15 @@ Web platform for **MOP Careers**, a technology training institute. Two faces: a 
 marketing site (no auth) and an authenticated platform (admin / teacher / student).
 
 > **Read this first if you are picking the project up.** Phases 1, 2 and 5 are built,
-> verified and **deployed live**, and the public site has been rebuilt to a new design.
-> The current open work is course detail pages and an admin area for managing the
-> public site's content. Jump to **"Open threads"** at the bottom — that is the live
-> to-do list.
+> verified and **deployed live**. The public site has been rebuilt to a new design and
+> all eight programme pages are complete and live.
+>
+> **The next piece of work is the admin area** so Bala can edit the site's content
+> himself — see Open thread 1. **Read Open thread 2 before touching anything public**:
+> a lot of what is currently live is unverified, and seven of the eight syllabi plus
+> nine mentors were written in-session rather than by MOP.
+>
+> Jump to **"Open threads"** at the bottom — that is the live to-do list.
 >
 > - Live site: <https://mop-careers.onrender.com>
 > - Live API: <https://mop-careers-api.onrender.com> (`/docs` for the API browser)
@@ -434,6 +439,84 @@ Python 3.13.2 · Node v22.17.0 (npm 10.9.2) · Git 2.50.1 · PostgreSQL 17.9
   build hash does **not** work — Render compiles its own bundle and line-ending
   conversion alone changes the hash. Check the deployed bundle's *contents* instead.
 
+- **"Courses" renamed to "Programs" across the public site ✅ live.** MOP calls them
+  programmes. Copy, section ids, data file, components and routes all follow. The
+  signed-in app keeps `course_type` and `course_completed` — those are database
+  column names and renaming them is a migration, deliberately not done.
+  - **There is no separate programs page.** All eight appear on the home page, so a
+    second copy was only somewhere else to keep in sync. `/programs` and `/courses`
+    both redirect to `/#programs`.
+  - Nav gained **Home** first, and **Programs** is a dropdown listing every published
+    programme with its badge. It opens on hover *and* focus — hover-only leaves it
+    unreachable by keyboard. On mobile the drawer expands the list inline.
+  - Two new sections: **"What is Pay After Placement, really?"** (replaced a
+    seven-step process strip that told the same story twice) and **Refer & Earn**
+    (₹10,000, unconfirmed, behind an `enabled` flag).
+
+- **Program detail pages at `/programs/{slug}` ✅ live.** One template, eight pages.
+  - Sections in order: hero + "what's included" card, why, roadmap, roles, syllabus,
+    technologies, projects, **mentors**, career services, fees, FAQ, hiring partners,
+    enquiry, related programs.
+  - **Every section is optional** — a programme with no projects has no projects
+    section rather than an empty shell. Content arrives programme by programme.
+  - **Global vs per-programme is the whole trick.** Written naively each page needs
+    ~120 pieces of content, or 960 across eight. Roadmap, career services, hiring
+    partners, fee structure and most FAQs do not vary, so they live in `site.js` and
+    are written once — bringing per-programme authoring down to roughly 40 items.
+  - **Placements Exit** is kept from the reference and is the best idea on it: each
+    phase names the calibre of employer you are ready for at that point, rising
+    through the programme. Those company lists need to be true.
+  - Syllabus phases are labelled **Phase 1–4 with no month**. The reference pinned
+    them to JAN/APR/JUL/OCT, which only works with one intake a year.
+  - Fees come from `DEFAULT_FEES` in `site.js` and can be overridden per programme.
+    Almost certainly not identical across all eight.
+  - One phase open at a time; opening another closes the first, and the clicked
+    header is scroll-compensated so it does not jump out from under the cursor.
+
+  **Content provenance — important.** Only Data Science with AI came from MOP's own
+  prototype. **The other seven syllabi were written from scratch in-session**: 32
+  syllabus phases, 32 projects, 32 role descriptions with salary bands. Plausible and
+  industry-standard, but not MOP's curriculum and unreviewed by anyone there. Salary
+  bands are market estimates. Certification claims (AWS SAA, CEH, Security+) must be
+  checked against what MOP actually teaches.
+
+- **People on the site.**
+  - `MENTORS` carry a `programs` array of slugs; that is what puts a mentor on a
+    programme page. Assignments are inferred from each mentor's speciality line, not
+    confirmed.
+  - `Avatar` renders a real portrait when `photo` is set, otherwise a monogram on a
+    brand tint. Tints cycle by list position, not by hashing the name — hashing kept
+    collapsing to two colours across four cards.
+  - **Nine fabricated mentors are live**, flagged `placeholder: true`, with employer
+    "Placeholder · N yrs" and "replace before launch" in the speciality line. Find
+    them with `grep -n "placeholder: true" src/data/site.js`.
+  - **Stock photos were tried and removed.** The free pools are overwhelmingly
+    Western; searches for Indian portraits return documentary street photography.
+    A stranger's face under a real mentor's name is worse than no face.
+    `src/assets/people/README.md` documents sizes and the two-line swap.
+
+  Bugs found and fixed in this stretch:
+  - **Scroll position was not reset on navigation.** Clicking a programme card
+    halfway down the home page opened its detail page halfway down. `ScrollToTop` in
+    `App.jsx` fixes it, skipping hash URLs and POP navigations so Back still restores.
+  - **A component declared inside another component's render body** gets a new
+    identity every state change, so React rebuilt the subtree and fired `mouseleave`
+    on the node being removed — closing the nav dropdown the instant hover opened it.
+    Inlined the JSX instead.
+  - **Sections scrolled to via the nav landed under the sticky header.**
+    `scroll-margin-top: 88px` on `section[id]`.
+  - Grid items stretch by default, which left ~170px of dead white under the hero
+    card. `lg:self-start`.
+
+  Two verification lessons worth keeping:
+  - **Matching a string in the deployed bundle is not proof of deploy.** The string
+    may already exist in the previous build. Poll until the bundle *hash* changes,
+    then check behaviour in a browser.
+  - **The automated browser pane often lacks window focus** (`document.hasFocus()`
+    false) and does not composite. Hover, focus events, `requestAnimationFrame` and
+    IntersectionObserver all silently do nothing. Twice this looked like a code bug
+    and was not — verify with a full page load before chasing it.
+
 ---
 
 ## Open threads
@@ -441,24 +524,7 @@ Python 3.13.2 · Node v22.17.0 (npm 10.9.2) · Git 2.50.1 · PostgreSQL 17.9
 Everything below is decided-but-not-built, or known-but-unresolved. This is the
 to-do list.
 
-### 1. Course detail pages — the next piece of work
-
-Clicking a course should open its own page, structured like
-`https://ai-data-science-3.preview.emergentagent.com/data-science-with-ai.html`.
-That preview had gone to sleep and served only a loading shell, so **the reference
-was never actually seen** — wake it before starting.
-
-Eight pages at `/courses/{slug}`. The card action already routes through a single
-`onOpen` handler, and the footer's course list is generated, so wiring the slugs is
-a small change. The expensive part is content: overview, who it is for, module
-breakdown, tools, projects, eligibility, target roles and per-course FAQs, times
-eight. That is writing, not code, and it has to come from MOP.
-
-**Sequencing note:** if courses are going to be admin-managed (thread 2), build the
-detail page as a template driven by the same data shape rather than eight hardcoded
-pages, or the work gets done twice.
-
-### 2. Admin content management — Bala's request
+### 1. Admin content management — Bala's request, and now the priority
 
 Bala's words, via the user: he wants to *"just fill a form"* to add or remove a
 course, a trainer or a story, change the fees, the WhatsApp number or the enquiry
@@ -494,18 +560,34 @@ with a live counter. A longer quote does not break the layout but drags the row
 taller and hollows out the other cards — constrain the input rather than truncating
 what someone wrote.
 
-### 3. Content that is live but unconfirmed
+**Why this is now the priority.** The programme pages are built and the site is
+complete. What remains is almost entirely *content correction* — seven invented
+syllabi, nine fake mentors, unverified figures, two unconfirmed programmes. Every
+one of those currently needs a developer and a git push. Built once, Bala fixes his
+own syllabus or deletes a fake mentor in about a minute. The data files are already
+shaped like the API rows, so the swap is an import change.
 
-The public site currently publishes several things nobody has verified:
+### 2. Content that is live but unconfirmed
 
+The public site currently publishes a great deal nobody has verified. In rough order
+of how much it would matter if wrong:
+
+- **Seven of the eight syllabi were written in-session, not by MOP.** Only Data
+  Science came from MOP's own material. Salary bands are market estimates; the
+  Placements Exit company lists are the strongest claim on any page; AWS SAA, CEH
+  and Security+ certification claims must match what is actually taught.
+- **Nine mentors do not exist.** Flagged `placeholder: true` and visibly marked, but
+  live. `grep -n "placeholder: true" src/data/site.js`.
 - **Cloud Computing and Cyber Security** appear only in the Emergent prototype. They
   are **not** on mopcareers.in and MOP has not confirmed it runs them. Both are
-  flagged `confirmed: false` in `courses.js`; set `published: false` to remove them.
-- **Mentors, learner quotes and the placement figures** (1,050+ placements, ₹47.6L
-  highest, 500+ partners, 87%) are taken from mopcareers.in — MOP's own existing
-  claims, not invented here, but unverified against records. No student has been
-  asked for consent to be quoted on a new site.
-- **Contact details conflict across MOP's own properties.** The site now shows
+  flagged `confirmed: false` in `programs.js`; set `published: false` to remove them.
+- **Real mentors' details and programme assignments are unverified.** One name was
+  already wrong (Kuppola Rajesh → Vinay K), so the employers and years beside the
+  other three are equally suspect. Who teaches what is inferred.
+- **Learner quotes and placement figures** (1,050+ placements, ₹47.6L highest, 500+
+  partners, 87%) come from mopcareers.in — MOP's own claims, unverified against
+  records, and no student has consented to being quoted here.
+- **Contact details conflict across MOP's own properties.** The site shows
   `hello@mopcareers.com`, `+91 98908 13235`, HSR Layout Bengaluru. mopcareers.in
   publishes `hello@mopcareers.in` and a Whitefield address. Both are live and
   disagreeing.
@@ -513,7 +595,7 @@ The public site currently publishes several things nobody has verified:
   fall back to the enquiry form. Do **not** assume the phone number above takes
   WhatsApp — a landline or a number without it hands the visitor a dead end.
 
-### 4. Domain
+### 3. Domain
 
 MOP owns **mopcareers.com** — currently a GoDaddy "Launching Soon" placeholder. The
 decision between pointing that at Render, keeping mopcareers.in, or running both was
@@ -524,7 +606,7 @@ saving it in the dashboard does nothing until the frontend is redeployed.
 
 Auto-deploy is confirmed **On Commit** for both `mop-careers` and `mop-careers-api`.
 
-### 5. Six roles — blocked on Bala
+### 4. Six roles — blocked on Bala
 
 Three roles exist (admin, teacher, student). Three more are specified but not built:
 
@@ -551,7 +633,7 @@ and whether teachers keep attendance.
 A shareable summary of all six roles was produced for Bala:
 <https://claude.ai/code/artifact/2fa3f337-6e8b-40bf-a65f-2283840a9d35>
 
-### 6. Before real students use the live site
+### 5. Before real students use the live site
 
 - **The free PostgreSQL database expires.** This is the only item here with an actual
   deadline, and when it lapses the database is *deleted* — students, batches,
@@ -571,7 +653,7 @@ A shareable summary of all six roles was produced for Bala:
   site itself is CDN-served and does **not** sleep.
 - A test enquiry named **"Deploy Check"** may still be in Admin > Enquiries.
 
-### 7. Still single-programme internally
+### 6. Still single-programme internally
 
 `TOTAL_CURRICULUM_DAYS` is a global 55 and `curriculum.py` seeds the Python day 1-11
 topics into *every* new batch regardless of course type. **A Java batch created today
@@ -580,7 +662,7 @@ is the gap between what is sold and what the platform does. Fixing it needs a `C
 entity, per-course curriculum templates and a per-course day count. The user also
 noted "every course is 45 days" for later.
 
-### 8. Phases 3 and 4 — no longer being built
+### 7. Phases 3 and 4 — no longer being built
 
 The ATS resume builder and AI interviewer are **being bought in externally** and will
 be connected rather than built. The student dashboard still shows "Mock interviews"
