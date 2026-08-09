@@ -89,6 +89,7 @@ export const OUTCOMES = [
  * mentor at all, which is honest but is also a gap a visitor will notice.
  */
 export const MENTORS = [
+  /* ---- Real people, from mopcareers.in. Details still unconfirmed. ---- */
   { name: 'Balaram', photo: null, former: 'Ex-TCS · 8 yrs',
     focus: 'Full stack development. Mentors the web and Java tracks.',
     programs: ['full-stack-web-development', 'java-full-stack'] },
@@ -101,6 +102,49 @@ export const MENTORS = [
   { name: 'Bharath David', photo: null, former: '10 yrs experience',
     focus: 'Data science and machine learning, from fundamentals to deployment.',
     programs: ['data-science-with-ai'] },
+
+  /* ==========================================================================
+   *  PLACEHOLDER MENTORS — THESE PEOPLE DO NOT EXIST.
+   * ==========================================================================
+   *  Invented so every program has someone listed and the layout can be seen
+   *  with a realistic number of cards. Each is flagged `placeholder: true`.
+   *
+   *  This is a heavier fiction than a stock photo: a stock photo is a real
+   *  person miscredited, whereas these are fabricated people with fabricated
+   *  careers. Publishing them would tell a prospective student that a named
+   *  engineer will teach them, when no such engineer exists.
+   *
+   *  Delete every entry below before this site takes real enrolments, or
+   *  replace each with a real mentor. To find them:
+   *      grep -n "placeholder: true" src/data/site.js
+   * ========================================================================== */
+  { name: 'Aarav Menon', photo: null, former: 'Placeholder · 7 yrs', placeholder: true,
+    focus: 'Backend and API engineering. Placeholder mentor — replace before launch.',
+    programs: ['java-full-stack', 'python-full-stack'] },
+  { name: 'Divya Raghavan', photo: null, former: 'Placeholder · 9 yrs', placeholder: true,
+    focus: 'LLM applications and retrieval systems. Placeholder mentor — replace before launch.',
+    programs: ['gen-ai-agentic-ai'] },
+  { name: 'Nikhil Sarma', photo: null, former: 'Placeholder · 6 yrs', placeholder: true,
+    focus: 'Agents, evaluation and production AI. Placeholder mentor — replace before launch.',
+    programs: ['gen-ai-agentic-ai'] },
+  { name: 'Sneha Kulkarni', photo: null, former: 'Placeholder · 8 yrs', placeholder: true,
+    focus: 'Cloud architecture and infrastructure as code. Placeholder mentor — replace before launch.',
+    programs: ['cloud-computing'] },
+  { name: 'Rohit Deshpande', photo: null, former: 'Placeholder · 10 yrs', placeholder: true,
+    focus: 'Kubernetes, CI/CD and reliability. Placeholder mentor — replace before launch.',
+    programs: ['cloud-computing'] },
+  { name: 'Farhan Qureshi', photo: null, former: 'Placeholder · 9 yrs', placeholder: true,
+    focus: 'Penetration testing and application security. Placeholder mentor — replace before launch.',
+    programs: ['cyber-security'] },
+  { name: 'Ananya Iyer', photo: null, former: 'Placeholder · 7 yrs', placeholder: true,
+    focus: 'Security operations and incident response. Placeholder mentor — replace before launch.',
+    programs: ['cyber-security'] },
+  { name: 'Karthik Nair', photo: null, former: 'Placeholder · 8 yrs', placeholder: true,
+    focus: 'Performance marketing and paid media. Placeholder mentor — replace before launch.',
+    programs: ['digital-marketing-with-ai'] },
+  { name: 'Meera Joshi', photo: null, former: 'Placeholder · 6 yrs', placeholder: true,
+    focus: 'SEO, content strategy and analytics. Placeholder mentor — replace before launch.',
+    programs: ['digital-marketing-with-ai'] },
 ];
 
 /** The mentors teaching a given program. Empty when nobody is assigned. */

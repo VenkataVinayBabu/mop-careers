@@ -159,18 +159,17 @@ export default function ProgramDetail() {
               </div>
             </div>
 
-            {/* fee card */}
-            <aside className="rounded-[24px] border border-navy-100 bg-white p-7 shadow-pop">
-              <Eyebrow>Pay after placement</Eyebrow>
+            {/*
+              * What's-included card. Prices deliberately live in the Fees
+              * section further down and nowhere else — two places showing a
+              * number is two places to update, and one of them will eventually
+              * be wrong. This links there instead.
+              */}
+            {/* `self-start` stops the card stretching to match the taller left
+                column, which left ~170px of empty white below the last button. */}
+            <aside className="rounded-[24px] border border-navy-100 bg-white p-7 shadow-pop lg:self-start">
+              <Eyebrow>What&apos;s included</Eyebrow>
               <h2 className="mt-3 text-[1.3rem] font-extrabold tracking-tight text-navy">{program.name}</h2>
-
-              <div className="mt-5 flex items-baseline gap-3">
-                <span className="text-[2.1rem] font-extrabold tracking-tight text-navy">{fees.registration}</span>
-                {fees.registrationWas && (
-                  <span className="text-[1.05rem] text-navy-300 line-through">{fees.registrationWas}</span>
-                )}
-              </div>
-              <p className="mt-1 text-[0.82rem] text-navy-400">{fees.registrationNote}</p>
 
               <ul className="mt-6 grid gap-2.5 border-t border-navy-100 pt-6">
                 {(d.highlights || [program.summary]).concat([
@@ -189,9 +188,12 @@ export default function ProgramDetail() {
               </ul>
 
               <a href="#enquire" className="pbtn-primary mt-6 w-full">Apply now &rarr;</a>
-              <p className="mt-3 text-center text-[0.78rem] text-navy-400">
-                Then {fees.tuition} once you are placed.
-              </p>
+              <a
+                href="#fees"
+                className="mt-3 block text-center text-[0.82rem] font-semibold text-teal-ink transition hover:text-teal-700"
+              >
+                See the fee structure &darr;
+              </a>
             </aside>
           </div>
         </div>
@@ -423,9 +425,31 @@ export default function ProgramDetail() {
               accent="done the job."
               lede="You are matched with a mentor for the whole program — not a support queue."
             />
-            <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+            {/*
+              * Up to four mentors sit centred on one line; beyond that the row
+              * becomes a horizontal scroller rather than wrapping into a ragged
+              * second row. Cards keep a fixed width either way, so a program
+              * with two teachers and one with ten look like the same design.
+              *
+              * The negative margin lets cards run to the screen edge on a phone,
+              * which is the visual cue that a row scrolls.
+              */}
+            <div
+              className={
+                mentors.length > 4
+                  ? 'flex snap-x snap-mandatory gap-4 overflow-x-auto scroll-px-6 px-6 pb-4 -mx-6'
+                  : 'flex flex-wrap justify-center gap-4'
+              }
+            >
               {mentors.map((m, i) => (
-                <article key={m.name} className="overflow-hidden rounded-[20px] border border-navy-100 bg-white">
+                <article
+                  key={m.name}
+                  className={`overflow-hidden rounded-[20px] border border-navy-100 bg-white ${
+                    mentors.length > 4
+                      ? 'w-[260px] shrink-0 snap-start'
+                      : 'w-full sm:w-[272px]'
+                  }`}
+                >
                   <Avatar
                     name={m.name}
                     photo={m.photo}
@@ -436,11 +460,17 @@ export default function ProgramDetail() {
                   <div className="p-5">
                     <p className="text-[0.68rem] font-bold uppercase tracking-[0.1em] text-teal-ink">{m.former}</p>
                     <h3 className="mt-1.5 text-base font-bold tracking-tight text-navy">{m.name}</h3>
-                    <p className="mt-1.5 text-[0.81rem] text-navy-500 sm:min-h-[2.43rem]">{m.focus}</p>
+                    <p className="mt-1.5 text-[0.81rem] text-navy-500 sm:min-h-[3.25rem]">{m.focus}</p>
                   </div>
                 </article>
               ))}
             </div>
+
+            {mentors.length > 4 && (
+              <p className="mt-1 text-center text-[0.78rem] text-navy-400 lg:hidden">
+                Scroll for more &rarr;
+              </p>
+            )}
           </div>
         </section>
       )}
