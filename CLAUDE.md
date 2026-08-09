@@ -581,6 +581,24 @@ Python 3.13.2 · Node v22.17.0 (npm 10.9.2) · Git 2.50.1 · PostgreSQL 17.9
   before. Clean console in a fresh tab; one settings fetch, not two, despite
   StrictMode's double mount.
 
+  **A deploy-checking trap that cost half an hour.** Polling
+  `https://mop-careers.onrender.com/` for a changed bundle hash reported "not
+  deployed yet" long after both services were live. Cloudflare edge-caches
+  `index.html` with `s-maxage=300`, so a plain GET happily served the *previous*
+  build's HTML — naming the previous bundle — for five minutes at a time, and a
+  poll every 20s just kept hitting the same cached copy. **Always cache-bust
+  when checking a deploy**: a unique query string plus `Cache-Control: no-cache`
+  (`cf-cache-status: MISS` in the response headers confirms you got past it).
+  This sits on top of the existing rule that a changed *hash* is the signal, not
+  a string match.
+
+  **`View the site` needed `?preview`.** `PublicHome` redirects any signed-in
+  user to their own dashboard, so the button on Admin > Website opened a tab
+  that bounced straight back to `/admin` — the one person who needs to check
+  their own edit was the one person who could not. `/?preview` opts out of the
+  redirect. It has to be explicit: a signed-in student landing on `/` should
+  still go to their dashboard, not the marketing page.
+
   A verification note: **do not `resize_window` the automated pane wider than
   it really is.** Emulating 1280 on a ~540px pane left the layout stretched but
   the paint clipped, so screenshots showed a stale frame and coordinate clicks
