@@ -204,8 +204,11 @@ export default function AdminWebsite() {
       <PageHeader
         title="Website"
         subtitle="Contact details, announcements and links shown on the public site"
+        /* `?preview` is required, not decoration: / redirects a signed-in user
+           to their own dashboard, so without it this button opened a tab that
+           bounced straight back to /admin. */
         action={
-          <a href="/" target="_blank" rel="noreferrer" className="btn-ghost btn-sm">
+          <a href="/?preview=1" target="_blank" rel="noreferrer" className="btn-ghost btn-sm">
             View the site &rarr;
           </a>
         }

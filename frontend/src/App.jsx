@@ -1,5 +1,5 @@
 import { useEffect } from 'react';
-import { Navigate, Route, Routes, useLocation, useNavigationType } from 'react-router-dom';
+import { Navigate, Route, Routes, useLocation, useNavigationType, useSearchParams } from 'react-router-dom';
 
 import Layout from './components/Layout';
 import ProtectedRoute, { HOME_FOR_ROLE } from './components/ProtectedRoute';
@@ -34,11 +34,19 @@ import StudentProgress from './pages/student/Progress';
 import StudentSchedule from './pages/student/Schedule';
 
 /** The public landing page, unless you are already signed in — in which case
- *  you go straight to your dashboard. */
+ *  you go straight to your dashboard.
+ *
+ *  `?preview` opts out of that redirect. Without it an admin cannot look at
+ *  the site they have just edited: "View the site" on Admin > Website opened a
+ *  tab that bounced straight back to /admin, so the one person who needs to
+ *  check their own change was the one person who could not see it. The
+ *  parameter has to be explicit — a signed-in student landing on / should
+ *  still go to their dashboard rather than the marketing page. */
 function PublicHome() {
   const { user, loading } = useAuth();
+  const [params] = useSearchParams();
   if (loading) return null;
-  if (user) {
+  if (user && !params.has('preview')) {
     return (
       <Navigate
         to={user.must_change_password ? '/change-password' : HOME_FOR_ROLE[user.role] || '/login'}
