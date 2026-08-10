@@ -525,13 +525,30 @@ export default function Landing() {
             </h2>
           </div>
 
-          <div className="grid grid-cols-2 gap-px overflow-hidden rounded-[20px] border border-navy-100 bg-navy-100 sm:grid-cols-4 lg:grid-cols-6">
+          {/*
+            * Wrapped tiles rather than a grid.
+            *
+            * The grid drew its dividers by letting a navy container show
+            * through 1px gaps, which only works when the last row is full.
+            * Thirteen companies in a six-column grid left one tile and five
+            * cells of bare container — a grey block, and the first thing
+            * anyone noticed in this section.
+            *
+            * That count is admin-editable now, so it will be an arbitrary
+            * number forever. Centred wrapping is the shape that cannot have a
+            * ragged row: the last line simply centres, whether it holds six
+            * names or one.
+            */}
+          <ul className="flex flex-wrap justify-center gap-2.5">
             {partners.map((c) => (
-              <div key={c.name} className="bg-white px-2 py-6 text-center text-[0.87rem] font-bold tracking-tight text-navy-300">
+              <li
+                key={c.name}
+                className="rounded-full border border-navy-100 bg-white px-6 py-3 text-[0.87rem] font-bold tracking-tight text-navy-400 transition hover:border-teal hover:text-navy"
+              >
                 {c.name}
-              </div>
+              </li>
             ))}
-          </div>
+          </ul>
         </div>
       </section>
       )}

@@ -584,13 +584,20 @@ export default function ProgramDetail() {
         <section className="py-16 sm:py-20">
           <div className="mx-auto max-w-[1240px] px-6">
             <SectionHead eyebrow="Hiring network" title="Where we make" accent="introductions." />
-            <div className="grid grid-cols-2 gap-px overflow-hidden rounded-[20px] border border-navy-100 bg-navy-100 sm:grid-cols-4 lg:grid-cols-6">
+            {/* Wrapped tiles, matching the home page. A grid drawing its
+                dividers through 1px gaps leaves a block of bare container
+                whenever the last row is short, and the count is admin-editable
+                now — so it will be an arbitrary number forever. */}
+            <ul className="flex flex-wrap justify-center gap-2.5">
               {partners.map((c) => (
-                <div key={c.name} className="bg-white px-2 py-6 text-center text-[0.87rem] font-bold tracking-tight text-navy-300">
+                <li
+                  key={c.name}
+                  className="rounded-full border border-navy-100 bg-white px-6 py-3 text-[0.87rem] font-bold tracking-tight text-navy-400 transition hover:border-teal hover:text-navy"
+                >
                   {c.name}
-                </div>
+                </li>
               ))}
-            </div>
+            </ul>
           </div>
         </section>
       )}
