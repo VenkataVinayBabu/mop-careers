@@ -838,6 +838,51 @@ class HiringPartnerUpdate(BaseModel):
         return _optional_url(v)
 
 
+# --- headline statistics --------------------------------------------------
+StatSection = Literal["hero", "outcomes"]
+
+
+class StatisticOut(ORMModel):
+    id: int
+    section: StatSection
+    label: str
+    value: float
+    prefix: str = ""
+    suffix: str = ""
+    published: bool = True
+    sort_order: int = 0
+
+
+class StatisticCreate(BaseModel):
+    section: StatSection
+    label: str = Field(min_length=1, max_length=80)
+    # Negative figures make no sense for any of these — every one is a count,
+    # a package or a percentage.
+    value: float = Field(ge=0, le=99_999_999)
+    prefix: str = Field(default="", max_length=8)
+    suffix: str = Field(default="", max_length=8)
+    published: bool = True
+
+    @field_validator("label", "prefix", "suffix")
+    @classmethod
+    def _trim(cls, v: str) -> str:
+        return v.strip()
+
+
+class StatisticUpdate(BaseModel):
+    section: StatSection | None = None
+    label: str | None = Field(default=None, min_length=1, max_length=80)
+    value: float | None = Field(default=None, ge=0, le=99_999_999)
+    prefix: str | None = Field(default=None, max_length=8)
+    suffix: str | None = Field(default=None, max_length=8)
+    published: bool | None = None
+
+    @field_validator("label", "prefix", "suffix")
+    @classmethod
+    def _trim(cls, v: str | None) -> str | None:
+        return v.strip() if v is not None else None
+
+
 # --- programmes -----------------------------------------------------------
 # The detail block is typed rather than an open dict. It is stored as one JSON
 # document, but that is a storage decision — it does not mean the API should

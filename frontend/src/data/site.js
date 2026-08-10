@@ -84,6 +84,13 @@ export const SITE_DEFAULTS = {
 };
 
 /* ---------------------------------------------------------------- outcomes */
+/*
+ * EDITABLE AT Admin > Website > Statistics. Both lists below are only the
+ * first paint; the database is the source of truth and they are seeded from
+ * exactly these rows. Read `useHeroStats()` / `useOutcomeStats()`.
+ *
+ * These remain the least verified claims on the whole site.
+ */
 /* `value` is the number the counter animates to; `suffix` stays static while
    it runs. `prefix` carries the rupee sign so it does not get animated. */
 export const STATS = [

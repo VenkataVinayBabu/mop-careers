@@ -20,7 +20,7 @@ from sqlalchemy.orm import Session
 from app import site_settings
 from app.database import get_db
 from app.deps import require_admin
-from app.models import HiringPartner, Mentor, Program, Story, User
+from app.models import HiringPartner, Mentor, Program, Statistic, Story, User
 from app.schemas import (
     HiringPartnerCreate,
     HiringPartnerOut,
@@ -35,6 +35,9 @@ from app.schemas import (
     ReorderRequest,
     SiteSettingsAdmin,
     SiteSettingsUpdate,
+    StatisticCreate,
+    StatisticOut,
+    StatisticUpdate,
     StoryCreate,
     StoryOut,
     StoryUpdate,
@@ -306,3 +309,61 @@ def reorder_programs(
 ) -> list[Program]:
     logger.info("Programs reordered by %s", admin.email)
     return apply_reorder(db, Program, payload.ids)
+
+
+# --- headline statistics --------------------------------------------------
+# `name` is `label` on this one, so the shared _save_new/_remove helpers would
+# log and message the wrong attribute. Written out instead of contorting them.
+@router.get("/statistics", response_model=list[StatisticOut])
+def list_statistics(db: Session = Depends(get_db)) -> list[Statistic]:
+    return ordered(db, Statistic)
+
+
+@router.post("/statistics", response_model=StatisticOut, status_code=status.HTTP_201_CREATED)
+def create_statistic(
+    payload: StatisticCreate, db: Session = Depends(get_db), admin: User = Depends(require_admin)
+) -> Statistic:
+    stat = Statistic(**payload.model_dump(), sort_order=next_sort_order(db, Statistic))
+    db.add(stat)
+    db.commit()
+    db.refresh(stat)
+    logger.info("Statistic '%s' added by %s", stat.label, admin.email)
+    return stat
+
+
+@router.put("/statistics/{statistic_id}", response_model=StatisticOut)
+def update_statistic(
+    statistic_id: int,
+    payload: StatisticUpdate,
+    db: Session = Depends(get_db),
+    admin: User = Depends(require_admin),
+) -> Statistic:
+    stat = get_or_404(db, Statistic, statistic_id, "Statistic")
+    changes = payload.model_dump(exclude_unset=True)
+    for key, value in changes.items():
+        setattr(stat, key, value)
+    db.commit()
+    db.refresh(stat)
+    if changes:
+        logger.info("Statistic #%s updated by %s: %s", stat.id, admin.email, ", ".join(sorted(changes)))
+    return stat
+
+
+@router.delete("/statistics/{statistic_id}", response_model=MessageResponse)
+def delete_statistic(
+    statistic_id: int, db: Session = Depends(get_db), admin: User = Depends(require_admin)
+) -> MessageResponse:
+    stat = get_or_404(db, Statistic, statistic_id, "Statistic")
+    label = stat.label
+    db.delete(stat)
+    db.commit()
+    logger.info("Statistic '%s' deleted by %s", label, admin.email)
+    return MessageResponse(message=f"{label} removed from the website.")
+
+
+@router.post("/statistics/reorder", response_model=list[StatisticOut])
+def reorder_statistics(
+    payload: ReorderRequest, db: Session = Depends(get_db), admin: User = Depends(require_admin)
+) -> list[Statistic]:
+    logger.info("Statistics reordered by %s", admin.email)
+    return apply_reorder(db, Statistic, payload.ids)

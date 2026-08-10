@@ -558,6 +558,46 @@ class Program(Base):
     )
 
 
+STAT_HERO = "hero"
+STAT_OUTCOMES = "outcomes"
+STAT_SECTIONS = (STAT_HERO, STAT_OUTCOMES)
+
+
+class Statistic(Base):
+    """One counted-up figure on the public site.
+
+    Both places these appear live in one table, told apart by `section`: the
+    strip under the hero, and the outcomes grid further down. They were two
+    hardcoded lists sharing three of their four figures, which is two lists
+    that have to agree — the same trap the hiring partners were in.
+
+    They are also **the least verified claims on the whole site**: 1,050
+    placements, ₹47.6L, 500 partners, 87%. Being a table rather than a
+    constant is what lets someone correct them the day the real numbers are
+    known.
+    """
+
+    __tablename__ = "statistics"
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True)
+    section: Mapped[str] = mapped_column(String(20), nullable=False, index=True)
+    label: Mapped[str] = mapped_column(String(80), nullable=False)
+    # The number the counter animates to. Float because one of them is 47.6;
+    # how many decimals to show is derived from the value rather than stored,
+    # so the form has one less technical field to get wrong.
+    value: Mapped[float] = mapped_column(Numeric(12, 2), nullable=False, default=0)
+    # Rendered either side of the animated digits so they do not flicker:
+    # "₹" before, "+" / "%" / "L" after.
+    prefix: Mapped[str] = mapped_column(String(8), default="", nullable=False)
+    suffix: Mapped[str] = mapped_column(String(8), default="", nullable=False)
+    published: Mapped[bool] = mapped_column(Boolean, default=True, nullable=False)
+    sort_order: Mapped[int] = mapped_column(Integer, default=0, nullable=False, index=True)
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
+    updated_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), server_default=func.now(), onupdate=func.now()
+    )
+
+
 class PasswordResetToken(Base):
     """Single-use, expiring token backing the forgot-password flow.
 

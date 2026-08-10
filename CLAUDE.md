@@ -830,6 +830,37 @@ Python 3.13.2 · Node v22.17.0 (npm 10.9.2) · Git 2.50.1 · PostgreSQL 17.9
   exactly why "it builds" is not verification. Same shape as the `COMPANIES`
   bug: a second consumer inside the file being edited.
 
+- **Admin content management, part 5 — the headline statistics ✅.** The four
+  figures under the hero and the four in the outcomes grid. 1 new table
+  (`statistics`), 20 tables total, 8 migrations. **Nothing on the marketing
+  site is hardcoded any more.**
+  - **One table, split by `section`.** They were two arrays agreeing on three
+    of their four numbers — two places to remember when a figure changes, the
+    same trap the hiring partners were in.
+  - **`decimals` is derived from the value, not stored.** 47.6 needs one
+    decimal place and 1050 needs none; a separate "decimal places" box that
+    has to be kept in step with the number is the one mistake nobody would
+    spot. The frontend mapper works it out.
+  - The screen shows a **live preview** of what a visitor will see — "1,050+",
+    "₹47.6L" — because a raw value and a suffix in two boxes read very
+    differently from the assembled result.
+  - It carries the bluntest warning of any of these screens: these are the
+    least verified claims on the site, and a placement rate is the first thing
+    a sceptical parent asks you to back up.
+
+  Verification: **23/23 API assertions** — RBAC, the seeded eight split four
+  and four, an unknown section and a negative figure rejected, trimming, the
+  published filter, moving a figure between sections, and delete naming the
+  label rather than a `name` field it does not have. In the browser: both
+  sections listed with their previews rendering exactly as the public page
+  does, and an edit to the placement rate reaching the public store.
+
+  **What could not be checked in the automated pane:** the counters animate on
+  IntersectionObserver, which never fires without compositing, so they sit at
+  zero there. The structure was verified instead — labels, the rupee prefix
+  and coloured suffix in their own spans, and the decimal place correctly
+  derived. The animation itself was verified when `CountUp` was built.
+
 ---
 
 ## Open threads
@@ -915,9 +946,9 @@ of how much it would matter if wrong:
   partners, 87%) come from mopcareers.in — MOP's own claims, unverified against
   records, and no student has consented to being quoted here. The quotes, the
   company list and the ticker packages are all editable at Admin > Website now;
-  the four headline statistics are still hardcoded in `site.js` (`STATS` and
-  `OUTCOMES`) and remain the largest unverified claim that still needs a
-  developer to change.
+  and the four headline statistics are editable at Admin > Website >
+  Statistics. **They remain the largest unverified claim on the site** — being
+  editable makes them correctable, not true.
 - **Contact details conflict across MOP's own properties.** The site shows
   `hello@mopcareers.com`, `+91 98908 13235`, HSR Layout Bengaluru. mopcareers.in
   publishes `hello@mopcareers.in` and a Whitefield address. Both are live and

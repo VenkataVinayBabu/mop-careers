@@ -4,10 +4,11 @@ import { warmUp } from '../../api/client';
 import Avatar from '../../components/Avatar';
 import CountUp from '../../components/CountUp';
 import {
-  FAQ, OUTCOMES, PAP_EXPLAINER, PAP_FEATURES, PAP_STEPS, REFERRAL, STATS,
+  FAQ, PAP_EXPLAINER, PAP_FEATURES, PAP_STEPS, REFERRAL,
 } from '../../data/site';
 import {
-  useMentors, usePartners, usePlacementsTicker, usePrograms, useSite, useStories,
+  useHeroStats, useMentors, useOutcomeStats, usePartners, usePlacementsTicker,
+  usePrograms, useSite, useStories,
 } from '../../data/siteSettings';
 import ProgramCard from './ProgramCard';
 import EnquiryForm from './EnquiryForm';
@@ -146,6 +147,9 @@ export default function Landing() {
   /* Admin-managed. `featured` splits the catalogue into the two lead cards
      and the rest, exactly as FEATURED_PROGRAMS/OTHER_PROGRAMS used to. */
   const programs = usePrograms();
+  /* Admin-managed, and the least verified claims on the site. */
+  const heroStats = useHeroStats();
+  const outcomeStats = useOutcomeStats();
   const featured = programs.filter((p) => p.featured);
   const others = programs.filter((p) => !p.featured);
 
@@ -212,7 +216,7 @@ export default function Landing() {
           </div>
 
           <div className="mx-auto mt-14 grid max-w-3xl grid-cols-2 gap-x-4 gap-y-7 sm:grid-cols-4">
-            {STATS.map((s) => <Stat key={s.label} stat={s} />)}
+            {heroStats.map((s) => <Stat key={s.label} stat={s} />)}
           </div>
         </div>
       </section>
@@ -348,7 +352,7 @@ export default function Landing() {
           </div>
 
           <div className="grid grid-cols-2 gap-4 lg:grid-cols-4">
-            {OUTCOMES.map((o) => (
+            {outcomeStats.map((o) => (
               <div key={o.label} className="rounded-[20px] border border-navy-100 bg-white p-6">
                 <CountUp
                   value={o.value}

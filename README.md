@@ -150,8 +150,9 @@ creation, block/unblock, the full curriculum workspace for any batch, **fees**
 public site with a status workflow, the **doubt support** inbox, and **Website** —
 content management for the public site, editable without a deploy. Five tabs:
 *Settings* (contact details, WhatsApp number, announcement bar, social links,
-notification addresses), *Programs*, *Mentors*, *Stories* and *Hiring partners* —
-each of the last four a list you can add to, edit, hide, reorder and delete. A
+notification addresses), *Programs*, *Statistics*, *Mentors*, *Stories* and
+*Hiring partners* — each of the last five a list you can add to, edit, hide,
+reorder and delete. A
 programme opens its own editor for the whole of its page: headline, why, roles,
 syllabus phases, technologies, projects, fees and FAQ.
 

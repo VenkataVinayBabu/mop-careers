@@ -14,7 +14,7 @@ from sqlalchemy.orm import Session
 from app import site_settings
 from app.database import get_db
 from app.mail import send_email
-from app.models import Enquiry, HiringPartner, Mentor, Program, Story
+from app.models import Enquiry, HiringPartner, Mentor, Program, Statistic, Story
 from app.schemas import (
     EnquiryCreate,
     HiringPartnerOut,
@@ -22,6 +22,7 @@ from app.schemas import (
     MessageResponse,
     ProgramOut,
     SiteSettingsPublic,
+    StatisticOut,
     StoryOut,
 )
 from app.website_content import ordered
@@ -101,6 +102,16 @@ def read_partners(db: Session = Depends(get_db)) -> list[HiringPartner]:
     that may be waking a sleeping backend.
     """
     return ordered(db, HiringPartner, published_only=True)
+
+
+@router.get("/statistics", response_model=list[StatisticOut])
+def read_statistics(db: Session = Depends(get_db)) -> list[Statistic]:
+    """The headline figures for both the hero strip and the outcomes grid.
+
+    One list; the frontend splits it by `section`. These are the least
+    verified claims on the site — see CLAUDE.md.
+    """
+    return ordered(db, Statistic, published_only=True)
 
 
 @router.post("/enquiries", response_model=MessageResponse, status_code=status.HTTP_201_CREATED)

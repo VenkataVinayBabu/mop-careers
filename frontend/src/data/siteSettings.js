@@ -34,6 +34,8 @@ import { api } from '../api/client';
 import { PROGRAMS as PROGRAM_DEFAULTS } from './programs';
 import {
   COMPANIES as COMPANY_DEFAULTS,
+  OUTCOMES as OUTCOME_DEFAULTS,
+  STATS as STAT_DEFAULTS,
   MENTORS as MENTOR_DEFAULTS,
   PLACEMENTS_TICKER as TICKER_DEFAULTS,
   SITE_DEFAULTS,
@@ -45,6 +47,7 @@ const MENTORS_CACHE_KEY = 'mop_site_mentors';
 const STORIES_CACHE_KEY = 'mop_site_stories';
 const PARTNERS_CACHE_KEY = 'mop_site_partners';
 const PROGRAMS_CACHE_KEY = 'mop_site_programs';
+const STATS_CACHE_KEY = 'mop_site_statistics';
 
 /* The API speaks snake_case and a flat shape; the site speaks camelCase with
    the social links nested. One mapper here, rather than either side bending to
@@ -112,6 +115,23 @@ const partnersFromApi = listMapper((r) => ({
   logo: r.logo_url || null,
   package: r.package_lpa || '',
 }));
+
+/* Headline statistics. `decimals` is DERIVED from the value rather than
+   stored: 47.6 needs one decimal place, 1050 needs none, and asking an admin
+   to keep a separate "decimal places" box in step with the number is inviting
+   the one mistake nobody would spot. */
+const statsFromApi = listMapper((r) => {
+  const value = Number(r.value) || 0;
+  const decimals = String(value).includes('.') ? String(value).split('.')[1].length : 0;
+  return {
+    section: r.section || 'hero',
+    label: r.label || '',
+    value,
+    prefix: r.prefix || '',
+    suffix: r.suffix || '',
+    decimals,
+  };
+});
 
 /* The programme catalogue. Only the flat fields need renaming — everything
    inside `detail` (headline, why, roles, syllabus, projects, faq) already
@@ -223,6 +243,17 @@ const partnersStore = createListStore(PARTNERS_CACHE_KEY, partnersFromApi, PARTN
 /* The public endpoint only ever returns published programmes, so the baked
    default is filtered to match — otherwise an unpublished programme would be
    visible for the moment before the API answers. */
+/* Both sections come from one endpoint and are split by `section` below —
+   they were two hardcoded lists agreeing on three of their four figures. */
+const statsStore = createListStore(
+  STATS_CACHE_KEY,
+  statsFromApi,
+  [
+    ...STAT_DEFAULTS.map((s) => ({ ...s, section: 'hero' })),
+    ...OUTCOME_DEFAULTS.map((s) => ({ ...s, section: 'outcomes' })),
+  ],
+);
+
 const programsStore = createListStore(
   PROGRAMS_CACHE_KEY,
   programsFromApi,
@@ -255,6 +286,12 @@ export const usePlacementsTicker = () => partnersStore.use().filter((p) => p.pac
  *  `use()` of its own, unlike the three list stores. */
 export const useFees = () => useSite().fees;
 
+/** The four figures under the hero. */
+export const useHeroStats = () => statsStore.use().filter((s) => s.section === 'hero');
+
+/** The four in the outcomes grid. */
+export const useOutcomeStats = () => statsStore.use().filter((s) => s.section === 'outcomes');
+
 /** Every published programme, in the order an admin arranged them. This is
  *  what `LIVE_PROGRAMS` used to be; the endpoint already filters. */
 export const usePrograms = () => programsStore.use();
@@ -282,6 +319,7 @@ export const applyMentors = (rows) => mentorsStore.apply(rows);
 export const applyStories = (rows) => storiesStore.apply(rows);
 export const applyPartners = (rows) => partnersStore.apply(rows);
 export const applyPrograms = (rows) => programsStore.apply(rows);
+export const applyStatistics = (rows) => statsStore.apply(rows);
 
 /* Once per page load. Several public pages ask for the refresh (whichever one
    the visitor lands on renders the header), and they should not each spend a
@@ -301,6 +339,7 @@ export function refreshPublicContent() {
       api.get('/public/stories').then(({ data }) => applyStories(data)).catch(() => null),
       api.get('/public/partners').then(({ data }) => applyPartners(data)).catch(() => null),
       api.get('/public/programs').then(({ data }) => applyPrograms(data)).catch(() => null),
+      api.get('/public/statistics').then(({ data }) => applyStatistics(data)).catch(() => null),
     ]);
   }
   return inFlight;
