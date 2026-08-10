@@ -139,6 +139,30 @@
            transition hover:-translate-y-0.5 hover:border-teal hover:shadow-pop;
   }
 
+  /*
+   * Horizontal card rail. The scrollbar is hidden because the rail carries its
+   * own arrow buttons and snaps — a native bar under the cards on a marketing
+   * page reads as an accident. It stays a real scroll container, so touch
+   * swipe, trackpad and keyboard arrows all still work.
+   */
+  .rail {
+    @apply flex snap-x snap-mandatory gap-4 overflow-x-auto scroll-smooth
+           [scrollbar-width:none] [-ms-overflow-style:none];
+  }
+  .rail::-webkit-scrollbar {
+    @apply hidden;
+  }
+  /* Bleeds the rail to the viewport edge inside a padded container, so a card
+     is visibly cut off rather than stopping neatly at the margin — which is
+     what tells you there is more to scroll to.
+     `scroll-pl-6` must match the padding: without it a snap-start card aligns
+     to the raw scrollport edge, so the rail snaps to 24px and can never come
+     to rest at scrollLeft 0 — which leaves the Previous arrow enabled while
+     already at the first card. */
+  .rail-bleed {
+    @apply -mx-6 px-6 scroll-pl-6;
+  }
+
   .table-wrap {
     @apply overflow-x-auto;
   }

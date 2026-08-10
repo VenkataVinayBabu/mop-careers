@@ -1,4 +1,4 @@
-import { useEffect } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 
 import { warmUp } from '../../api/client';
 import Avatar from '../../components/Avatar';
@@ -62,8 +62,77 @@ const PILLARS = [
     icon: 'M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2M13 7a4 4 0 1 1-8 0 4 4 0 0 1 8 0Zm4 4 2 2 4-4', tint: 'bg-teal-50 text-teal-ink' },
 ];
 
+/*
+ * Arrow controls for a horizontal card rail.
+ *
+ * Declared at module level, not inside Landing's render body. A component
+ * defined in a render body gets a new identity on every state change, which
+ * makes React tear the subtree down and rebuild it — the same mistake that
+ * once made the nav dropdown close the instant hovering opened it.
+ *
+ * The arrows are an addition, never the only way through: the rail is a real
+ * scroll container, so touch swipe, trackpad and keyboard arrows all work
+ * without them. They exist for a mouse user on a desktop, who otherwise has
+ * no affordance at all once the scrollbar is hidden.
+ */
+function RailArrows({ railRef, label }) {
+  const [at, setAt] = useState({ start: true, end: false });
+
+  const measure = useCallback(() => {
+    const el = railRef.current;
+    if (!el) return;
+    const max = el.scrollWidth - el.clientWidth;
+    setAt({
+      start: el.scrollLeft <= 1,
+      // 1px of slack: fractional layout widths mean scrollLeft rarely lands
+      // exactly on the maximum, which would leave "next" enabled at the end.
+      end: el.scrollLeft >= max - 1,
+    });
+  }, [railRef]);
+
+  useEffect(() => {
+    const el = railRef.current;
+    if (!el) return undefined;
+    measure();
+    el.addEventListener('scroll', measure, { passive: true });
+    window.addEventListener('resize', measure);
+    return () => {
+      el.removeEventListener('scroll', measure);
+      window.removeEventListener('resize', measure);
+    };
+  }, [measure, railRef]);
+
+  /* Scroll by a whole viewport of cards rather than a fixed pixel count, so
+     the step matches however many happen to be visible. */
+  const nudge = (dir) => () => {
+    const el = railRef.current;
+    if (el) el.scrollBy({ left: dir * el.clientWidth * 0.9, behavior: 'smooth' });
+  };
+
+  const btn =
+    'grid h-10 w-10 place-items-center rounded-full border border-navy-100 bg-white text-navy ' +
+    'transition hover:border-teal hover:text-teal-ink disabled:cursor-not-allowed disabled:opacity-35 ' +
+    'disabled:hover:border-navy-100 disabled:hover:text-navy';
+
+  return (
+    <div className="flex gap-2">
+      <button type="button" onClick={nudge(-1)} disabled={at.start} className={btn} aria-label={`Previous ${label}`}>
+        <svg className="h-4 w-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5">
+          <path d="m15 18-6-6 6-6" strokeLinecap="round" strokeLinejoin="round" />
+        </svg>
+      </button>
+      <button type="button" onClick={nudge(1)} disabled={at.end} className={btn} aria-label={`Next ${label}`}>
+        <svg className="h-4 w-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5">
+          <path d="m9 18 6-6-6-6" strokeLinecap="round" strokeLinejoin="round" />
+        </svg>
+      </button>
+    </div>
+  );
+}
+
 export default function Landing() {
   useHashScroll();
+  const mentorRail = useRef(null);
   /* Subscribed so the WhatsApp CTA below re-renders once the live settings
      arrive — `contactHref()` reads the store rather than taking a prop. */
   useSite();
@@ -316,19 +385,50 @@ export default function Landing() {
           <div className="mb-11 grid gap-6 lg:grid-cols-[1.35fr_1fr] lg:items-end lg:gap-12">
             <div>
               <Eyebrow>Meet your mentors</Eyebrow>
-              <h2 className="mt-3.5 text-[clamp(1.85rem,4vw,2.9rem)] font-extrabold leading-[1.05] tracking-tight text-navy">
+              <h2
+                id="mentors-heading"
+                className="mt-3.5 text-[clamp(1.85rem,4vw,2.9rem)] font-extrabold leading-[1.05] tracking-tight text-navy"
+              >
                 Taught by people who&apos;ve <span className="ser text-teal">done the job.</span>
               </h2>
             </div>
-            <p className="text-[1.02rem] text-navy-500">
-              Every learner is matched with a mentor for the whole programme — not just a
-              support queue.
-            </p>
+            <div className="flex items-end justify-between gap-6">
+              <p className="text-[1.02rem] text-navy-500">
+                Every learner is matched with a mentor for the whole programme — not just a
+                support queue.
+              </p>
+              {/* Hidden below lg, where the rail is swiped rather than clicked
+                  and a pair of buttons is just clutter beside a thumb. */}
+              <div className="hidden shrink-0 lg:block">
+                <RailArrows railRef={mentorRail} label="mentors" />
+              </div>
+            </div>
           </div>
 
-          <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+          {/*
+            * A rail rather than a grid. Thirteen mentors in a four-up grid is
+            * four rows of near-identical cards — the section became the tallest
+            * thing on the page while saying the least, and the fold landed in
+            * the middle of it. Scrolling keeps the whole section to one card
+            * high however many mentors there are, which matters because that
+            * number is about to become editable.
+            *
+            * tabIndex + role make it reachable by keyboard: a hidden scrollbar
+            * with no focusable child would otherwise strand anyone not using a
+            * mouse. The heading names it via aria-labelledby.
+            */}
+          <div
+            ref={mentorRail}
+            tabIndex={0}
+            role="region"
+            aria-labelledby="mentors-heading"
+            className="rail rail-bleed pb-1 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-teal focus-visible:ring-offset-4"
+          >
             {MENTORS.map((m, i) => (
-              <article key={m.name} className="overflow-hidden rounded-[20px] border border-navy-100 bg-white">
+              <article
+                key={m.name}
+                className="w-[220px] shrink-0 snap-start overflow-hidden rounded-[20px] border border-navy-100 bg-white sm:w-[252px]"
+              >
                 {/* Real portrait when one exists, otherwise a monogram. Never
                     a stock photo of someone else — these are real people. */}
                 <Avatar
@@ -341,9 +441,10 @@ export default function Landing() {
                 <div className="p-5">
                   <p className="text-[0.68rem] font-bold uppercase tracking-[0.1em] text-teal-ink">{m.former}</p>
                   <h3 className="mt-1.5 text-base font-bold tracking-tight text-navy">{m.name}</h3>
-                  {/* Two lines reserved, so a mentor with a shorter speciality
-                      does not leave their card looking half-finished. */}
-                  <p className="mt-1.5 text-[0.81rem] text-navy-500 sm:min-h-[2.43rem]">{m.focus}</p>
+                  {/* Three lines reserved here, not two: the cards are narrower
+                      in a rail than in the old grid, so the same speciality
+                      wraps one line further. */}
+                  <p className="mt-1.5 text-[0.81rem] text-navy-500 sm:min-h-[3.64rem]">{m.focus}</p>
                 </div>
               </article>
             ))}

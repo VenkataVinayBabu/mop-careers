@@ -606,6 +606,35 @@ Python 3.13.2 · Node v22.17.0 (npm 10.9.2) · Git 2.50.1 · PostgreSQL 17.9
   synthetic clicks and key presses land only intermittently — pressing Enter in
   a focused field submitted the form when six clicks on the button did not.
 
+- **The mentors section is a horizontal rail, not a grid ✅.** Thirteen mentors
+  in a four-up grid was four rows of near-identical cards — the tallest section
+  on the page for the least said, with the fold landing in the middle of it.
+  It now scrolls sideways and stays one card high however many mentors there
+  are, which matters because that count is about to become editable.
+  - `.rail` and `.rail-bleed` in `index.css` are the reusable pattern.
+    `ProgramDetail` already hand-rolls the same thing for programmes with more
+    than four mentors; worth folding into these utilities next time it is
+    touched.
+  - **The scrollbar is hidden, so the affordances have to be real.** Arrow
+    buttons on `lg` and up (hidden on touch, where a thumb needs no buttons),
+    snap points, and `tabIndex={0}` + `role="region"` + `aria-labelledby` so a
+    keyboard user can reach and scroll it. A hidden scrollbar with no focusable
+    child would otherwise strand anyone not using a mouse.
+  - **`scroll-padding-left` must match the bleed padding.** With
+    `snap-mandatory` and `px-6`, a `snap-start` card aligns to the raw
+    scrollport edge, so the rail snapped to 24px and could never come to rest
+    at `scrollLeft: 0` — leaving the Previous arrow enabled while already on
+    the first card. `scroll-pl-6` fixes it. Found by measuring, not by looking.
+
+  **Verifying a scroller in the automated pane needs a workaround.** Both
+  `scrollBy({behavior:'smooth'})` and the browser's own `scroll` event delivery
+  are driven by frames, and the pane frequently does not composite — so the
+  arrows appeared to do nothing and the disabled states never updated. Neither
+  was a bug. Set `scrollLeft` directly and `dispatchEvent(new Event('scroll'))`
+  to exercise the listener, and read the resulting state in a **separate**
+  tool call, because React batches the update and a same-block read returns the
+  previous render.
+
 ---
 
 ## Open threads
