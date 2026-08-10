@@ -5,8 +5,9 @@ import { warmUp } from '../../api/client';
 import Avatar from '../../components/Avatar';
 import { LIVE_PROGRAMS, programBySlug } from '../../data/programs';
 import {
-  CAREER_SERVICES, COMPANIES, DEFAULT_FEES, PROGRAM_FAQ, ROADMAP, mentorsFor,
+  CAREER_SERVICES, COMPANIES, DEFAULT_FEES, PROGRAM_FAQ, ROADMAP,
 } from '../../data/site';
+import { useMentors } from '../../data/siteSettings';
 import EnquiryForm from './EnquiryForm';
 import ProgramCard from './ProgramCard';
 import { PublicFloats, PublicFooter, PublicHeader } from './PublicChrome';
@@ -75,13 +76,19 @@ export default function ProgramDetail() {
     warmUp();
   }, [program]);
 
+  // Admin-managed, and the same store the landing rail reads, so the section
+  // appears or disappears when the API answer lands. Read BEFORE the early
+  // return below: a hook after a conditional return changes the hook order
+  // between an known and an unknown slug.
+  const allMentors = useMentors();
+
   // An unknown or unpublished slug goes home rather than to a 404 — the
   // programme may simply have been withdrawn, and the list is what they want.
   if (!program) return <Navigate to={{ pathname: '/', hash: '#programs' }} replace />;
 
   const d = program.detail || {};
   const fees = d.fees || DEFAULT_FEES;
-  const mentors = mentorsFor(program.slug);
+  const mentors = allMentors.filter((m) => (m.programs || []).includes(program.slug));
   const related = LIVE_PROGRAMS.filter((p) => p.slug !== program.slug).slice(0, 3);
 
   return (

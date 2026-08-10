@@ -5,10 +5,10 @@ import Avatar from '../../components/Avatar';
 import CountUp from '../../components/CountUp';
 import { FEATURED_PROGRAMS, LIVE_PROGRAMS, OTHER_PROGRAMS } from '../../data/programs';
 import {
-  COMPANIES, FAQ, MENTORS, OUTCOMES, PAP_EXPLAINER, PAP_FEATURES, PAP_STEPS,
+  COMPANIES, FAQ, OUTCOMES, PAP_EXPLAINER, PAP_FEATURES, PAP_STEPS,
   PLACEMENTS_TICKER, REFERRAL, STATS, STORIES,
 } from '../../data/site';
-import { useSite } from '../../data/siteSettings';
+import { useMentors, useSite } from '../../data/siteSettings';
 import ProgramCard from './ProgramCard';
 import EnquiryForm from './EnquiryForm';
 import {
@@ -136,6 +136,10 @@ export default function Landing() {
   /* Subscribed so the WhatsApp CTA below re-renders once the live settings
      arrive — `contactHref()` reads the store rather than taking a prop. */
   useSite();
+  /* Admin-managed. Renders the copy baked into the bundle first, then swaps to
+     whatever the API returns — including an empty list, which is what makes
+     deleting a mentor actually stick. */
+  const mentors = useMentors();
 
   useEffect(() => {
     document.title = 'MOP Careers — Your Future. Our Priority.';
@@ -380,6 +384,10 @@ export default function Landing() {
       </section>
 
       {/* ------------------------------------------------------- mentors */}
+      {/* Dropped entirely when there are none, rather than leaving a heading
+          and a pair of arrows over empty space. An admin who has removed every
+          mentor has said something, and a hollow section would contradict it. */}
+      {mentors.length > 0 && (
       <section id="mentors" className="py-16 sm:py-24">
         <div className="mx-auto max-w-[1240px] px-6">
           <div className="mb-11 grid gap-6 lg:grid-cols-[1.35fr_1fr] lg:items-end lg:gap-12">
@@ -424,7 +432,7 @@ export default function Landing() {
             aria-labelledby="mentors-heading"
             className="rail rail-bleed pb-1 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-teal focus-visible:ring-offset-4"
           >
-            {MENTORS.map((m, i) => (
+            {mentors.map((m, i) => (
               <article
                 key={m.name}
                 className="w-[220px] shrink-0 snap-start overflow-hidden rounded-[20px] border border-navy-100 bg-white sm:w-[252px]"
@@ -451,6 +459,7 @@ export default function Landing() {
           </div>
         </div>
       </section>
+      )}
 
       {/* ------------------------------------------------------- stories */}
       <section id="stories" className="bg-white py-16 sm:py-24">

@@ -9,13 +9,14 @@ import time
 from collections import defaultdict
 
 from fastapi import APIRouter, Depends, HTTPException, Request, status
+from sqlalchemy import select
 from sqlalchemy.orm import Session
 
 from app import site_settings
 from app.database import get_db
 from app.mail import send_email
-from app.models import Enquiry
-from app.schemas import EnquiryCreate, MessageResponse, SiteSettingsPublic
+from app.models import Enquiry, Mentor
+from app.schemas import EnquiryCreate, MentorOut, MessageResponse, SiteSettingsPublic
 
 logger = logging.getLogger("mop.public")
 router = APIRouter(prefix="/public", tags=["public"])
@@ -50,6 +51,22 @@ def read_site_settings(db: Session = Depends(get_db)) -> SiteSettingsPublic:
     slightly stale footer rather than an empty page.
     """
     return SiteSettingsPublic(**site_settings.typed(site_settings.load_public(db)))
+
+
+@router.get("/mentors", response_model=list[MentorOut])
+def read_mentors(db: Session = Depends(get_db)) -> list[Mentor]:
+    """Published mentors, in the order an admin arranged them.
+
+    An empty list is a real answer, not a missing one: if an admin deletes
+    every mentor the site must show none, rather than falling back to the copy
+    baked into the bundle. That is why the table is seeded rather than
+    starting empty — see the mentors migration.
+    """
+    return list(
+        db.scalars(
+            select(Mentor).where(Mentor.published.is_(True)).order_by(Mentor.sort_order, Mentor.id)
+        ).all()
+    )
 
 
 @router.post("/enquiries", response_model=MessageResponse, status_code=status.HTTP_201_CREATED)

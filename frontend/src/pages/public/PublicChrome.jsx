@@ -3,7 +3,7 @@ import { Link, useLocation, useNavigate } from 'react-router-dom';
 
 import Logo from '../../components/Logo';
 import { LIVE_PROGRAMS } from '../../data/programs';
-import { refreshSiteSettings, useSite, whatsappLink } from '../../data/siteSettings';
+import { refreshPublicContent, useMentors, useSite, whatsappLink } from '../../data/siteSettings';
 
 /*
  * Header, footer and the floating actions, shared by every public page.
@@ -56,12 +56,13 @@ export function PublicHeader() {
   const navigate = useNavigate();
   const { pathname } = useLocation();
   const site = useSite();
+  const mentors = useMentors();
 
   /* Every public page renders this header, so this is the one place the live
      settings need asking for. The call itself is deduplicated, and the page is
      already showing readable values while it is in flight. */
   useEffect(() => {
-    refreshSiteSettings();
+    refreshPublicContent();
   }, []);
 
   /* Close the dropdown on Escape or on a click outside it. Without the outside
@@ -169,6 +170,11 @@ export function PublicHeader() {
     </div>
   );
 
+  /* The landing page drops its mentors section when an admin has removed them
+     all, so the nav entry has to go with it — otherwise it is a link that
+     scrolls nowhere. */
+  const navItems = NAV.filter((item) => item.id !== 'mentors' || mentors.length > 0);
+
   const linkFor = (item) =>
     item.menu ? (
       programsMenu
@@ -211,7 +217,7 @@ export function PublicHeader() {
             <Logo size="md" className="h-8 sm:h-10" />
           </Link>
 
-          <nav className="mx-auto hidden items-center gap-7 lg:flex">{NAV.map(linkFor)}</nav>
+          <nav className="mx-auto hidden items-center gap-7 lg:flex">{navItems.map(linkFor)}</nav>
 
           <div className="ml-auto flex items-center gap-2 lg:ml-0">
             <Link to="/login" className="pbtn-outline pbtn-sm hidden sm:inline-flex">
@@ -239,7 +245,7 @@ export function PublicHeader() {
             hidden behind a hover dropdown, which does not exist on touch. */}
         {open && (
           <nav className="flex max-h-[70vh] flex-col gap-1 overflow-y-auto border-t border-navy-100 bg-white px-6 py-3 lg:hidden">
-            {NAV.map((item) => (
+            {navItems.map((item) => (
               <div key={item.id} className="py-1.5">
                 <a href={`/#${item.id}`} onClick={goToSection(item.id)} className={linkClass}>
                   {item.label}

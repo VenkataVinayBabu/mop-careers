@@ -87,10 +87,16 @@ export const OUTCOMES = [
 ];
 
 /* ----------------------------------------------------------------- mentors */
-/* `photo` is the slot for a real portrait: drop a file in src/assets/people/
-   and import it here. Until then the card shows a monogram — deliberately not
-   a stock photo of someone else, since these are real named people. */
 /*
+ * MENTORS ARE NOW EDITED AT Admin > Website > Mentors, and the database is the
+ * source of truth. The list below is only the FIRST PAINT — what the page
+ * shows in the moment before the API answers, and all it has to show if the
+ * backend is asleep. `useMentors()` in ./siteSettings is what a component
+ * should read; this list going stale is expected and harmless.
+ *
+ * The same rows were seeded into the `mentors` table by the mentors migration,
+ * so editing one here does NOT change the site. Edit it in the admin.
+ *
  * `programs` lists the slugs a mentor teaches, which is what puts them on that
  * program's page. A mentor can teach several; a program with no matching
  * mentor simply has no mentors section rather than an empty one.
@@ -158,10 +164,6 @@ export const MENTORS = [
     focus: 'SEO, content strategy and analytics. Placeholder mentor — replace before launch.',
     programs: ['digital-marketing-with-ai'] },
 ];
-
-/** The mentors teaching a given program. Empty when nobody is assigned. */
-export const mentorsFor = (slug) =>
-  MENTORS.filter((m) => (m.programs || []).includes(slug));
 
 /* ----------------------------------------------------------------- stories */
 /* Same as mentors: `photo` stays null until MOP supplies a real portrait AND

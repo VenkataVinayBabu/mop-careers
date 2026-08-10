@@ -31,9 +31,10 @@
 import { useSyncExternalStore } from 'react';
 
 import { api } from '../api/client';
-import { SITE_DEFAULTS } from './site';
+import { MENTORS as MENTOR_DEFAULTS, SITE_DEFAULTS } from './site';
 
 const CACHE_KEY = 'mop_site_settings';
+const MENTORS_CACHE_KEY = 'mop_site_mentors';
 
 /* The API speaks snake_case and a flat shape; the site speaks camelCase with
    the social links nested. One mapper here, rather than either side bending to
@@ -63,53 +64,104 @@ function fromApi(row) {
   };
 }
 
+/* The API row shape for a mentor, mapped to the shape the cards already
+   expect. `photo` stays null rather than '' so `Avatar` keeps falling through
+   to its monogram — an empty string is a broken <img>. */
+function mentorsFromApi(rows) {
+  if (!Array.isArray(rows)) return null;
+  return rows.map((r) => ({
+    name: r.name || '',
+    photo: r.photo_url || null,
+    former: r.former || '',
+    focus: r.focus || '',
+    programs: Array.isArray(r.programs) ? r.programs : [],
+    placeholder: Boolean(r.is_placeholder),
+  }));
+}
+
 /* localStorage throws in some privacy modes, and a corrupted entry must not
-   take the site down over a phone number. Both directions swallow failure. */
-function readCache() {
+   take the site down over a phone number. Every access swallows failure. */
+function readCache(key, parse) {
   try {
-    const raw = window.localStorage.getItem(CACHE_KEY);
-    return raw ? fromApi(JSON.parse(raw)) : null;
+    const raw = window.localStorage.getItem(key);
+    return raw ? parse(JSON.parse(raw)) : null;
   } catch {
     return null;
   }
 }
 
-function writeCache(row) {
+function writeCache(key, value) {
   try {
-    window.localStorage.setItem(CACHE_KEY, JSON.stringify(row));
+    window.localStorage.setItem(key, JSON.stringify(value));
   } catch {
     /* nothing to do — the next page load just falls back to the defaults */
   }
 }
 
-let current = readCache() || { ...SITE_DEFAULTS };
-const listeners = new Set();
-
-/* useSyncExternalStore compares snapshots by identity, so `current` is
-   replaced wholesale on every change and never mutated in place. */
-function emit(next) {
-  current = next;
-  listeners.forEach((fn) => fn());
+/* A minimal external store. useSyncExternalStore compares snapshots by
+   identity, so the value is replaced wholesale on every change and never
+   mutated in place. */
+function createStore(initial) {
+  let value = initial;
+  const listeners = new Set();
+  return {
+    get: () => value,
+    set(next) {
+      value = next;
+      listeners.forEach((fn) => fn());
+    },
+    subscribe(fn) {
+      listeners.add(fn);
+      return () => listeners.delete(fn);
+    },
+  };
 }
 
-function subscribe(fn) {
-  listeners.add(fn);
-  return () => listeners.delete(fn);
-}
+const settingsStore = createStore(
+  readCache(CACHE_KEY, fromApi) || { ...SITE_DEFAULTS },
+);
+
+/*
+ * Mentors differ from settings in one important way: an EMPTY LIST IS A REAL
+ * ANSWER. If an admin deletes every mentor the site must show none, not fall
+ * back to the copy baked into the bundle — otherwise deleting a fabricated
+ * mentor would appear to work and then quietly undo itself.
+ *
+ * That is why `??` and not `||` below, and why the mentors table ships seeded
+ * rather than empty: the database is the source of truth from the first
+ * deploy, and the baked list is only ever the first paint.
+ */
+const mentorsStore = createStore(
+  readCache(MENTORS_CACHE_KEY, mentorsFromApi) ?? MENTOR_DEFAULTS,
+);
 
 /** The current settings, outside a component. */
-export const getSite = () => current;
+export const getSite = () => settingsStore.get();
 
 /** The current settings, re-rendering the component when they change. */
 export function useSite() {
-  return useSyncExternalStore(subscribe, getSite, getSite);
+  return useSyncExternalStore(settingsStore.subscribe, settingsStore.get, settingsStore.get);
 }
 
-/** Adopt an API payload — used by the fetch below and by the admin form,
- *  which already has the saved response and should not have to re-fetch it. */
+/** The mentors currently on the site. */
+export const getMentors = () => mentorsStore.get();
+
+export function useMentors() {
+  return useSyncExternalStore(mentorsStore.subscribe, mentorsStore.get, mentorsStore.get);
+}
+
+/** Adopt an API payload — used by the fetch below and by the admin screens,
+ *  which already have the saved response and should not have to re-fetch it. */
 export function applySiteSettings(row) {
-  emit(fromApi(row));
-  writeCache(row);
+  settingsStore.set(fromApi(row));
+  writeCache(CACHE_KEY, row);
+}
+
+export function applyMentors(rows) {
+  const mapped = mentorsFromApi(rows);
+  if (!mapped) return;
+  mentorsStore.set(mapped);
+  writeCache(MENTORS_CACHE_KEY, rows);
 }
 
 /* Once per page load. Several public pages ask for the refresh (whichever one
@@ -117,17 +169,17 @@ export function applySiteSettings(row) {
    request on it. */
 let inFlight = null;
 
-export function refreshSiteSettings() {
+/** Fetch everything the marketing site can have edited under it.
+ *
+ *  Deliberately silent on failure, and never awaited by a render: the visitor
+ *  already has readable values from the bundle and the last cached answer, and
+ *  there is nothing they could do about a backend that is still waking up. */
+export function refreshPublicContent() {
   if (!inFlight) {
-    inFlight = api
-      .get('/public/site-settings')
-      .then(({ data }) => {
-        applySiteSettings(data);
-        return data;
-      })
-      /* Deliberately silent. The visitor already has readable values and there
-         is nothing they could do about a failure here. */
-      .catch(() => null);
+    inFlight = Promise.all([
+      api.get('/public/site-settings').then(({ data }) => applySiteSettings(data)).catch(() => null),
+      api.get('/public/mentors').then(({ data }) => applyMentors(data)).catch(() => null),
+    ]);
   }
   return inFlight;
 }
@@ -136,7 +188,7 @@ export function refreshSiteSettings() {
  *  callers fall back to the enquiry form rather than opening a chat with
  *  nobody. */
 export function whatsappLink() {
-  const { whatsapp, whatsappMessage } = current;
+  const { whatsapp, whatsappMessage } = getSite();
   if (!whatsapp) return null;
   return `https://wa.me/${whatsapp}?text=${encodeURIComponent(whatsappMessage || '')}`;
 }

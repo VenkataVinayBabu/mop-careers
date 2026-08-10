@@ -9,6 +9,7 @@ from __future__ import annotations
 from datetime import date, datetime
 
 from sqlalchemy import (
+    JSON,
     Boolean,
     Date,
     DateTime,
@@ -410,6 +411,43 @@ class SiteSetting(Base):
     )
 
     updated_by: Mapped[User | None] = relationship()
+
+
+class Mentor(Base):
+    """A mentor shown on the public site.
+
+    Unlike site settings, this table is **seeded** with the mentors that used
+    to be hardcoded in the frontend, and it is the source of truth from then
+    on. That distinction matters: with an unseeded table there is no way to
+    tell "nobody has set this up yet" from "the admin deleted them all", and
+    deleting the last mentor would silently bring the hardcoded list back.
+    """
+
+    __tablename__ = "mentors"
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True)
+    name: Mapped[str] = mapped_column(String(120), nullable=False)
+    # "Ex-TCS · 8 yrs" — one line, free text, because it is sometimes an
+    # employer, sometimes just a number of years.
+    former: Mapped[str] = mapped_column(String(120), default="", nullable=False)
+    focus: Mapped[str] = mapped_column(String(400), default="", nullable=False)
+    # A URL, not an upload: Render's free tier wipes local disk on deploy, so
+    # uploads wait on the object-storage decision. A link to an image MOP
+    # already hosts works today and costs nothing.
+    photo_url: Mapped[str] = mapped_column(String(500), default="", nullable=False)
+    # Program slugs this mentor teaches, e.g. ["python-full-stack"]. Free text
+    # rather than a foreign key, the same way Enquiry.programme is: the public
+    # catalogue is still frontend data and changes independently of any table.
+    programs: Mapped[list] = mapped_column(JSON, default=list, nullable=False)
+    # Fabricated stand-ins carried over from the seed. The public card renders
+    # them visibly marked, and it is the flag the admin list sorts to the top.
+    is_placeholder: Mapped[bool] = mapped_column(Boolean, default=False, nullable=False)
+    published: Mapped[bool] = mapped_column(Boolean, default=True, nullable=False)
+    sort_order: Mapped[int] = mapped_column(Integer, default=0, nullable=False, index=True)
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
+    updated_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), server_default=func.now(), onupdate=func.now()
+    )
 
 
 class PasswordResetToken(Base):

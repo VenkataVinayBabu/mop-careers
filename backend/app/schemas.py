@@ -634,5 +634,94 @@ class SiteSettingsUpdate(BaseModel):
         return v.strip() if v is not None else None
 
 
+class MentorOut(ORMModel):
+    id: int
+    name: str
+    former: str = ""
+    focus: str = ""
+    photo_url: str = ""
+    programs: list[str] = []
+    is_placeholder: bool = False
+    published: bool = True
+    sort_order: int = 0
+
+
+def _clean_slugs(v: list[str] | None) -> list[str] | None:
+    """Programme slugs are free text — the catalogue is still frontend data.
+    Deduplicated and order-preserving, so the form cannot send one twice."""
+    if v is None:
+        return None
+    out: list[str] = []
+    for raw in v:
+        slug = str(raw).strip().lower()
+        if slug and slug not in out:
+            out.append(slug)
+    return out
+
+
+class MentorCreate(BaseModel):
+    name: str = Field(min_length=2, max_length=120)
+    former: str = Field(default="", max_length=120)
+    focus: str = Field(default="", max_length=400)
+    photo_url: str = Field(default="", max_length=500)
+    programs: list[str] = Field(default_factory=list, max_length=20)
+    is_placeholder: bool = False
+    published: bool = True
+
+    @field_validator("name", "former", "focus")
+    @classmethod
+    def _trim_text(cls, v: str) -> str:
+        return v.strip()
+
+    @field_validator("photo_url")
+    @classmethod
+    def _check_photo(cls, v: str) -> str:
+        return _optional_url(v) or ""
+
+    @field_validator("programs")
+    @classmethod
+    def _clean_programs(cls, v: list[str]) -> list[str]:
+        return _clean_slugs(v) or []
+
+
+class MentorUpdate(BaseModel):
+    """Every field optional — the form sends only what changed, and an absent
+    field keeps its current value."""
+
+    name: str | None = Field(default=None, min_length=2, max_length=120)
+    former: str | None = Field(default=None, max_length=120)
+    focus: str | None = Field(default=None, max_length=400)
+    photo_url: str | None = Field(default=None, max_length=500)
+    programs: list[str] | None = Field(default=None, max_length=20)
+    is_placeholder: bool | None = None
+    published: bool | None = None
+
+    @field_validator("name", "former", "focus")
+    @classmethod
+    def _trim_text(cls, v: str | None) -> str | None:
+        return v.strip() if v is not None else None
+
+    @field_validator("photo_url")
+    @classmethod
+    def _check_photo(cls, v: str | None) -> str | None:
+        return _optional_url(v)
+
+    @field_validator("programs")
+    @classmethod
+    def _clean_programs(cls, v: list[str] | None) -> list[str] | None:
+        return _clean_slugs(v)
+
+
+class MentorReorder(BaseModel):
+    """The full list of mentor ids in the order they should appear.
+
+    Whole-list rather than "move this one up": a single request cannot leave
+    the table half-reordered, and two admins reordering at once end with one
+    of the two orders rather than an interleaving of both.
+    """
+
+    ids: list[int] = Field(min_length=1)
+
+
 # Resolve the forward reference in TokenResponse.
 TokenResponse.model_rebuild()

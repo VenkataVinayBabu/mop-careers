@@ -635,6 +635,66 @@ Python 3.13.2 · Node v22.17.0 (npm 10.9.2) · Git 2.50.1 · PostgreSQL 17.9
   tool call, because React batches the update and a same-block read returns the
   previous render.
 
+- **Admin content management, part 2 — mentors ✅.** `Admin > Website > Mentors`
+  adds, edits, hides, reorders and deletes the people on the public site.
+  Deleting one of the nine fabricated mentors is now about a minute's work
+  instead of a developer and a git push. 1 new table (`mentors`), 16 tables
+  total, 5 migrations.
+  - **The table ships SEEDED with the thirteen mentors that were hardcoded**,
+    and that is the whole design. Site settings could start empty because a
+    missing row means "use the default". Mentors cannot: with an empty table
+    there is no way to tell "nobody has set this up" from "the admin deleted
+    them all", so deleting the last mentor would quietly resurrect the
+    hardcoded list. Seeded, the database is the source of truth from the first
+    deploy and **an empty list is a real answer**.
+  - `MENTORS` in `site.js` is now only the first paint — what shows before the
+    API answers, and all there is if the backend is asleep. Editing it does not
+    change the site. Components read `useMentors()`.
+  - Note the `??` rather than `||` where the mentors store reads its cache: an
+    empty array is a legitimate cached answer and must not fall through to the
+    defaults.
+  - The mentors section, and its nav entry, **disappear entirely when there are
+    none** rather than leaving a heading and two arrows over empty space.
+
+  Decisions worth remembering:
+  - **`programs` is a JSON array of slugs, not a join table.** The programme
+    catalogue is still frontend data in `programs.js`, so there is nothing to
+    point a foreign key at. Same reasoning as `Enquiry.programme`. Revisit when
+    courses become a table.
+  - **Reorder sends the whole list of ids, not "move this one up".** One
+    request cannot leave the table half-sorted, and two admins reordering at
+    once end with one of the two orders rather than an interleaving. Unknown
+    ids are ignored rather than rejected — an admin reordering while someone
+    else deletes a row should still get their order applied.
+  - **`sort_order` steps by 10**, leaving room to slot a mentor between two
+    others later without renumbering the table.
+  - **The admin list deliberately does not filter by `published`.** Only the
+    public endpoint filters; an unpublished mentor still has to be editable.
+  - **Photos are a URL field, not an upload.** Uploads still wait on the
+    object-storage decision, but a link to an image MOP already hosts works
+    today and costs nothing.
+  - **The migration carries its own copy of the seed data** rather than
+    importing the models or reading `site.js`. A migration has to keep doing
+    the same thing years from now, and both of those will have moved on.
+  - `Admin > Website` is now a **tabbed shell** (`WebsiteTabs`), which is where
+    Stories and Companies go next.
+
+  Verification: **50/50 API assertions passed** — RBAC across anonymous,
+  teacher and student on read, create, delete and reorder; the seeded shape
+  (13 rows, 4 real, 9 flagged); four rejected payloads; trimming and
+  slug deduplication on create; partial update leaving untouched fields alone;
+  404 on a missing id; the published filter hiding a mentor from the public
+  list while keeping it in the admin one; reorder including a stale id and an
+  incomplete id list; and delete being idempotent-by-404. In the browser, every
+  write path driven for real: delete (confirm names the person, counts and the
+  warning banner update), hide (badge, dimming, button flip, count), add
+  through the modal including a 422 rendering under the photo field, reorder
+  with the ends disabling correctly — then the public rail showing exactly 12
+  cards with the right one added, one deleted and one hidden, and the new
+  mentor appearing on the programme page she was assigned to. Clean console,
+  one fetch per endpoint despite StrictMode, and **the whole site still renders
+  with the backend stopped and the cache cleared**.
+
 ---
 
 ## Open threads
@@ -656,10 +716,13 @@ Scope, in the order it should be built:
    `programs.js` is ~900 lines of nested content per program (syllabus phases,
    projects, roles, FAQs), so this one does *not* fit the flat key/value shape
    site settings used. It needs real tables.
-3. **Mentors, stories, companies** — same shape as each other, one pass.
-   Smaller than courses and higher value: deleting a fake mentor is currently a
-   git push, and there are nine of them live (thread 2).
-4. **Photos** — blocked on the storage decision below.
+3. ~~**Mentors**~~ — **built.** See the progress log entry above.
+   **Stories and companies** are the same shape and should be one more pass:
+   `WebsiteTabs` is already the shell, and `STORIES` / `COMPANIES` in `site.js`
+   are the rows to seed. Stories additionally need the ~200 character limit
+   with a live counter decided below.
+4. **Photos** — blocked on the storage decision below. Mentors accept a photo
+   *link* in the meantime, which covers images MOP already hosts.
 
 The decisions this raised:
 
@@ -701,14 +764,17 @@ of how much it would matter if wrong:
   Science came from MOP's own material. Salary bands are market estimates; the
   Placements Exit company lists are the strongest claim on any page; AWS SAA, CEH
   and Security+ certification claims must match what is actually taught.
-- **Nine mentors do not exist.** Flagged `placeholder: true` and visibly marked, but
-  live. `grep -n "placeholder: true" src/data/site.js`.
+- **Nine mentors do not exist.** Still live, still visibly marked — but this no
+  longer needs a developer. They are rows in the `mentors` table now, flagged
+  as stand-ins, and **Bala can delete or replace each one at Admin > Website >
+  Mentors in about a minute.** The screen counts them and says so at the top.
 - **Cloud Computing and Cyber Security** appear only in the Emergent prototype. They
   are **not** on mopcareers.in and MOP has not confirmed it runs them. Both are
   flagged `confirmed: false` in `programs.js`; set `published: false` to remove them.
 - **Real mentors' details and programme assignments are unverified.** One name was
   already wrong (Kuppola Rajesh → Vinay K), so the employers and years beside the
-  other three are equally suspect. Who teaches what is inferred.
+  other three are equally suspect. Who teaches what is inferred. Also editable
+  at Admin > Website > Mentors now, including the programme tick-boxes.
 - **Learner quotes and placement figures** (1,050+ placements, ₹47.6L highest, 500+
   partners, 87%) come from mopcareers.in — MOP's own claims, unverified against
   records, and no student has consented to being quoted here.

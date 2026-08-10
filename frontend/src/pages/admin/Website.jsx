@@ -4,6 +4,7 @@ import { api, errorMessage } from '../../api/client';
 import { useToast } from '../../components/Toast';
 import { ErrorState, Loading, PageHeader } from '../../components/ui';
 import { applySiteSettings } from '../../data/siteSettings';
+import WebsiteTabs from './WebsiteTabs';
 
 /*
  * Admin > Website — the first content-management screen.
@@ -201,17 +202,10 @@ export default function AdminWebsite() {
 
   return (
     <form onSubmit={save}>
+      <WebsiteTabs />
       <PageHeader
-        title="Website"
+        title="Website settings"
         subtitle="Contact details, announcements and links shown on the public site"
-        /* `?preview` is required, not decoration: / redirects a signed-in user
-           to their own dashboard, so without it this button opened a tab that
-           bounced straight back to /admin. */
-        action={
-          <a href="/?preview=1" target="_blank" rel="noreferrer" className="btn-ghost btn-sm">
-            View the site &rarr;
-          </a>
-        }
       />
 
       <div className="space-y-5">
