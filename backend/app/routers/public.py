@@ -9,14 +9,21 @@ import time
 from collections import defaultdict
 
 from fastapi import APIRouter, Depends, HTTPException, Request, status
-from sqlalchemy import select
 from sqlalchemy.orm import Session
 
 from app import site_settings
 from app.database import get_db
 from app.mail import send_email
-from app.models import Enquiry, Mentor
-from app.schemas import EnquiryCreate, MentorOut, MessageResponse, SiteSettingsPublic
+from app.models import Enquiry, HiringPartner, Mentor, Story
+from app.schemas import (
+    EnquiryCreate,
+    HiringPartnerOut,
+    MentorOut,
+    MessageResponse,
+    SiteSettingsPublic,
+    StoryOut,
+)
+from app.website_content import ordered
 
 logger = logging.getLogger("mop.public")
 router = APIRouter(prefix="/public", tags=["public"])
@@ -60,13 +67,27 @@ def read_mentors(db: Session = Depends(get_db)) -> list[Mentor]:
     An empty list is a real answer, not a missing one: if an admin deletes
     every mentor the site must show none, rather than falling back to the copy
     baked into the bundle. That is why the table is seeded rather than
-    starting empty — see the mentors migration.
+    starting empty — see the mentors migration. The same applies to the two
+    endpoints below.
     """
-    return list(
-        db.scalars(
-            select(Mentor).where(Mentor.published.is_(True)).order_by(Mentor.sort_order, Mentor.id)
-        ).all()
-    )
+    return ordered(db, Mentor, published_only=True)
+
+
+@router.get("/stories", response_model=list[StoryOut])
+def read_stories(db: Session = Depends(get_db)) -> list[Story]:
+    return ordered(db, Story, published_only=True)
+
+
+@router.get("/partners", response_model=list[HiringPartnerOut])
+def read_partners(db: Session = Depends(get_db)) -> list[HiringPartner]:
+    """Every published company, for the hiring-network grid.
+
+    The placements ticker is the subset carrying a `package_lpa`, filtered on
+    the frontend rather than served as a second endpoint — it is the same
+    dozen rows, and two requests for one list would be wasteful on a connection
+    that may be waking a sleeping backend.
+    """
+    return ordered(db, HiringPartner, published_only=True)
 
 
 @router.post("/enquiries", response_model=MessageResponse, status_code=status.HTTP_201_CREATED)

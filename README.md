@@ -148,10 +148,10 @@ creation, block/unblock, the full curriculum workspace for any batch, **fees**
 (totals, payments, outstanding balances, batch collection summary), **placements**
 (companies, applications, interview rounds, batch-wise stats), **enquiries** from the
 public site with a status workflow, the **doubt support** inbox, and **Website** —
-content management for the public site, editable without a deploy: contact details,
-WhatsApp number, announcement bar, social links and notification addresses under
-*Settings*, and the mentors shown on the home page and programme pages (add, edit,
-hide, reorder, delete) under *Mentors*.
+content management for the public site, editable without a deploy. Four tabs:
+*Settings* (contact details, WhatsApp number, announcement bar, social links,
+notification addresses), *Mentors*, *Stories* and *Hiring partners* — each of the
+last three a list you can add to, edit, hide, reorder and delete.
 
 **Teacher** — *only their assigned batches.* Mark class days complete, set dates,
 paste recording links, upload notes PDFs, take attendance, view their students'
@@ -245,13 +245,27 @@ component ignores whatever the admin has changed. The defaults in that file and
 `DEFAULTS` in `backend/app/site_settings.py` must stay identical, or a cold visit
 visibly flickers from one to the other.
 
-**Mentors live in the database, and the table ships seeded.** Site settings can
-start empty because a missing row means "use the default". Mentors cannot: with an
-empty table there is no way to tell "not set up yet" from "the admin deleted them
-all", so deleting the last mentor would quietly bring the hardcoded list back. The
-mentors migration seeds the rows that used to be in `site.js`, which makes an empty
-list a real answer — and makes `MENTORS` in `site.js` nothing more than the first
-paint. Read `useMentors()`; editing that array no longer changes the site.
+**Mentors, stories and hiring partners live in the database, and their tables ship
+seeded.** Site settings can start empty because a missing row means "use the
+default". A list cannot: with an empty table there is no way to tell "not set up
+yet" from "the admin deleted them all", so deleting the last row would quietly bring
+the hardcoded list back. The migrations seed the rows that used to be in `site.js`,
+which makes an empty list a real answer — and makes `MENTORS`, `STORIES`,
+`COMPANIES` and `PLACEMENTS_TICKER` in `site.js` nothing more than the first paint.
+Read `useMentors()` / `useStories()` / `usePartners()`; editing those arrays no
+longer changes the site.
+
+**One hiring-partner row feeds two places.** Every published row is in the
+hiring-network grid; the ones carrying a `package_lpa` are also in the scrolling
+placements ticker (`usePlacementsTicker()` is that subset, filtered client-side —
+it is the same dozen rows, not worth a second request). Note `HiringPartner` is not
+the Phase 2 `Company`: that one is an employer joined to real applications and
+offers, this one is marketing copy.
+
+**The three lists share their plumbing.** `backend/app/website_content.py` holds
+ordering, 404s, appending and reordering; `frontend/src/pages/admin/websiteContent.js`
+holds the matching load/save/delete/reorder hook. The endpoints and the row markup
+stay written out per entity — that is the part worth reading.
 
 **Where enquiries and doubts are delivered is a setting, not just an env var.**
 `ENQUIRY_EMAIL` and `ADMIN_DOUBTS_EMAIL` remain the fallback; a value saved under

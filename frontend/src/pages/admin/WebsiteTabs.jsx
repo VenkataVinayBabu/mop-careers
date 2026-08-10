@@ -11,6 +11,8 @@ import { NavLink } from 'react-router-dom';
 const TABS = [
   { to: '/admin/website', label: 'Settings', end: true },
   { to: '/admin/website/mentors', label: 'Mentors' },
+  { to: '/admin/website/stories', label: 'Stories' },
+  { to: '/admin/website/partners', label: 'Hiring partners' },
 ];
 
 export default function WebsiteTabs() {

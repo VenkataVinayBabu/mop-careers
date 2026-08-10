@@ -3,7 +3,9 @@ import { Link, useLocation, useNavigate } from 'react-router-dom';
 
 import Logo from '../../components/Logo';
 import { LIVE_PROGRAMS } from '../../data/programs';
-import { refreshPublicContent, useMentors, useSite, whatsappLink } from '../../data/siteSettings';
+import {
+  refreshPublicContent, useMentors, useSite, useStories, whatsappLink,
+} from '../../data/siteSettings';
 
 /*
  * Header, footer and the floating actions, shared by every public page.
@@ -57,6 +59,7 @@ export function PublicHeader() {
   const { pathname } = useLocation();
   const site = useSite();
   const mentors = useMentors();
+  const stories = useStories();
 
   /* Every public page renders this header, so this is the one place the live
      settings need asking for. The call itself is deduplicated, and the page is
@@ -170,10 +173,11 @@ export function PublicHeader() {
     </div>
   );
 
-  /* The landing page drops its mentors section when an admin has removed them
-     all, so the nav entry has to go with it — otherwise it is a link that
+  /* The landing page drops a section when an admin has removed everything in
+     it, so the nav entry has to go with it — otherwise it is a link that
      scrolls nowhere. */
-  const navItems = NAV.filter((item) => item.id !== 'mentors' || mentors.length > 0);
+  const sectionIsEmpty = { mentors: mentors.length === 0, stories: stories.length === 0 };
+  const navItems = NAV.filter((item) => !sectionIsEmpty[item.id]);
 
   const linkFor = (item) =>
     item.menu ? (

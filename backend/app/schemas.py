@@ -712,15 +712,113 @@ class MentorUpdate(BaseModel):
         return _clean_slugs(v)
 
 
-class MentorReorder(BaseModel):
-    """The full list of mentor ids in the order they should appear.
+class ReorderRequest(BaseModel):
+    """The full list of ids in the order they should appear.
 
     Whole-list rather than "move this one up": a single request cannot leave
     the table half-reordered, and two admins reordering at once end with one
-    of the two orders rather than an interleaving of both.
+    of the two orders rather than an interleaving of both. Shared by mentors,
+    stories and hiring partners.
     """
 
     ids: list[int] = Field(min_length=1)
+
+
+# The quote cap is 200, not the column's 400. A longer testimonial does not
+# break the layout — it drags the whole row taller and hollows out the cards
+# beside it. Constrain the input rather than truncating what someone said.
+STORY_QUOTE_MAX = 200
+
+
+class StoryOut(ORMModel):
+    id: int
+    name: str
+    role: str = ""
+    quote: str = ""
+    photo_url: str = ""
+    published: bool = True
+    sort_order: int = 0
+
+
+class StoryCreate(BaseModel):
+    name: str = Field(min_length=2, max_length=120)
+    role: str = Field(default="", max_length=120)
+    quote: str = Field(default="", max_length=STORY_QUOTE_MAX)
+    photo_url: str = Field(default="", max_length=500)
+    published: bool = True
+
+    @field_validator("name", "role", "quote")
+    @classmethod
+    def _trim_text(cls, v: str) -> str:
+        return v.strip()
+
+    @field_validator("photo_url")
+    @classmethod
+    def _check_photo(cls, v: str) -> str:
+        return _optional_url(v) or ""
+
+
+class StoryUpdate(BaseModel):
+    name: str | None = Field(default=None, min_length=2, max_length=120)
+    role: str | None = Field(default=None, max_length=120)
+    quote: str | None = Field(default=None, max_length=STORY_QUOTE_MAX)
+    photo_url: str | None = Field(default=None, max_length=500)
+    published: bool | None = None
+
+    @field_validator("name", "role", "quote")
+    @classmethod
+    def _trim_text(cls, v: str | None) -> str | None:
+        return v.strip() if v is not None else None
+
+    @field_validator("photo_url")
+    @classmethod
+    def _check_photo(cls, v: str | None) -> str | None:
+        return _optional_url(v)
+
+
+class HiringPartnerOut(ORMModel):
+    id: int
+    name: str
+    logo_url: str = ""
+    package_lpa: str = ""
+    published: bool = True
+    sort_order: int = 0
+
+
+class HiringPartnerCreate(BaseModel):
+    name: str = Field(min_length=1, max_length=120)
+    logo_url: str = Field(default="", max_length=500)
+    # Free text: it is a string printed beside a company name, not a number
+    # anything computes with. Blank keeps the company out of the ticker.
+    package_lpa: str = Field(default="", max_length=40)
+    published: bool = True
+
+    @field_validator("name", "package_lpa")
+    @classmethod
+    def _trim_text(cls, v: str) -> str:
+        return v.strip()
+
+    @field_validator("logo_url")
+    @classmethod
+    def _check_logo(cls, v: str) -> str:
+        return _optional_url(v) or ""
+
+
+class HiringPartnerUpdate(BaseModel):
+    name: str | None = Field(default=None, min_length=1, max_length=120)
+    logo_url: str | None = Field(default=None, max_length=500)
+    package_lpa: str | None = Field(default=None, max_length=40)
+    published: bool | None = None
+
+    @field_validator("name", "package_lpa")
+    @classmethod
+    def _trim_text(cls, v: str | None) -> str | None:
+        return v.strip() if v is not None else None
+
+    @field_validator("logo_url")
+    @classmethod
+    def _check_logo(cls, v: str | None) -> str | None:
+        return _optional_url(v)
 
 
 # Resolve the forward reference in TokenResponse.

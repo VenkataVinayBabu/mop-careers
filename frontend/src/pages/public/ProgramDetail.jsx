@@ -5,9 +5,9 @@ import { warmUp } from '../../api/client';
 import Avatar from '../../components/Avatar';
 import { LIVE_PROGRAMS, programBySlug } from '../../data/programs';
 import {
-  CAREER_SERVICES, COMPANIES, DEFAULT_FEES, PROGRAM_FAQ, ROADMAP,
+  CAREER_SERVICES, DEFAULT_FEES, PROGRAM_FAQ, ROADMAP,
 } from '../../data/site';
-import { useMentors } from '../../data/siteSettings';
+import { useMentors, usePartners } from '../../data/siteSettings';
 import EnquiryForm from './EnquiryForm';
 import ProgramCard from './ProgramCard';
 import { PublicFloats, PublicFooter, PublicHeader } from './PublicChrome';
@@ -81,6 +81,7 @@ export default function ProgramDetail() {
   // return below: a hook after a conditional return changes the hook order
   // between an known and an unknown slug.
   const allMentors = useMentors();
+  const partners = usePartners();
 
   // An unknown or unpublished slug goes home rather than to a 404 — the
   // programme may simply have been withdrawn, and the list is what they want.
@@ -577,18 +578,22 @@ export default function ProgramDetail() {
       </section>
 
       {/* ---------------------------------------------- hiring partners */}
-      <section className="py-16 sm:py-20">
-        <div className="mx-auto max-w-[1240px] px-6">
-          <SectionHead eyebrow="Hiring network" title="Where we make" accent="introductions." />
-          <div className="grid grid-cols-2 gap-px overflow-hidden rounded-[20px] border border-navy-100 bg-navy-100 sm:grid-cols-4 lg:grid-cols-6">
-            {COMPANIES.map((c) => (
-              <div key={c} className="bg-white px-2 py-6 text-center text-[0.87rem] font-bold tracking-tight text-navy-300">
-                {c}
-              </div>
-            ))}
+      {/* Admin-managed, and absent entirely when the list is empty rather
+          than leaving a heading over an empty box. */}
+      {partners.length > 0 && (
+        <section className="py-16 sm:py-20">
+          <div className="mx-auto max-w-[1240px] px-6">
+            <SectionHead eyebrow="Hiring network" title="Where we make" accent="introductions." />
+            <div className="grid grid-cols-2 gap-px overflow-hidden rounded-[20px] border border-navy-100 bg-navy-100 sm:grid-cols-4 lg:grid-cols-6">
+              {partners.map((c) => (
+                <div key={c.name} className="bg-white px-2 py-6 text-center text-[0.87rem] font-bold tracking-tight text-navy-300">
+                  {c.name}
+                </div>
+              ))}
+            </div>
           </div>
-        </div>
-      </section>
+        </section>
+      )}
 
       {/* ------------------------------------------------------- enquire */}
       <section id="enquire" className="bg-white py-16 sm:py-20">

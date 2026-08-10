@@ -695,6 +695,57 @@ Python 3.13.2 · Node v22.17.0 (npm 10.9.2) · Git 2.50.1 · PostgreSQL 17.9
   one fetch per endpoint despite StrictMode, and **the whole site still renders
   with the backend stopped and the cache cleared**.
 
+- **Admin content management, part 3 — stories and hiring partners ✅.** That
+  completes everything on the marketing site except courses. 2 new tables
+  (`stories`, `hiring_partners`), 18 tables total, 6 migrations. Both seeded
+  from `site.js` for the same reason mentors were.
+  - **`hiring_partners` merges two hardcoded lists into one.** `COMPANIES` was
+    the hiring-network grid and `PLACEMENTS_TICKER` was company-plus-package;
+    they overlapped in ten of twelve entries. One row now: published means it
+    is in the grid, and a `package_lpa` on top of that puts it in the ticker
+    as well. Two lists that had to agree became one that cannot disagree.
+  - **`HiringPartner` is deliberately not the Phase 2 `Company`.** That one is
+    an employer a student actually applied to, joined to applications and
+    offers. This one is marketing copy. Sharing a table would tie the public
+    site to the placement records.
+  - **The story quote is capped at 200 characters at the input**, with a
+    counter that turns orange near the limit — the constraint decided during
+    the layout work, finally enforced. A longer quote does not break anything,
+    it drags the card row taller and hollows out the cards beside it.
+    Truncating at render was rejected: silently clipping what someone said
+    looks like a broken site to whoever wrote it.
+  - Both screens carry a plain-language warning about the claim they publish:
+    stories need written consent, and a package figure says a named company
+    paid a MOP learner that salary.
+
+  Two refactors this made worth doing, both because a third copy is where
+  copy-paste stops being cheaper:
+  - **`app/website_content.py`** holds the ordering, 404, append and reorder
+    logic all three entities share. The endpoints stay written out — a generic
+    CRUD generator would hide the one thing a reader needs to see.
+  - **`useContentList` + `ReorderButtons`** on the frontend do the same for
+    load/create/update/delete/reorder. The row markup and the form stay in each
+    screen, because that is the part that actually differs. Mentors was
+    refactored onto both.
+
+  Verification: **52/52 API assertions passed** (157 across the three suites,
+  all re-run green together) — RBAC on both entities, the seed shape including
+  Cred arriving from the ticker-only list and TCS arriving with no package,
+  a 201-character quote rejected and exactly 200 accepted, trimming, the
+  published filter, reorder, 404s, and a check that the Phase 2 companies
+  endpoint still works and is a separate list. In the browser: the tab strip,
+  the quote counter warning at 195/200, adding a story, and clearing Cred's
+  package — which moved the subtitle from 8 to 7 in the ticker while leaving
+  it in the grid, then showed exactly that on the public site.
+
+  **A bug this introduced and caught.** `COMPANIES` was an array of strings and
+  `partners` is an array of objects; `ProgramDetail` still rendered `{c}`,
+  which crashed every programme page with "Objects are not valid as a React
+  child". The landing page was fine because it was updated in the same edit —
+  the programme page was a second consumer of the same constant. **When a
+  shared data shape changes, grep for every consumer**, and check a page that
+  is not the one being worked on.
+
 ---
 
 ## Open threads
@@ -716,13 +767,11 @@ Scope, in the order it should be built:
    `programs.js` is ~900 lines of nested content per program (syllabus phases,
    projects, roles, FAQs), so this one does *not* fit the flat key/value shape
    site settings used. It needs real tables.
-3. ~~**Mentors**~~ — **built.** See the progress log entry above.
-   **Stories and companies** are the same shape and should be one more pass:
-   `WebsiteTabs` is already the shell, and `STORIES` / `COMPANIES` in `site.js`
-   are the rows to seed. Stories additionally need the ~200 character limit
-   with a live counter decided below.
-4. **Photos** — blocked on the storage decision below. Mentors accept a photo
-   *link* in the meantime, which covers images MOP already hosts.
+3. ~~**Mentors, stories, companies**~~ — **all built.** See the progress log.
+   **Courses are the only entity left**, and they are the hard one.
+4. **Photos** — blocked on the storage decision below. Mentors, stories and
+   partners all accept an image *link* in the meantime, which covers anything
+   MOP already hosts.
 
 The decisions this raised:
 
@@ -777,7 +826,11 @@ of how much it would matter if wrong:
   at Admin > Website > Mentors now, including the programme tick-boxes.
 - **Learner quotes and placement figures** (1,050+ placements, ₹47.6L highest, 500+
   partners, 87%) come from mopcareers.in — MOP's own claims, unverified against
-  records, and no student has consented to being quoted here.
+  records, and no student has consented to being quoted here. The quotes, the
+  company list and the ticker packages are all editable at Admin > Website now;
+  the four headline statistics are still hardcoded in `site.js` (`STATS` and
+  `OUTCOMES`) and remain the largest unverified claim that still needs a
+  developer to change.
 - **Contact details conflict across MOP's own properties.** The site shows
   `hello@mopcareers.com`, `+91 98908 13235`, HSR Layout Bengaluru. mopcareers.in
   publishes `hello@mopcareers.in` and a Whitefield address. Both are live and

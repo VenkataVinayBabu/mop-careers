@@ -31,10 +31,18 @@
 import { useSyncExternalStore } from 'react';
 
 import { api } from '../api/client';
-import { MENTORS as MENTOR_DEFAULTS, SITE_DEFAULTS } from './site';
+import {
+  COMPANIES as COMPANY_DEFAULTS,
+  MENTORS as MENTOR_DEFAULTS,
+  PLACEMENTS_TICKER as TICKER_DEFAULTS,
+  SITE_DEFAULTS,
+  STORIES as STORY_DEFAULTS,
+} from './site';
 
 const CACHE_KEY = 'mop_site_settings';
 const MENTORS_CACHE_KEY = 'mop_site_mentors';
+const STORIES_CACHE_KEY = 'mop_site_stories';
+const PARTNERS_CACHE_KEY = 'mop_site_partners';
 
 /* The API speaks snake_case and a flat shape; the site speaks camelCase with
    the social links nested. One mapper here, rather than either side bending to
@@ -64,20 +72,33 @@ function fromApi(row) {
   };
 }
 
-/* The API row shape for a mentor, mapped to the shape the cards already
-   expect. `photo` stays null rather than '' so `Avatar` keeps falling through
-   to its monogram — an empty string is a broken <img>. */
-function mentorsFromApi(rows) {
-  if (!Array.isArray(rows)) return null;
-  return rows.map((r) => ({
-    name: r.name || '',
-    photo: r.photo_url || null,
-    former: r.former || '',
-    focus: r.focus || '',
-    programs: Array.isArray(r.programs) ? r.programs : [],
-    placeholder: Boolean(r.is_placeholder),
-  }));
-}
+/* API rows mapped to the shapes the cards already expect. `photo` stays null
+   rather than '' so `Avatar` keeps falling through to its monogram — an empty
+   string is a broken <img>. Each returns null for a non-array, which is how a
+   corrupted cache entry is told apart from a genuinely empty list. */
+const listMapper = (map) => (rows) => (Array.isArray(rows) ? rows.map(map) : null);
+
+const mentorsFromApi = listMapper((r) => ({
+  name: r.name || '',
+  photo: r.photo_url || null,
+  former: r.former || '',
+  focus: r.focus || '',
+  programs: Array.isArray(r.programs) ? r.programs : [],
+  placeholder: Boolean(r.is_placeholder),
+}));
+
+const storiesFromApi = listMapper((r) => ({
+  name: r.name || '',
+  photo: r.photo_url || null,
+  role: r.role || '',
+  quote: r.quote || '',
+}));
+
+const partnersFromApi = listMapper((r) => ({
+  name: r.name || '',
+  logo: r.logo_url || null,
+  package: r.package_lpa || '',
+}));
 
 /* localStorage throws in some privacy modes, and a corrupted entry must not
    take the site down over a phone number. Every access swallows failure. */
@@ -122,18 +143,48 @@ const settingsStore = createStore(
 );
 
 /*
- * Mentors differ from settings in one important way: an EMPTY LIST IS A REAL
- * ANSWER. If an admin deletes every mentor the site must show none, not fall
- * back to the copy baked into the bundle — otherwise deleting a fabricated
- * mentor would appear to work and then quietly undo itself.
+ * The three lists differ from settings in one important way: an EMPTY LIST IS
+ * A REAL ANSWER. If an admin deletes every mentor the site must show none, not
+ * fall back to the copy baked into the bundle — otherwise deleting a
+ * fabricated mentor would appear to work and then quietly undo itself.
  *
- * That is why `??` and not `||` below, and why the mentors table ships seeded
- * rather than empty: the database is the source of truth from the first
- * deploy, and the baked list is only ever the first paint.
+ * That is why `??` and not `||` below, and why these tables ship seeded rather
+ * than empty: the database is the source of truth from the first deploy, and
+ * the baked lists are only ever the first paint.
  */
-const mentorsStore = createStore(
-  readCache(MENTORS_CACHE_KEY, mentorsFromApi) ?? MENTOR_DEFAULTS,
-);
+function createListStore(cacheKey, mapper, defaults) {
+  const store = createStore(readCache(cacheKey, mapper) ?? defaults);
+  return {
+    ...store,
+    /** Adopt an API payload — used by the fetch below and by the admin
+     *  screens, which already have the saved response and should not have to
+     *  re-fetch it. A non-array is ignored rather than blanking the list. */
+    apply(rows) {
+      const mapped = mapper(rows);
+      if (!mapped) return;
+      store.set(mapped);
+      writeCache(cacheKey, rows);
+    },
+    use() {
+      return useSyncExternalStore(store.subscribe, store.get, store.get);
+    },
+  };
+}
+
+const mentorsStore = createListStore(MENTORS_CACHE_KEY, mentorsFromApi, MENTOR_DEFAULTS);
+const storiesStore = createListStore(STORIES_CACHE_KEY, storiesFromApi, STORY_DEFAULTS);
+
+/* The two hardcoded lists this replaces were separate: COMPANIES was a name
+   grid and PLACEMENTS_TICKER was name-plus-package. One table serves both now,
+   so the baked default has to be merged the same way — a company keeps its
+   ticker package when it had one. */
+const PARTNER_DEFAULTS = COMPANY_DEFAULTS.map((name) => ({
+  name,
+  logo: null,
+  package: (TICKER_DEFAULTS.find(([co]) => co === name) || [])[1] || '',
+}));
+
+const partnersStore = createListStore(PARTNERS_CACHE_KEY, partnersFromApi, PARTNER_DEFAULTS);
 
 /** The current settings, outside a component. */
 export const getSite = () => settingsStore.get();
@@ -145,10 +196,16 @@ export function useSite() {
 
 /** The mentors currently on the site. */
 export const getMentors = () => mentorsStore.get();
+export const useMentors = () => mentorsStore.use();
 
-export function useMentors() {
-  return useSyncExternalStore(mentorsStore.subscribe, mentorsStore.get, mentorsStore.get);
-}
+export const useStories = () => storiesStore.use();
+
+/** Every published company, for the hiring-network grid. */
+export const usePartners = () => partnersStore.use();
+
+/** The subset carrying a package, which is what the placements ticker shows.
+ *  Filtered here rather than fetched separately — it is the same dozen rows. */
+export const usePlacementsTicker = () => partnersStore.use().filter((p) => p.package);
 
 /** Adopt an API payload — used by the fetch below and by the admin screens,
  *  which already have the saved response and should not have to re-fetch it. */
@@ -157,12 +214,9 @@ export function applySiteSettings(row) {
   writeCache(CACHE_KEY, row);
 }
 
-export function applyMentors(rows) {
-  const mapped = mentorsFromApi(rows);
-  if (!mapped) return;
-  mentorsStore.set(mapped);
-  writeCache(MENTORS_CACHE_KEY, rows);
-}
+export const applyMentors = (rows) => mentorsStore.apply(rows);
+export const applyStories = (rows) => storiesStore.apply(rows);
+export const applyPartners = (rows) => partnersStore.apply(rows);
 
 /* Once per page load. Several public pages ask for the refresh (whichever one
    the visitor lands on renders the header), and they should not each spend a
@@ -179,6 +233,8 @@ export function refreshPublicContent() {
     inFlight = Promise.all([
       api.get('/public/site-settings').then(({ data }) => applySiteSettings(data)).catch(() => null),
       api.get('/public/mentors').then(({ data }) => applyMentors(data)).catch(() => null),
+      api.get('/public/stories').then(({ data }) => applyStories(data)).catch(() => null),
+      api.get('/public/partners').then(({ data }) => applyPartners(data)).catch(() => null),
     ]);
   }
   return inFlight;

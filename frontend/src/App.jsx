@@ -18,6 +18,8 @@ import AdminFees from './pages/admin/Fees';
 import AdminPlacements from './pages/admin/Placements';
 import AdminWebsite from './pages/admin/Website';
 import AdminWebsiteMentors from './pages/admin/WebsiteMentors';
+import AdminWebsitePartners from './pages/admin/WebsitePartners';
+import AdminWebsiteStories from './pages/admin/WebsiteStories';
 import DoubtsInbox from './pages/staff/DoubtsInbox';
 import Landing from './pages/public/Landing';
 import ProgramDetail from './pages/public/ProgramDetail';
@@ -141,6 +143,8 @@ export default function App() {
             the API router carries its own admin dependency. */}
         <Route path="/admin/website" element={<AdminWebsite />} />
         <Route path="/admin/website/mentors" element={<AdminWebsiteMentors />} />
+        <Route path="/admin/website/stories" element={<AdminWebsiteStories />} />
+        <Route path="/admin/website/partners" element={<AdminWebsitePartners />} />
       </Route>
 
       {/* Teacher workspace — admins may open it too, since they can do everything. */}

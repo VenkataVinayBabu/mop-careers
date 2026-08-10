@@ -5,10 +5,11 @@ import Avatar from '../../components/Avatar';
 import CountUp from '../../components/CountUp';
 import { FEATURED_PROGRAMS, LIVE_PROGRAMS, OTHER_PROGRAMS } from '../../data/programs';
 import {
-  COMPANIES, FAQ, OUTCOMES, PAP_EXPLAINER, PAP_FEATURES, PAP_STEPS,
-  PLACEMENTS_TICKER, REFERRAL, STATS, STORIES,
+  FAQ, OUTCOMES, PAP_EXPLAINER, PAP_FEATURES, PAP_STEPS, REFERRAL, STATS,
 } from '../../data/site';
-import { useMentors, useSite } from '../../data/siteSettings';
+import {
+  useMentors, usePartners, usePlacementsTicker, useSite, useStories,
+} from '../../data/siteSettings';
 import ProgramCard from './ProgramCard';
 import EnquiryForm from './EnquiryForm';
 import {
@@ -140,6 +141,9 @@ export default function Landing() {
      whatever the API returns — including an empty list, which is what makes
      deleting a mentor actually stick. */
   const mentors = useMentors();
+  const stories = useStories();
+  const partners = usePartners();
+  const ticker = usePlacementsTicker();
 
   useEffect(() => {
     document.title = 'MOP Careers — Your Future. Our Priority.';
@@ -210,18 +214,22 @@ export default function Landing() {
       </section>
 
       {/* -------------------------------------------------------- ticker */}
+      {/* Only companies with a package appear here, so an empty ticker is a
+          real possibility — and an empty strip is two stray horizontal rules. */}
+      {ticker.length > 0 && (
       <div className="overflow-hidden border-y border-navy-100 bg-white" aria-label="Recent placements">
         <div className="flex w-max gap-12 py-3.5 motion-safe:animate-[mop-ticker_38s_linear_infinite]">
           {/* Doubled so the loop has no visible seam. */}
-          {[...PLACEMENTS_TICKER, ...PLACEMENTS_TICKER].map(([co, ctc], i) => (
-            <span key={`${co}-${i}`} className="inline-flex items-center gap-2.5 whitespace-nowrap text-[0.86rem]">
+          {[...ticker, ...ticker].map((p, i) => (
+            <span key={`${p.name}-${i}`} className="inline-flex items-center gap-2.5 whitespace-nowrap text-[0.86rem]">
               <span className="block h-1.5 w-1.5 rounded-full bg-teal" />
-              <b className="font-bold text-navy">{co}</b>
-              <span className="text-navy-400">{ctc}</span>
+              <b className="font-bold text-navy">{p.name}</b>
+              <span className="text-navy-400">{p.package}</span>
             </span>
           ))}
         </div>
       </div>
+      )}
 
       {/* ------------------------------------------------------- programs */}
       <section id="programs" className="py-16 sm:py-24">
@@ -462,6 +470,7 @@ export default function Landing() {
       )}
 
       {/* ------------------------------------------------------- stories */}
+      {stories.length > 0 && (
       <section id="stories" className="bg-white py-16 sm:py-24">
         <div className="mx-auto max-w-[1240px] px-6">
           <div className="mb-11">
@@ -472,7 +481,7 @@ export default function Landing() {
           </div>
 
           <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
-            {STORIES.map((s, i) => (
+            {stories.map((s, i) => (
               <article key={s.name} className="flex flex-col rounded-[20px] border border-navy-100 bg-white p-6">
                 <div className="text-[0.82rem] tracking-[0.12em] text-orange" aria-label="Five out of five">
                   &#9733;&#9733;&#9733;&#9733;&#9733;
@@ -503,8 +512,10 @@ export default function Landing() {
           </div>
         </div>
       </section>
+      )}
 
       {/* ----------------------------------------------------- companies */}
+      {partners.length > 0 && (
       <section id="companies" className="py-16 sm:py-24">
         <div className="mx-auto max-w-[1240px] px-6">
           <div className="mb-11">
@@ -515,14 +526,15 @@ export default function Landing() {
           </div>
 
           <div className="grid grid-cols-2 gap-px overflow-hidden rounded-[20px] border border-navy-100 bg-navy-100 sm:grid-cols-4 lg:grid-cols-6">
-            {COMPANIES.map((c) => (
-              <div key={c} className="bg-white px-2 py-6 text-center text-[0.87rem] font-bold tracking-tight text-navy-300">
-                {c}
+            {partners.map((c) => (
+              <div key={c.name} className="bg-white px-2 py-6 text-center text-[0.87rem] font-bold tracking-tight text-navy-300">
+                {c.name}
               </div>
             ))}
           </div>
         </div>
       </section>
+      )}
 
       {/* ----------------------------------------------------------- faq */}
       <section id="faq" className="bg-white py-16 sm:py-24">

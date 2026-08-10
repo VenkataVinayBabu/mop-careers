@@ -1,12 +1,12 @@
-import { useCallback, useEffect, useMemo, useState } from 'react';
+import { useCallback, useMemo, useState } from 'react';
 
-import { api, errorMessage } from '../../api/client';
 import Avatar from '../../components/Avatar';
-import { useToast } from '../../components/Toast';
 import { EmptyState, ErrorState, Loading, Modal, PageHeader } from '../../components/ui';
 import { LIVE_PROGRAMS } from '../../data/programs';
 import { applyMentors } from '../../data/siteSettings';
+import ReorderButtons from './ReorderButtons';
 import WebsiteTabs from './WebsiteTabs';
+import { useContentList } from './websiteContent';
 
 /*
  * Admin > Website > Mentors.
@@ -31,19 +31,6 @@ const BLANK = {
   is_placeholder: false,
   published: true,
 };
-
-/* FastAPI validation errors arrive as [{loc: ['body','name'], msg}]. Worth
-   unpacking so each message lands under the field that caused it. */
-function fieldErrors(err) {
-  const detail = err?.response?.data?.detail;
-  if (!Array.isArray(detail)) return {};
-  const out = {};
-  detail.forEach((d) => {
-    const key = Array.isArray(d.loc) ? d.loc[d.loc.length - 1] : null;
-    if (key) out[key] = String(d.msg).replace(/^Value error, /, '');
-  });
-  return out;
-}
 
 const programName = (slug) =>
   LIVE_PROGRAMS.find((p) => p.slug === slug)?.name || slug;
@@ -152,149 +139,44 @@ function MentorForm({ value, errors, onChange }) {
 }
 
 export default function AdminWebsiteMentors() {
-  const toast = useToast();
-  const [rows, setRows] = useState([]);
-  const [loading, setLoading] = useState(true);
-  const [loadError, setLoadError] = useState('');
-  const [busyId, setBusyId] = useState(null);
-
   const [editing, setEditing] = useState(null); // the mentor being edited, or BLANK for a new one
   const [draft, setDraft] = useState(BLANK);
-  const [errors, setErrors] = useState({});
-  const [saving, setSaving] = useState(false);
 
-  /* The admin list and the public store are different things: this one shows
-     unpublished mentors too. `applyMentors` gets the published subset so the
-     public site in another tab of this app is correct straight away. */
-  const adopt = useCallback((all) => {
-    setRows(all);
-    applyMentors(all.filter((m) => m.published));
-  }, []);
-
-  const load = useCallback(async () => {
-    setLoadError('');
-    try {
-      const { data } = await api.get('/admin/website/mentors');
-      adopt(data);
-    } catch (err) {
-      setLoadError(errorMessage(err));
-    } finally {
-      setLoading(false);
-    }
-  }, [adopt]);
-
-  useEffect(() => {
-    load();
-  }, [load]);
+  /* The admin list carries unpublished rows too; the public store only wants
+     what is live, so another tab of this app is correct straight away.
+     Memoised so the list hook's load effect does not re-run every render. */
+  const adopt = useCallback((all) => applyMentors(all.filter((m) => m.published)), []);
+  const list = useContentList('/admin/website/mentors', adopt, 'mentor');
 
   const counts = useMemo(() => ({
-    total: rows.length,
-    live: rows.filter((m) => m.published).length,
-    placeholder: rows.filter((m) => m.is_placeholder).length,
-  }), [rows]);
+    total: list.rows.length,
+    live: list.rows.filter((m) => m.published).length,
+    placeholder: list.rows.filter((m) => m.is_placeholder).length,
+  }), [list.rows]);
 
-  const openNew = () => {
-    setEditing(BLANK);
-    setDraft(BLANK);
-    setErrors({});
-  };
-
+  const openNew = () => { setEditing(BLANK); setDraft(BLANK); list.setErrors({}); };
   const openEdit = (mentor) => {
     setEditing(mentor);
     setDraft({ ...BLANK, ...mentor, programs: [...(mentor.programs || [])] });
-    setErrors({});
+    list.setErrors({});
   };
 
-  const save = async (e) => {
+  const submit = async (e) => {
     e.preventDefault();
-    if (saving) return;
-    setSaving(true);
-    setErrors({});
-    try {
-      const body = {
-        name: draft.name,
-        former: draft.former,
-        focus: draft.focus,
-        photo_url: draft.photo_url,
-        programs: draft.programs,
-        is_placeholder: draft.is_placeholder,
-        published: draft.published,
-      };
-      if (editing.id) {
-        const { data } = await api.put(`/admin/website/mentors/${editing.id}`, body);
-        adopt(rows.map((m) => (m.id === data.id ? data : m)));
-        toast.success(`${data.name} updated.`);
-      } else {
-        const { data } = await api.post('/admin/website/mentors', body);
-        adopt([...rows, data]);
-        toast.success(`${data.name} added to the site.`);
-      }
-      setEditing(null);
-    } catch (err) {
-      const byField = fieldErrors(err);
-      setErrors(byField);
-      if (!Object.keys(byField).length) toast.error(errorMessage(err));
-    } finally {
-      setSaving(false);
-    }
+    const ok = await list.save(editing, {
+      name: draft.name,
+      former: draft.former,
+      focus: draft.focus,
+      photo_url: draft.photo_url,
+      programs: draft.programs,
+      is_placeholder: draft.is_placeholder,
+      published: draft.published,
+    });
+    if (ok) setEditing(null);
   };
 
-  const togglePublished = async (mentor) => {
-    setBusyId(mentor.id);
-    try {
-      const { data } = await api.put(`/admin/website/mentors/${mentor.id}`, {
-        published: !mentor.published,
-      });
-      adopt(rows.map((m) => (m.id === data.id ? data : m)));
-      toast.info(data.published ? `${data.name} is on the site.` : `${data.name} is hidden.`);
-    } catch (err) {
-      toast.error(errorMessage(err));
-    } finally {
-      setBusyId(null);
-    }
-  };
-
-  const remove = async (mentor) => {
-    /* A named person disappearing from a public page is worth one deliberate
-       confirmation, and the name is in the prompt so it cannot be the wrong row. */
-    if (!window.confirm(`Remove ${mentor.name} from the website? This cannot be undone.`)) return;
-    setBusyId(mentor.id);
-    try {
-      await api.delete(`/admin/website/mentors/${mentor.id}`);
-      adopt(rows.filter((m) => m.id !== mentor.id));
-      toast.info(`${mentor.name} removed.`);
-    } catch (err) {
-      toast.error(errorMessage(err));
-    } finally {
-      setBusyId(null);
-    }
-  };
-
-  /* Reorder sends the whole list rather than "move this one up", so a request
-     cannot leave the table half-sorted. The move is applied locally first so
-     the row does not visibly lag the click. */
-  const move = async (index, delta) => {
-    const target = index + delta;
-    if (target < 0 || target >= rows.length) return;
-    const next = [...rows];
-    [next[index], next[target]] = [next[target], next[index]];
-    setRows(next);
-    setBusyId(rows[index].id);
-    try {
-      const { data } = await api.post('/admin/website/mentors/reorder', {
-        ids: next.map((m) => m.id),
-      });
-      adopt(data);
-    } catch (err) {
-      toast.error(errorMessage(err));
-      load(); // put the real order back
-    } finally {
-      setBusyId(null);
-    }
-  };
-
-  if (loading) return <Loading label="Loading mentors…" />;
-  if (loadError) return <ErrorState message={loadError} onRetry={load} />;
+  if (list.loading) return <Loading label="Loading mentors…" />;
+  if (list.loadError) return <ErrorState message={list.loadError} onRetry={list.load} />;
 
   return (
     <div>
@@ -302,11 +184,7 @@ export default function AdminWebsiteMentors() {
       <PageHeader
         title="Mentors"
         subtitle={`${counts.live} on the site${counts.total !== counts.live ? ` · ${counts.total - counts.live} hidden` : ''}`}
-        action={
-          <button type="button" className="btn-cta" onClick={openNew}>
-            Add a mentor
-          </button>
-        }
+        action={<button type="button" className="btn-cta" onClick={openNew}>Add a mentor</button>}
       />
 
       {counts.placeholder > 0 && (
@@ -319,21 +197,17 @@ export default function AdminWebsiteMentors() {
         </div>
       )}
 
-      {rows.length === 0 ? (
+      {list.rows.length === 0 ? (
         <div className="card">
           <EmptyState
             title="No mentors"
             message="The mentors section is hidden on the public site until you add someone."
-            action={
-              <button type="button" className="btn-cta" onClick={openNew}>
-                Add a mentor
-              </button>
-            }
+            action={<button type="button" className="btn-cta" onClick={openNew}>Add a mentor</button>}
           />
         </div>
       ) : (
         <ul className="space-y-3">
-          {rows.map((m, i) => (
+          {list.rows.map((m, i) => (
             <li key={m.id} className={`card p-4 ${m.published ? '' : 'opacity-70'}`}>
               <div className="flex flex-col gap-4 sm:flex-row sm:items-start">
                 <Avatar
@@ -362,52 +236,23 @@ export default function AdminWebsiteMentors() {
                 </div>
 
                 <div className="flex shrink-0 items-center gap-1.5">
-                  <div className="flex flex-col">
-                    <button
-                      type="button"
-                      onClick={() => move(i, -1)}
-                      disabled={i === 0 || busyId !== null}
-                      aria-label={`Move ${m.name} up`}
-                      className="rounded p-1 text-navy-400 hover:bg-navy-50 hover:text-navy disabled:opacity-30 disabled:hover:bg-transparent"
-                    >
-                      <svg className="h-4 w-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5">
-                        <path d="m18 15-6-6-6 6" strokeLinecap="round" strokeLinejoin="round" />
-                      </svg>
-                    </button>
-                    <button
-                      type="button"
-                      onClick={() => move(i, 1)}
-                      disabled={i === rows.length - 1 || busyId !== null}
-                      aria-label={`Move ${m.name} down`}
-                      className="rounded p-1 text-navy-400 hover:bg-navy-50 hover:text-navy disabled:opacity-30 disabled:hover:bg-transparent"
-                    >
-                      <svg className="h-4 w-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5">
-                        <path d="m6 9 6 6 6-6" strokeLinecap="round" strokeLinejoin="round" />
-                      </svg>
-                    </button>
-                  </div>
-                  <button
-                    type="button"
-                    className="btn-ghost btn-sm"
-                    disabled={busyId === m.id}
-                    onClick={() => togglePublished(m)}
-                  >
+                  <ReorderButtons
+                    index={i}
+                    total={list.rows.length}
+                    label={m.name}
+                    disabled={list.busyId !== null}
+                    onMove={list.move}
+                  />
+                  <button type="button" className="btn-ghost btn-sm" disabled={list.busyId === m.id}
+                          onClick={() => list.togglePublished(m)}>
                     {m.published ? 'Hide' : 'Show'}
                   </button>
-                  <button
-                    type="button"
-                    className="btn-ghost btn-sm"
-                    disabled={busyId === m.id}
-                    onClick={() => openEdit(m)}
-                  >
+                  <button type="button" className="btn-ghost btn-sm" disabled={list.busyId === m.id}
+                          onClick={() => openEdit(m)}>
                     Edit
                   </button>
-                  <button
-                    type="button"
-                    className="btn-ghost btn-sm text-orange"
-                    disabled={busyId === m.id}
-                    onClick={() => remove(m)}
-                  >
+                  <button type="button" className="btn-ghost btn-sm text-orange" disabled={list.busyId === m.id}
+                          onClick={() => list.remove(m)}>
                     Delete
                   </button>
                 </div>
@@ -423,11 +268,9 @@ export default function AdminWebsiteMentors() {
         onClose={() => setEditing(null)}
         footer={
           <>
-            <button type="button" className="btn-ghost" onClick={() => setEditing(null)}>
-              Cancel
-            </button>
-            <button type="submit" form="mentor-form" className="btn-cta" disabled={saving}>
-              {saving ? 'Saving…' : 'Save'}
+            <button type="button" className="btn-ghost" onClick={() => setEditing(null)}>Cancel</button>
+            <button type="submit" form="mentor-form" className="btn-cta" disabled={list.saving}>
+              {list.saving ? 'Saving…' : 'Save'}
             </button>
           </>
         }
@@ -435,8 +278,8 @@ export default function AdminWebsiteMentors() {
         {/* The submit button lives in the modal footer, outside this form, so
             it is wired back with form="mentor-form" rather than duplicating a
             second submit inside. */}
-        <form id="mentor-form" onSubmit={save}>
-          <MentorForm value={draft} errors={errors} onChange={setDraft} />
+        <form id="mentor-form" onSubmit={submit}>
+          <MentorForm value={draft} errors={list.errors} onChange={setDraft} />
         </form>
       </Modal>
     </div>

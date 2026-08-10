@@ -450,6 +450,60 @@ class Mentor(Base):
     )
 
 
+class Story(Base):
+    """A learner testimonial. Seeded like mentors, and for the same reason."""
+
+    __tablename__ = "stories"
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True)
+    name: Mapped[str] = mapped_column(String(120), nullable=False)
+    role: Mapped[str] = mapped_column(String(120), default="", nullable=False)
+    # Capped at 200 in the schema, not just here. A longer quote does not break
+    # the layout, it drags the whole row taller and hollows out the cards
+    # beside it — so the limit belongs at the input rather than truncating what
+    # someone actually said.
+    quote: Mapped[str] = mapped_column(String(400), default="", nullable=False)
+    photo_url: Mapped[str] = mapped_column(String(500), default="", nullable=False)
+    published: Mapped[bool] = mapped_column(Boolean, default=True, nullable=False)
+    sort_order: Mapped[int] = mapped_column(Integer, default=0, nullable=False, index=True)
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
+    updated_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), server_default=func.now(), onupdate=func.now()
+    )
+
+
+class HiringPartner(Base):
+    """A company shown on the marketing site.
+
+    Deliberately NOT the Phase 2 `Company` above, which is an employer a
+    student actually applied to and is joined to applications and offers. This
+    one is a name in the hiring-network grid — marketing copy that changes for
+    entirely different reasons. Sharing a table would tie the public site to
+    the placement records.
+
+    One table covers both places a company appears on that site: every
+    published row is in the hiring-network grid, and the ones that also carry a
+    `package_lpa` appear in the placements ticker. Those were two hardcoded
+    lists overlapping in ten of twelve entries — two lists to keep in agreement
+    for no gain.
+    """
+
+    __tablename__ = "hiring_partners"
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True)
+    name: Mapped[str] = mapped_column(String(120), nullable=False)
+    logo_url: Mapped[str] = mapped_column(String(500), default="", nullable=False)
+    # Free text, e.g. "₹28 LPA" — it is a display string beside a company name,
+    # not a number anything computes with. Blank keeps them out of the ticker.
+    package_lpa: Mapped[str] = mapped_column(String(40), default="", nullable=False)
+    published: Mapped[bool] = mapped_column(Boolean, default=True, nullable=False)
+    sort_order: Mapped[int] = mapped_column(Integer, default=0, nullable=False, index=True)
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
+    updated_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), server_default=func.now(), onupdate=func.now()
+    )
+
+
 class PasswordResetToken(Base):
     """Single-use, expiring token backing the forgot-password flow.
 
