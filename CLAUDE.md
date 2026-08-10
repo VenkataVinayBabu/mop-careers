@@ -804,6 +804,24 @@ Python 3.13.2 · Node v22.17.0 (npm 10.9.2) · Git 2.50.1 · PostgreSQL 17.9
   correction appearing on the public page — then **all eight programme pages
   walked** to confirm each still renders.
 
+  **Fees were the gap in "everything is editable", and they are now closed.**
+  Two things were wrong. The standard fee structure lived in `DEFAULT_FEES` in
+  `site.js` — global, hardcoded, identical on all eight pages. And the
+  per-programme escape hatch documented here (`detail.fees`) had been **broken
+  by the typed detail schema**: `ProgramDetail` had no `fees` field, so
+  Pydantic silently dropped any override sent to it. The API answered 200 and
+  the block vanished. Nothing was lost, because no programme had one — but the
+  escape hatch was dead.
+  - The seven fee fields are now site settings, edited on **Website >
+    Settings**, and every programme page falls back to them.
+  - A programme overrides them from its own editor, behind a tick-box that
+    prefills from the standard figures so only the difference gets typed.
+  - The merge is **per field, not all-or-nothing**: overriding the tuition
+    alone keeps the standard registration note rather than blanking it. Blank
+    override fields fall through too.
+  - `DEFAULT_FEES` is now literally `SITE_DEFAULTS.fees`, not a copy — two
+    lists of prices that can drift apart is the bug worth not having.
+
   **A bug this introduced, found by walking those pages.** Renaming
   `LIVE_PROGRAMS.map(` to `programs.map(` hit `PublicFooter` as well as
   `PublicHeader`, and the footer is a separate component with no `programs` in
@@ -889,6 +907,10 @@ of how much it would matter if wrong:
   already wrong (Kuppola Rajesh → Vinay K), so the employers and years beside the
   other three are equally suspect. Who teaches what is inferred. Also editable
   at Admin > Website > Mentors now, including the programme tick-boxes.
+- **The fee figures are MOP's own published prices and are not independently
+  verified** — and they are almost certainly not identical across all eight
+  programmes. They are editable at Admin > Website > Settings, with a
+  per-programme override on each programme's editor.
 - **Learner quotes and placement figures** (1,050+ placements, ₹47.6L highest, 500+
   partners, 87%) come from mopcareers.in — MOP's own claims, unverified against
   records, and no student has consented to being quoted here. The quotes, the

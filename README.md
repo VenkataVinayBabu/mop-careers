@@ -153,7 +153,7 @@ content management for the public site, editable without a deploy. Five tabs:
 notification addresses), *Programs*, *Mentors*, *Stories* and *Hiring partners* —
 each of the last four a list you can add to, edit, hide, reorder and delete. A
 programme opens its own editor for the whole of its page: headline, why, roles,
-syllabus phases, technologies, projects and FAQ.
+syllabus phases, technologies, projects, fees and FAQ.
 
 **Teacher** — *only their assigned batches.* Mark class days complete, set dates,
 paste recording links, upload notes PDFs, take attendance, view their students'
@@ -256,6 +256,12 @@ which makes an empty list a real answer — and makes `PROGRAMS` in `programs.js
 plus `MENTORS`, `STORIES`, `COMPANIES` and `PLACEMENTS_TICKER` in `site.js` nothing
 more than the first paint. Read `usePrograms()` / `useMentors()` / `useStories()` /
 `usePartners()`; editing those arrays no longer changes the site.
+
+**Fees live in two places on purpose.** The standard structure is seven site
+settings, shown on every programme page. A programme may carry its own `detail.fees`
+block, merged over the standard **per field** — so overriding the tuition alone
+keeps the standard registration note. `ProgramDetail` in `schemas.py` has to declare
+`fees` for that to survive: an undeclared key is silently dropped on the way through.
 
 **A programme's page content is one JSON document, not four tables.** `programs`
 has typed columns for what is filtered or looked up by (`slug`, `published`,

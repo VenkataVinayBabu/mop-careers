@@ -71,6 +71,17 @@ function fromApi(row) {
       youtube: pick('social_youtube', ''),
       facebook: pick('social_facebook', ''),
     },
+    /* Renamed into the shape the programme page renders, so a per-programme
+       override can be merged straight over it. */
+    fees: {
+      registration: pick('fee_registration', SITE_DEFAULTS.fees.registration),
+      registrationWas: pick('fee_registration_was', SITE_DEFAULTS.fees.registrationWas),
+      registrationNote: pick('fee_registration_note', SITE_DEFAULTS.fees.registrationNote),
+      tuition: pick('fee_tuition', SITE_DEFAULTS.fees.tuition),
+      tuitionWas: pick('fee_tuition_was', SITE_DEFAULTS.fees.tuitionWas),
+      tuitionNote: pick('fee_tuition_note', SITE_DEFAULTS.fees.tuitionNote),
+      emi: pick('fee_emi', SITE_DEFAULTS.fees.emi),
+    },
   };
 }
 
@@ -238,6 +249,11 @@ export const usePartners = () => partnersStore.use();
 /** The subset carrying a package, which is what the placements ticker shows.
  *  Filtered here rather than fetched separately — it is the same dozen rows. */
 export const usePlacementsTicker = () => partnersStore.use().filter((p) => p.package);
+
+/** The standard fee structure, before any per-programme override.
+ *  Goes through `useSite()`: the settings store is a plain store and has no
+ *  `use()` of its own, unlike the three list stores. */
+export const useFees = () => useSite().fees;
 
 /** Every published programme, in the order an admin arranged them. This is
  *  what `LIVE_PROGRAMS` used to be; the endpoint already filters. */

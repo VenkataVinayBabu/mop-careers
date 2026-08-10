@@ -40,6 +40,16 @@ PUBLIC_KEYS: tuple[str, ...] = (
     "social_instagram",
     "social_youtube",
     "social_facebook",
+    # The standard fee structure, shown on every programme page. A programme
+    # can override any of these from its own editor; these are the fallback,
+    # and the only figures most programmes will ever show.
+    "fee_registration",
+    "fee_registration_was",
+    "fee_registration_note",
+    "fee_tuition",
+    "fee_tuition_was",
+    "fee_tuition_note",
+    "fee_emi",
 )
 
 ADMIN_KEYS: tuple[str, ...] = (
@@ -68,6 +78,15 @@ DEFAULTS: dict[str, str] = {
     "social_instagram": "",
     "social_youtube": "",
     "social_facebook": "",
+    # These came from MOP's own programme page and are NOT independently
+    # verified. A `*_was` value renders struck through; blank hides the strike.
+    "fee_registration": "₹50,000",
+    "fee_registration_was": "₹90,000",
+    "fee_registration_note": "Inclusive of taxes · pay to start classes",
+    "fee_tuition": "₹1,20,000 + GST",
+    "fee_tuition_was": "₹1,60,000",
+    "fee_tuition_note": "Payable only after you accept an offer at your agreed CTC. No loans.",
+    "fee_emi": "₹5,000 / month",
     # Empty means "fall back to the .env value", which is how these worked
     # before this table existed. Setting one here overrides the environment
     # without a redeploy.

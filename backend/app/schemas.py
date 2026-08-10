@@ -551,6 +551,14 @@ class SiteSettingsPublic(BaseModel):
     social_instagram: str = ""
     social_youtube: str = ""
     social_facebook: str = ""
+    # The standard fee structure every programme page falls back to.
+    fee_registration: str = ""
+    fee_registration_was: str = ""
+    fee_registration_note: str = ""
+    fee_tuition: str = ""
+    fee_tuition_was: str = ""
+    fee_tuition_note: str = ""
+    fee_emi: str = ""
 
 
 class SiteSettingsAdmin(SiteSettingsPublic):
@@ -603,6 +611,13 @@ class SiteSettingsUpdate(BaseModel):
     social_instagram: str | None = Field(default=None, max_length=255)
     social_youtube: str | None = Field(default=None, max_length=255)
     social_facebook: str | None = Field(default=None, max_length=255)
+    fee_registration: str | None = Field(default=None, max_length=60)
+    fee_registration_was: str | None = Field(default=None, max_length=60)
+    fee_registration_note: str | None = Field(default=None, max_length=200)
+    fee_tuition: str | None = Field(default=None, max_length=60)
+    fee_tuition_was: str | None = Field(default=None, max_length=60)
+    fee_tuition_note: str | None = Field(default=None, max_length=200)
+    fee_emi: str | None = Field(default=None, max_length=60)
     enquiry_email: str | None = Field(default=None, max_length=255)
     doubts_email: str | None = Field(default=None, max_length=255)
 
@@ -628,7 +643,9 @@ class SiteSettingsUpdate(BaseModel):
     def _check_socials(cls, v: str | None) -> str | None:
         return _optional_url(v)
 
-    @field_validator("phone", "address", "announcement", "announcement_tag", "whatsapp_message")
+    @field_validator("phone", "address", "announcement", "announcement_tag", "whatsapp_message",
+                     "fee_registration", "fee_registration_was", "fee_registration_note",
+                     "fee_tuition", "fee_tuition_was", "fee_tuition_note", "fee_emi")
     @classmethod
     def _trim(cls, v: str | None) -> str | None:
         return v.strip() if v is not None else None
@@ -858,6 +875,24 @@ class ProgramProject(BaseModel):
     tech: list[str] = Field(default_factory=list, max_length=12)
 
 
+class ProgramFees(BaseModel):
+    """A programme's own fee structure, overriding the standard one.
+
+    Present only when a programme charges something different. Absent — which
+    is the normal case — the page shows the standard figures from site
+    settings. Merged per field rather than all-or-nothing, so overriding the
+    tuition alone does not blank the registration note.
+    """
+
+    registration: str = Field(default="", max_length=60)
+    registrationWas: str = Field(default="", max_length=60)
+    registrationNote: str = Field(default="", max_length=200)
+    tuition: str = Field(default="", max_length=60)
+    tuitionWas: str = Field(default="", max_length=60)
+    tuitionNote: str = Field(default="", max_length=200)
+    emi: str = Field(default="", max_length=60)
+
+
 class ProgramDetail(BaseModel):
     """Everything a programme's own page renders. Every field optional — a
     section with no data does not render at all, so a programme can go live
@@ -874,6 +909,11 @@ class ProgramDetail(BaseModel):
     # [question, answer] pairs, kept as pairs because that is the shape the
     # page already renders and the global FAQ already uses.
     faq: list[tuple[str, str]] = Field(default_factory=list, max_length=12)
+    # None means "use the standard fee structure from site settings", which is
+    # what almost every programme does. This field has to exist even though
+    # nothing sets it today: the page reads `detail.fees`, so leaving it off
+    # the model made Pydantic drop any override on the way through.
+    fees: ProgramFees | None = None
 
 
 class ProgramOut(ORMModel):

@@ -3,10 +3,8 @@ import { Navigate, useParams } from 'react-router-dom';
 
 import { warmUp } from '../../api/client';
 import Avatar from '../../components/Avatar';
-import {
-  CAREER_SERVICES, DEFAULT_FEES, PROGRAM_FAQ, ROADMAP,
-} from '../../data/site';
-import { useMentors, usePartners, usePrograms } from '../../data/siteSettings';
+import { CAREER_SERVICES, PROGRAM_FAQ, ROADMAP } from '../../data/site';
+import { useFees, useMentors, usePartners, usePrograms } from '../../data/siteSettings';
 import EnquiryForm from './EnquiryForm';
 import ProgramCard from './ProgramCard';
 import { PublicFloats, PublicFooter, PublicHeader } from './PublicChrome';
@@ -84,13 +82,18 @@ export default function ProgramDetail() {
   // between an known and an unknown slug.
   const allMentors = useMentors();
   const partners = usePartners();
+  const standardFees = useFees();
 
   // An unknown or unpublished slug goes home rather than to a 404 — the
   // programme may simply have been withdrawn, and the list is what they want.
   if (!program) return <Navigate to={{ pathname: '/', hash: '#programs' }} replace />;
 
   const d = program.detail || {};
-  const fees = d.fees || DEFAULT_FEES;
+  /* Merged per field, not all-or-nothing: a programme that overrides only its
+     tuition should keep the standard registration note rather than blanking
+     it. Blank values in an override fall through to the standard too. */
+  const fees = { ...standardFees };
+  Object.entries(d.fees || {}).forEach(([k, v]) => { if (v) fees[k] = v; });
   const mentors = allMentors.filter((m) => (m.programs || []).includes(program.slug));
   const related = programs.filter((p) => p.slug !== program.slug).slice(0, 3);
 

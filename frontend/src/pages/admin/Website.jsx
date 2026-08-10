@@ -70,6 +70,25 @@ const SECTIONS = [
     ],
   },
   {
+    title: 'Standard fees',
+    caption: 'The fee structure shown on every programme page. A programme can override any of it from its own editor.',
+    fields: [
+      { key: 'fee_registration', label: 'Registration fee', half: true, placeholder: '₹50,000',
+        hint: 'Paid up front to start classes.' },
+      { key: 'fee_registration_was', label: 'Registration — was', half: true, placeholder: '₹90,000',
+        hint: 'Shown struck through beside it. Blank for no strike-through.' },
+      { key: 'fee_registration_note', label: 'Registration note', max: 200,
+        placeholder: 'Inclusive of taxes · pay to start classes' },
+      { key: 'fee_tuition', label: 'Tuition', half: true, placeholder: '₹1,20,000 + GST',
+        hint: 'The Pay After Placement amount.' },
+      { key: 'fee_tuition_was', label: 'Tuition — was', half: true, placeholder: '₹1,60,000' },
+      { key: 'fee_tuition_note', label: 'Tuition note', max: 200,
+        placeholder: 'Payable only after you accept an offer at your agreed CTC. No loans.' },
+      { key: 'fee_emi', label: 'EMI option', placeholder: '₹5,000 / month',
+        hint: 'Shown as a line under the fees heading. Blank to leave it out.' },
+    ],
+  },
+  {
     title: 'Where notifications go',
     caption: 'Internal only — these are never shown on the website.',
     fields: [

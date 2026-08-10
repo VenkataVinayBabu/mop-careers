@@ -4,7 +4,7 @@ import { Link, useNavigate, useParams } from 'react-router-dom';
 import { api, errorMessage } from '../../api/client';
 import { useToast } from '../../components/Toast';
 import { ErrorState, Loading, PageHeader } from '../../components/ui';
-import { applyPrograms } from '../../data/siteSettings';
+import { applyPrograms, refreshPublicContent, useFees } from '../../data/siteSettings';
 import { Field, Repeater, TagList } from './ContentInputs';
 import { fieldErrors } from './websiteContent';
 
@@ -35,6 +35,13 @@ const CATEGORIES = [
 const BLANK_DETAIL = {
   headline: '', intro: '', highlights: [], why: [], roles: [],
   syllabus: [], technologies: [], projects: [], faq: [],
+  // null means "use the standard fees", which is the normal case.
+  fees: null,
+};
+
+const BLANK_FEES = {
+  registration: '', registrationWas: '', registrationNote: '',
+  tuition: '', tuitionWas: '', tuitionNote: '', emi: '',
 };
 
 const BLANK = {
@@ -91,6 +98,14 @@ export default function AdminWebsiteProgramEditor() {
   const [loadError, setLoadError] = useState('');
   const [loading, setLoading] = useState(!isNew);
   const [saving, setSaving] = useState(false);
+
+  /* The standard fees, so ticking the override starts from them rather than
+     from seven empty boxes. The admin app never renders the public header, so
+     this is where the settings get asked for. */
+  const standardFees = useFees();
+  useEffect(() => {
+    refreshPublicContent();
+  }, []);
 
   const load = useCallback(async () => {
     if (isNew) return;
@@ -352,6 +367,46 @@ export default function AdminWebsiteProgramEditor() {
               </div>
             )}
           />
+        </Section>
+
+        <Section
+          title="Fees"
+          caption="This programme uses the standard fees from Website > Settings unless you override them here."
+        >
+          <Check
+            checked={Boolean(d.fees)}
+            onChange={(on) => setDetail('fees')(on ? { ...BLANK_FEES, ...standardFees } : null)}
+            label="This programme charges something different"
+            hint="Ticking it starts from the standard figures so you only change what differs. Untick to go back to the standard, whatever it becomes later."
+          />
+
+          {d.fees && (
+            <div className="grid gap-5">
+              <div className="grid gap-5 sm:grid-cols-2">
+                <Field id="fee-reg" label="Registration fee" max={60} value={d.fees.registration}
+                       onChange={(v) => setDetail('fees')({ ...d.fees, registration: v })} />
+                <Field id="fee-reg-was" label="Registration — was" max={60} value={d.fees.registrationWas}
+                       onChange={(v) => setDetail('fees')({ ...d.fees, registrationWas: v })}
+                       hint="Struck through. Blank for no strike-through." />
+              </div>
+              <Field id="fee-reg-note" label="Registration note" max={200} value={d.fees.registrationNote}
+                     onChange={(v) => setDetail('fees')({ ...d.fees, registrationNote: v })} />
+              <div className="grid gap-5 sm:grid-cols-2">
+                <Field id="fee-tui" label="Tuition" max={60} value={d.fees.tuition}
+                       onChange={(v) => setDetail('fees')({ ...d.fees, tuition: v })} />
+                <Field id="fee-tui-was" label="Tuition — was" max={60} value={d.fees.tuitionWas}
+                       onChange={(v) => setDetail('fees')({ ...d.fees, tuitionWas: v })} />
+              </div>
+              <Field id="fee-tui-note" label="Tuition note" max={200} value={d.fees.tuitionNote}
+                     onChange={(v) => setDetail('fees')({ ...d.fees, tuitionNote: v })} />
+              <Field id="fee-emi" label="EMI option" max={60} value={d.fees.emi}
+                     onChange={(v) => setDetail('fees')({ ...d.fees, emi: v })} />
+              <p className="text-xs text-navy-400">
+                Any field left blank here falls back to the standard fee for it, so you can
+                override the tuition alone.
+              </p>
+            </div>
+          )}
         </Section>
 
         <Section

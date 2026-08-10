@@ -67,6 +67,20 @@ export const SITE_DEFAULTS = {
     youtube: '',
     facebook: '',
   },
+
+  // The standard fee structure shown on every programme page. Editable at
+  // Admin > Website > Settings; a programme can override any of it from its
+  // own editor. Kept in sync with DEFAULT_FEES below, which is the shape the
+  // programme page actually consumes.
+  fees: {
+    registration: '₹50,000',
+    registrationWas: '₹90,000',
+    registrationNote: 'Inclusive of taxes · pay to start classes',
+    tuition: '₹1,20,000 + GST',
+    tuitionWas: '₹1,60,000',
+    tuitionNote: 'Payable only after you accept an offer at your agreed CTC. No loans.',
+    emi: '₹5,000 / month',
+  },
 };
 
 /* ---------------------------------------------------------------- outcomes */
@@ -284,24 +298,20 @@ export const CAREER_SERVICES = [
 ];
 
 /*
- * Fee structure. These figures come from MOP's own program page and apply to
- * every program until Bala sets them per program from the admin screens.
+ * Fee structure — THE SAME OBJECT as SITE_DEFAULTS.fees above, not a copy.
+ * Two lists of prices that can drift apart is exactly the bug worth avoiding.
  *
- * NOT independently verified, and almost certainly not identical across all
- * eight — a marketing program is unlikely to cost the same as a Data Science
- * one. A program can override this by setting `detail.fees`.
+ * These are now editable at Admin > Website > Settings, and a programme can
+ * override any field of them from its own editor. What is here is the first
+ * paint; read `useFees()` for the live values.
  *
- * `was` values render struck through. Set one to null to hide the strike.
+ * The figures came from MOP's own programme page, are NOT independently
+ * verified, and are almost certainly not identical across all eight — a
+ * marketing programme is unlikely to cost what a Data Science one does.
+ *
+ * `was` values render struck through; blank hides the strike.
  */
-export const DEFAULT_FEES = {
-  registration: '₹50,000',
-  registrationWas: '₹90,000',
-  registrationNote: 'Inclusive of taxes · pay to start classes',
-  tuition: '₹1,20,000 + GST',
-  tuitionWas: '₹1,60,000',
-  tuitionNote: 'Payable only after you accept an offer at your agreed CTC. No loans.',
-  emi: '₹5,000 / month',
-};
+export const DEFAULT_FEES = SITE_DEFAULTS.fees;
 
 /* Shown on every program page, beneath any program-specific questions. */
 export const PROGRAM_FAQ = [
