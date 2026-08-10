@@ -18,6 +18,8 @@ import AdminFees from './pages/admin/Fees';
 import AdminPlacements from './pages/admin/Placements';
 import AdminWebsite from './pages/admin/Website';
 import AdminWebsiteMentors from './pages/admin/WebsiteMentors';
+import AdminWebsiteProgramEditor from './pages/admin/WebsiteProgramEditor';
+import AdminWebsitePrograms from './pages/admin/WebsitePrograms';
 import AdminWebsitePartners from './pages/admin/WebsitePartners';
 import AdminWebsiteStories from './pages/admin/WebsiteStories';
 import DoubtsInbox from './pages/staff/DoubtsInbox';
@@ -142,6 +144,9 @@ export default function App() {
         {/* Content management for the public site. Admin-only on both sides —
             the API router carries its own admin dependency. */}
         <Route path="/admin/website" element={<AdminWebsite />} />
+        <Route path="/admin/website/programs" element={<AdminWebsitePrograms />} />
+        {/* One programme is a page, not a modal — it carries a whole syllabus. */}
+        <Route path="/admin/website/programs/:programId" element={<AdminWebsiteProgramEditor />} />
         <Route path="/admin/website/mentors" element={<AdminWebsiteMentors />} />
         <Route path="/admin/website/stories" element={<AdminWebsiteStories />} />
         <Route path="/admin/website/partners" element={<AdminWebsitePartners />} />

@@ -14,12 +14,13 @@ from sqlalchemy.orm import Session
 from app import site_settings
 from app.database import get_db
 from app.mail import send_email
-from app.models import Enquiry, HiringPartner, Mentor, Story
+from app.models import Enquiry, HiringPartner, Mentor, Program, Story
 from app.schemas import (
     EnquiryCreate,
     HiringPartnerOut,
     MentorOut,
     MessageResponse,
+    ProgramOut,
     SiteSettingsPublic,
     StoryOut,
 )
@@ -76,6 +77,18 @@ def read_mentors(db: Session = Depends(get_db)) -> list[Mentor]:
 @router.get("/stories", response_model=list[StoryOut])
 def read_stories(db: Session = Depends(get_db)) -> list[Story]:
     return ordered(db, Story, published_only=True)
+
+
+@router.get("/programs", response_model=list[ProgramOut])
+def read_programs(db: Session = Depends(get_db)) -> list[Program]:
+    """Published programmes, in the order an admin arranged them.
+
+    One request carries the whole catalogue including every detail block. That
+    is roughly 60KB for eight programmes, which is cheaper than a second round
+    trip to a backend that may be waking from idle — and it means clicking
+    through to a programme page needs no fetch at all.
+    """
+    return ordered(db, Program, published_only=True)
 
 
 @router.get("/partners", response_model=list[HiringPartnerOut])

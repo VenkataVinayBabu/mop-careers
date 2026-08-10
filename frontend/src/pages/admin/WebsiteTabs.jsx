@@ -4,12 +4,12 @@ import { NavLink } from 'react-router-dom';
  * The Website section's tab strip.
  *
  * Its own component because everything under Admin > Website is content
- * management for the public site and shares this header — Settings and Mentors
- * today, Stories and Companies next. A page keeps its own PageHeader below
- * this; the tabs only say which entity you are editing.
+ * management for the public site and shares this header. A page keeps its own
+ * PageHeader below this; the tabs only say which entity you are editing.
  */
 const TABS = [
   { to: '/admin/website', label: 'Settings', end: true },
+  { to: '/admin/website/programs', label: 'Programs' },
   { to: '/admin/website/mentors', label: 'Mentors' },
   { to: '/admin/website/stories', label: 'Stories' },
   { to: '/admin/website/partners', label: 'Hiring partners' },

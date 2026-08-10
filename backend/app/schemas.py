@@ -4,7 +4,7 @@ from __future__ import annotations
 from datetime import date, datetime
 from typing import Annotated, Literal
 
-from pydantic import BaseModel, ConfigDict, EmailStr, Field, field_validator
+from pydantic import BaseModel, ConfigDict, EmailStr, Field, field_validator, model_validator
 
 Role = Literal["admin", "teacher", "student"]
 BatchStatus = Literal["upcoming", "active", "completed"]
@@ -819,6 +819,177 @@ class HiringPartnerUpdate(BaseModel):
     @classmethod
     def _check_logo(cls, v: str | None) -> str | None:
         return _optional_url(v)
+
+
+# --- programmes -----------------------------------------------------------
+# The detail block is typed rather than an open dict. It is stored as one JSON
+# document, but that is a storage decision — it does not mean the API should
+# accept any shape. These models are also the only readable description of
+# what a programme page can contain.
+class ProgramWhy(BaseModel):
+    title: str = Field(max_length=120)
+    body: str = Field(default="", max_length=600)
+
+
+class ProgramRole(BaseModel):
+    title: str = Field(max_length=120)
+    salary: str = Field(default="", max_length=60)
+    body: str = Field(default="", max_length=600)
+    companies: list[str] = Field(default_factory=list, max_length=12)
+
+
+class ProgramPhase(BaseModel):
+    """One syllabus phase.
+
+    `exit` is the Placements Exit — the calibre of employer a learner is ready
+    for by the end of this phase. It is the strongest claim on a programme
+    page, so it is content an admin can correct rather than a constant.
+    """
+
+    title: str = Field(max_length=160)
+    body: str = Field(default="", max_length=800)
+    topics: list[str] = Field(default_factory=list, max_length=30)
+    exit: list[str] = Field(default_factory=list, max_length=12)
+
+
+class ProgramProject(BaseModel):
+    title: str = Field(max_length=160)
+    body: str = Field(default="", max_length=800)
+    tech: list[str] = Field(default_factory=list, max_length=12)
+
+
+class ProgramDetail(BaseModel):
+    """Everything a programme's own page renders. Every field optional — a
+    section with no data does not render at all, so a programme can go live
+    with nothing but the basics and be filled in over time."""
+
+    headline: str = Field(default="", max_length=200)
+    intro: str = Field(default="", max_length=1200)
+    highlights: list[str] = Field(default_factory=list, max_length=8)
+    why: list[ProgramWhy] = Field(default_factory=list, max_length=12)
+    roles: list[ProgramRole] = Field(default_factory=list, max_length=12)
+    syllabus: list[ProgramPhase] = Field(default_factory=list, max_length=12)
+    technologies: list[str] = Field(default_factory=list, max_length=60)
+    projects: list[ProgramProject] = Field(default_factory=list, max_length=12)
+    # [question, answer] pairs, kept as pairs because that is the shape the
+    # page already renders and the global FAQ already uses.
+    faq: list[tuple[str, str]] = Field(default_factory=list, max_length=12)
+
+
+class ProgramOut(ORMModel):
+    id: int
+    slug: str
+    name: str
+    category: str = ""
+    badge: str = ""
+    duration: str = ""
+    ctc_avg: str = ""
+    ctc_high: str = ""
+    summary: str = ""
+    for_whom: str = ""
+    skills: list[str] = []
+    featured: bool = False
+    confirmed: bool = True
+    published: bool = True
+    detail: ProgramDetail = ProgramDetail()
+    sort_order: int = 0
+
+
+def _slugify(value: str) -> str:
+    """A URL-safe slug. Not clever — lowercase, non-alphanumerics to hyphens,
+    no doubled or trailing hyphens. The admin form shows the result before it
+    is saved, so surprising output is visible rather than mysterious."""
+    out = []
+    for ch in value.strip().lower():
+        if ch.isalnum():
+            out.append(ch)
+        elif out and out[-1] != "-":
+            out.append("-")
+    return "".join(out).strip("-")
+
+
+class ProgramCreate(BaseModel):
+    name: str = Field(min_length=2, max_length=120)
+    # Optional on create: derived from the name when left out.
+    slug: str = Field(default="", max_length=80)
+    category: str = Field(default="", max_length=20)
+    badge: str = Field(default="", max_length=40)
+    duration: str = Field(default="", max_length=60)
+    ctc_avg: str = Field(default="", max_length=60)
+    ctc_high: str = Field(default="", max_length=60)
+    summary: str = Field(default="", max_length=1000)
+    for_whom: str = Field(default="", max_length=600)
+    skills: list[str] = Field(default_factory=list, max_length=12)
+    featured: bool = False
+    confirmed: bool = True
+    published: bool = True
+    detail: ProgramDetail = Field(default_factory=ProgramDetail)
+
+    @field_validator("name", "category", "badge", "duration", "ctc_avg", "ctc_high",
+                     "summary", "for_whom")
+    @classmethod
+    def _trim(cls, v: str) -> str:
+        return v.strip()
+
+    @field_validator("skills")
+    @classmethod
+    def _clean_skills(cls, v: list[str]) -> list[str]:
+        return [s.strip() for s in v if s and s.strip()]
+
+    @field_validator("slug")
+    @classmethod
+    def _clean_slug(cls, v: str) -> str:
+        return _slugify(v)
+
+    @model_validator(mode="after")
+    def _slug_from_name(self):
+        if not self.slug:
+            self.slug = _slugify(self.name)
+        if not self.slug:
+            raise ValueError("Enter a name that can become a web address")
+        return self
+
+
+class ProgramUpdate(BaseModel):
+    """Every field optional. `detail` is replaced wholesale when sent — it is
+    one document, and merging half a syllabus into another is not a thing
+    anyone means to do."""
+
+    name: str | None = Field(default=None, min_length=2, max_length=120)
+    slug: str | None = Field(default=None, min_length=1, max_length=80)
+    category: str | None = Field(default=None, max_length=20)
+    badge: str | None = Field(default=None, max_length=40)
+    duration: str | None = Field(default=None, max_length=60)
+    ctc_avg: str | None = Field(default=None, max_length=60)
+    ctc_high: str | None = Field(default=None, max_length=60)
+    summary: str | None = Field(default=None, max_length=1000)
+    for_whom: str | None = Field(default=None, max_length=600)
+    skills: list[str] | None = Field(default=None, max_length=12)
+    featured: bool | None = None
+    confirmed: bool | None = None
+    published: bool | None = None
+    detail: ProgramDetail | None = None
+
+    @field_validator("name", "category", "badge", "duration", "ctc_avg", "ctc_high",
+                     "summary", "for_whom")
+    @classmethod
+    def _trim(cls, v: str | None) -> str | None:
+        return v.strip() if v is not None else None
+
+    @field_validator("skills")
+    @classmethod
+    def _clean_skills(cls, v: list[str] | None) -> list[str] | None:
+        return None if v is None else [s.strip() for s in v if s and s.strip()]
+
+    @field_validator("slug")
+    @classmethod
+    def _clean_slug(cls, v: str | None) -> str | None:
+        if v is None:
+            return None
+        slug = _slugify(v)
+        if not slug:
+            raise ValueError("Enter a web address using letters or numbers")
+        return slug
 
 
 # Resolve the forward reference in TokenResponse.

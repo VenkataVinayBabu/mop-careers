@@ -148,10 +148,12 @@ creation, block/unblock, the full curriculum workspace for any batch, **fees**
 (totals, payments, outstanding balances, batch collection summary), **placements**
 (companies, applications, interview rounds, batch-wise stats), **enquiries** from the
 public site with a status workflow, the **doubt support** inbox, and **Website** —
-content management for the public site, editable without a deploy. Four tabs:
+content management for the public site, editable without a deploy. Five tabs:
 *Settings* (contact details, WhatsApp number, announcement bar, social links,
-notification addresses), *Mentors*, *Stories* and *Hiring partners* — each of the
-last three a list you can add to, edit, hide, reorder and delete.
+notification addresses), *Programs*, *Mentors*, *Stories* and *Hiring partners* —
+each of the last four a list you can add to, edit, hide, reorder and delete. A
+programme opens its own editor for the whole of its page: headline, why, roles,
+syllabus phases, technologies, projects and FAQ.
 
 **Teacher** — *only their assigned batches.* Mark class days complete, set dates,
 paste recording links, upload notes PDFs, take attendance, view their students'
@@ -245,15 +247,23 @@ component ignores whatever the admin has changed. The defaults in that file and
 `DEFAULTS` in `backend/app/site_settings.py` must stay identical, or a cold visit
 visibly flickers from one to the other.
 
-**Mentors, stories and hiring partners live in the database, and their tables ship
-seeded.** Site settings can start empty because a missing row means "use the
+**Programmes, mentors, stories and hiring partners live in the database, and their
+tables ship seeded.** Site settings can start empty because a missing row means "use the
 default". A list cannot: with an empty table there is no way to tell "not set up
 yet" from "the admin deleted them all", so deleting the last row would quietly bring
 the hardcoded list back. The migrations seed the rows that used to be in `site.js`,
-which makes an empty list a real answer — and makes `MENTORS`, `STORIES`,
-`COMPANIES` and `PLACEMENTS_TICKER` in `site.js` nothing more than the first paint.
-Read `useMentors()` / `useStories()` / `usePartners()`; editing those arrays no
-longer changes the site.
+which makes an empty list a real answer — and makes `PROGRAMS` in `programs.js`
+plus `MENTORS`, `STORIES`, `COMPANIES` and `PLACEMENTS_TICKER` in `site.js` nothing
+more than the first paint. Read `usePrograms()` / `useMentors()` / `useStories()` /
+`usePartners()`; editing those arrays no longer changes the site.
+
+**A programme's page content is one JSON document, not four tables.** `programs`
+has typed columns for what is filtered or looked up by (`slug`, `published`,
+`featured`, `category`) and a `detail` document for everything its page renders.
+Nothing joins to a syllabus phase; it is written and read as a whole page.
+`detail` is still typed at the API (`ProgramDetail` in `schemas.py`), and sending
+it on an update replaces it wholesale rather than merging. The whole published
+catalogue arrives in one request, so a programme page needs no fetch of its own.
 
 **One hiring-partner row feeds two places.** Every published row is in the
 hiring-network grid; the ones carrying a `package_lpa` are also in the scrolling

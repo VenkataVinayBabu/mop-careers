@@ -3,11 +3,10 @@ import { Navigate, useParams } from 'react-router-dom';
 
 import { warmUp } from '../../api/client';
 import Avatar from '../../components/Avatar';
-import { LIVE_PROGRAMS, programBySlug } from '../../data/programs';
 import {
   CAREER_SERVICES, DEFAULT_FEES, PROGRAM_FAQ, ROADMAP,
 } from '../../data/site';
-import { useMentors, usePartners } from '../../data/siteSettings';
+import { useMentors, usePartners, usePrograms } from '../../data/siteSettings';
 import EnquiryForm from './EnquiryForm';
 import ProgramCard from './ProgramCard';
 import { PublicFloats, PublicFooter, PublicHeader } from './PublicChrome';
@@ -45,7 +44,10 @@ function SectionHead({ eyebrow, title, accent, lede, className = '' }) {
 
 export default function ProgramDetail() {
   const { slug } = useParams();
-  const program = programBySlug(slug);
+  /* The whole published catalogue arrives in one request, so the page this
+     route needs is already here — no per-page fetch and no loading state. */
+  const programs = usePrograms();
+  const program = programs.find((p) => p.slug === slug);
 
   /*
    * One phase open at a time. The four titles are the outline of the whole
@@ -90,7 +92,7 @@ export default function ProgramDetail() {
   const d = program.detail || {};
   const fees = d.fees || DEFAULT_FEES;
   const mentors = allMentors.filter((m) => (m.programs || []).includes(program.slug));
-  const related = LIVE_PROGRAMS.filter((p) => p.slug !== program.slug).slice(0, 3);
+  const related = programs.filter((p) => p.slug !== program.slug).slice(0, 3);
 
   return (
     <div className="min-h-screen bg-paper">
@@ -631,7 +633,7 @@ export default function ProgramDetail() {
                 <ProgramCard
                   key={p.slug}
                   program={p}
-                  index={LIVE_PROGRAMS.indexOf(p)}
+                  index={programs.indexOf(p)}
                   href={`/programs/${p.slug}`}
                   showActionLabel
                 />

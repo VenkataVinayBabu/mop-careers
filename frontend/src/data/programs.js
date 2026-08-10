@@ -2,14 +2,19 @@
  * ============================================================================
  *  PROGRAM CATALOGUE
  * ============================================================================
- *  This is the public site's program list. Editing this file and pushing is
- *  currently the only way to change it.
+ *  PROGRAMS ARE NOW EDITED AT Admin > Website > Programs, and the database is
+ *  the source of truth. This list is only the FIRST PAINT — what the site
+ *  shows in the moment before the API answers, and all it has to show if the
+ *  backend is asleep. `usePrograms()` in ./siteSettings is what a component
+ *  should read; this list going stale is expected and harmless.
  *
- *  SHAPE MATTERS. Every object here is deliberately shaped like the row the
- *  API will return once programs move into the database and Bala manages them
- *  from an admin form. Keeping the shape identical means the swap is a change
- *  of import, not a rewrite of the pages. If you add a field here, add it in
- *  the same shape you would want it on the server.
+ *  The same rows were seeded into the `programs` table by the programs
+ *  migration, so editing one here does NOT change the site. Edit it in the
+ *  admin.
+ *
+ *  The shape below is exactly the shape the API returns (bar snake_case on the
+ *  flat fields, mapped in siteSettings), which is what made that swap a change
+ *  of import rather than a rewrite of the pages.
  *
  *  `published: false` hides a program from the site completely — it will not
  *  appear in the listing, the enquiry dropdown, or any count.

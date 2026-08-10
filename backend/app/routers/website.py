@@ -1,25 +1,26 @@
 """Admin content management for the public website.
 
-Site settings, mentors, learner stories and hiring partners. Courses are the
-one remaining entity, and they will not fit this shape — see CLAUDE.md.
+Site settings, mentors, learner stories, hiring partners and programmes —
+every piece of the marketing site an admin can now change without a deploy.
 
 The admin guard is declared on the router rather than on each endpoint, the
 same way the fees router does it, so an endpoint added to this file later
 cannot be exposed by forgetting a dependency. Everything here edits what the
 whole internet sees, which is exactly the wrong place for that mistake.
 
-The three list entities share their ordering, publishing and reorder rules —
-that logic lives in `app.website_content` rather than three times over.
+The four list entities share their ordering, publishing and reorder rules —
+that logic lives in `app.website_content` rather than four times over.
 """
 import logging
 
-from fastapi import APIRouter, Depends, status
+from fastapi import APIRouter, Depends, HTTPException, status
+from sqlalchemy import select
 from sqlalchemy.orm import Session
 
 from app import site_settings
 from app.database import get_db
 from app.deps import require_admin
-from app.models import HiringPartner, Mentor, Story, User
+from app.models import HiringPartner, Mentor, Program, Story, User
 from app.schemas import (
     HiringPartnerCreate,
     HiringPartnerOut,
@@ -28,6 +29,9 @@ from app.schemas import (
     MentorOut,
     MentorUpdate,
     MessageResponse,
+    ProgramCreate,
+    ProgramOut,
+    ProgramUpdate,
     ReorderRequest,
     SiteSettingsAdmin,
     SiteSettingsUpdate,
@@ -70,9 +74,9 @@ def update_settings(
 
 
 # ==========================================================================
-#  Mentors, stories and hiring partners
+#  Mentors, stories, hiring partners and programmes
 # ==========================================================================
-#  All three follow the same five endpoints. They are written out rather than
+#  All four follow the same five endpoints. They are written out rather than
 #  generated, because a reader wants to see what each one does — but every
 #  behaviour they share (ordering, 404s, appending, reordering) comes from
 #  `app.website_content`, so it is fixed in one place.
@@ -233,3 +237,72 @@ def reorder_partners(
 ) -> list[HiringPartner]:
     logger.info("Hiring partners reordered by %s", admin.email)
     return apply_reorder(db, HiringPartner, payload.ids)
+
+
+# --- programmes -----------------------------------------------------------
+# The only entity here with a unique slug, so it is the only one that can
+# collide on create. 409 rather than a 500 from the database constraint.
+def _assert_slug_free(db: Session, slug: str, ignore_id: int | None = None) -> None:
+    existing = db.scalar(select(Program).where(Program.slug == slug))
+    if existing is not None and existing.id != ignore_id:
+        raise HTTPException(
+            status.HTTP_409_CONFLICT,
+            f"The web address '{slug}' is already used by {existing.name}.",
+        )
+
+
+@router.get("/programs", response_model=list[ProgramOut])
+def list_programs(db: Session = Depends(get_db)) -> list[Program]:
+    return ordered(db, Program)
+
+
+@router.post("/programs", response_model=ProgramOut, status_code=status.HTTP_201_CREATED)
+def create_program(
+    payload: ProgramCreate, db: Session = Depends(get_db), admin: User = Depends(require_admin)
+) -> Program:
+    _assert_slug_free(db, payload.slug)
+    data = payload.model_dump()
+    data["detail"] = payload.detail.model_dump()
+    return _save_new(
+        db, Program(**data, sort_order=next_sort_order(db, Program)), admin, "Program"
+    )
+
+
+@router.put("/programs/{program_id}", response_model=ProgramOut)
+def update_program(
+    program_id: int,
+    payload: ProgramUpdate,
+    db: Session = Depends(get_db),
+    admin: User = Depends(require_admin),
+) -> Program:
+    program = get_or_404(db, Program, program_id, "Program")
+    changes = payload.model_dump(exclude_unset=True)
+
+    if "slug" in changes:
+        _assert_slug_free(db, changes["slug"], ignore_id=program.id)
+    # The detail block is one document: replaced wholesale, never merged.
+    if "detail" in changes and payload.detail is not None:
+        changes["detail"] = payload.detail.model_dump()
+
+    for key, value in changes.items():
+        setattr(program, key, value)
+    db.commit()
+    db.refresh(program)
+    if changes:
+        logger.info("Program #%s updated by %s: %s", program.id, admin.email, ", ".join(sorted(changes)))
+    return program
+
+
+@router.delete("/programs/{program_id}", response_model=MessageResponse)
+def delete_program(
+    program_id: int, db: Session = Depends(get_db), admin: User = Depends(require_admin)
+) -> MessageResponse:
+    return _remove(db, get_or_404(db, Program, program_id, "Program"), admin, "Program")
+
+
+@router.post("/programs/reorder", response_model=list[ProgramOut])
+def reorder_programs(
+    payload: ReorderRequest, db: Session = Depends(get_db), admin: User = Depends(require_admin)
+) -> list[Program]:
+    logger.info("Programs reordered by %s", admin.email)
+    return apply_reorder(db, Program, payload.ids)

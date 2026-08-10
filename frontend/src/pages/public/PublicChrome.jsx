@@ -2,9 +2,8 @@ import { useEffect, useRef, useState } from 'react';
 import { Link, useLocation, useNavigate } from 'react-router-dom';
 
 import Logo from '../../components/Logo';
-import { LIVE_PROGRAMS } from '../../data/programs';
 import {
-  refreshPublicContent, useMentors, useSite, useStories, whatsappLink,
+  refreshPublicContent, useMentors, usePrograms, useSite, useStories, whatsappLink,
 } from '../../data/siteSettings';
 
 /*
@@ -60,6 +59,7 @@ export function PublicHeader() {
   const site = useSite();
   const mentors = useMentors();
   const stories = useStories();
+  const programs = usePrograms();
 
   /* Every public page renders this header, so this is the one place the live
      settings need asking for. The call itself is deduplicated, and the page is
@@ -146,7 +146,7 @@ export function PublicHeader() {
               Pay After Placement
             </p>
             <ul>
-              {LIVE_PROGRAMS.map((p) => (
+              {programs.map((p) => (
                 <li key={p.slug}>
                   <Link
                     to={`/programs/${p.slug}`}
@@ -257,7 +257,7 @@ export function PublicHeader() {
 
                 {item.menu && (
                   <ul className="mt-2 grid gap-1 border-l border-navy-100 pl-4">
-                    {LIVE_PROGRAMS.map((p) => (
+                    {programs.map((p) => (
                       <li key={p.slug}>
                         <Link
                           to={`/programs/${p.slug}`}
@@ -310,6 +310,9 @@ const SOCIAL_LABELS = {
 
 export function PublicFooter() {
   const site = useSite();
+  /* The footer lists every programme too. Its own subscription — it is a
+     separate component from the header and shares none of its scope. */
+  const programs = usePrograms();
   const wa = whatsappLink();
   const socials = Object.entries(site.social || {}).filter(([, url]) => url);
   return (
@@ -333,7 +336,7 @@ export function PublicFooter() {
                 points at the home page's programmes section today; once the
                 detail pages land these become /programs/{slug}. */}
             <ul className="grid gap-2.5">
-              {LIVE_PROGRAMS.map((c) => (
+              {programs.map((c) => (
                 <li key={c.slug}>
                   <Link to={`/programs/${c.slug}`} className="transition hover:text-teal-300">
                     {c.name}

@@ -31,6 +31,7 @@
 import { useSyncExternalStore } from 'react';
 
 import { api } from '../api/client';
+import { PROGRAMS as PROGRAM_DEFAULTS } from './programs';
 import {
   COMPANIES as COMPANY_DEFAULTS,
   MENTORS as MENTOR_DEFAULTS,
@@ -43,6 +44,7 @@ const CACHE_KEY = 'mop_site_settings';
 const MENTORS_CACHE_KEY = 'mop_site_mentors';
 const STORIES_CACHE_KEY = 'mop_site_stories';
 const PARTNERS_CACHE_KEY = 'mop_site_partners';
+const PROGRAMS_CACHE_KEY = 'mop_site_programs';
 
 /* The API speaks snake_case and a flat shape; the site speaks camelCase with
    the social links nested. One mapper here, rather than either side bending to
@@ -98,6 +100,27 @@ const partnersFromApi = listMapper((r) => ({
   name: r.name || '',
   logo: r.logo_url || null,
   package: r.package_lpa || '',
+}));
+
+/* The programme catalogue. Only the flat fields need renaming — everything
+   inside `detail` (headline, why, roles, syllabus, projects, faq) already
+   uses the keys the pages render, which is what makes this a swap rather
+   than a rewrite. */
+const programsFromApi = listMapper((r) => ({
+  slug: r.slug,
+  name: r.name || '',
+  category: r.category || '',
+  badge: r.badge || '',
+  duration: r.duration || '',
+  ctcAvg: r.ctc_avg || '',
+  ctcHigh: r.ctc_high || '',
+  summary: r.summary || '',
+  forWhom: r.for_whom || '',
+  skills: Array.isArray(r.skills) ? r.skills : [],
+  featured: Boolean(r.featured),
+  confirmed: r.confirmed !== false,
+  published: r.published !== false,
+  detail: r.detail || {},
 }));
 
 /* localStorage throws in some privacy modes, and a corrupted entry must not
@@ -186,6 +209,15 @@ const PARTNER_DEFAULTS = COMPANY_DEFAULTS.map((name) => ({
 
 const partnersStore = createListStore(PARTNERS_CACHE_KEY, partnersFromApi, PARTNER_DEFAULTS);
 
+/* The public endpoint only ever returns published programmes, so the baked
+   default is filtered to match — otherwise an unpublished programme would be
+   visible for the moment before the API answers. */
+const programsStore = createListStore(
+  PROGRAMS_CACHE_KEY,
+  programsFromApi,
+  PROGRAM_DEFAULTS.filter((p) => p.published),
+);
+
 /** The current settings, outside a component. */
 export const getSite = () => settingsStore.get();
 
@@ -207,6 +239,22 @@ export const usePartners = () => partnersStore.use();
  *  Filtered here rather than fetched separately — it is the same dozen rows. */
 export const usePlacementsTicker = () => partnersStore.use().filter((p) => p.package);
 
+/** Every published programme, in the order an admin arranged them. This is
+ *  what `LIVE_PROGRAMS` used to be; the endpoint already filters. */
+export const usePrograms = () => programsStore.use();
+
+/** One programme by its URL slug, or undefined. */
+export const useProgramBySlug = (slug) => programsStore.use().find((p) => p.slug === slug);
+
+/** The enquiry form's dropdown. Derived from the live catalogue so a new
+ *  programme appears in it without anyone remembering to add it. */
+export function useProgramOptions() {
+  return [
+    ...programsStore.use().map((p) => ({ value: p.name, label: p.name })),
+    { value: 'Not sure yet', label: 'Not sure yet' },
+  ];
+}
+
 /** Adopt an API payload — used by the fetch below and by the admin screens,
  *  which already have the saved response and should not have to re-fetch it. */
 export function applySiteSettings(row) {
@@ -217,6 +265,7 @@ export function applySiteSettings(row) {
 export const applyMentors = (rows) => mentorsStore.apply(rows);
 export const applyStories = (rows) => storiesStore.apply(rows);
 export const applyPartners = (rows) => partnersStore.apply(rows);
+export const applyPrograms = (rows) => programsStore.apply(rows);
 
 /* Once per page load. Several public pages ask for the refresh (whichever one
    the visitor lands on renders the header), and they should not each spend a
@@ -235,6 +284,7 @@ export function refreshPublicContent() {
       api.get('/public/mentors').then(({ data }) => applyMentors(data)).catch(() => null),
       api.get('/public/stories').then(({ data }) => applyStories(data)).catch(() => null),
       api.get('/public/partners').then(({ data }) => applyPartners(data)).catch(() => null),
+      api.get('/public/programs').then(({ data }) => applyPrograms(data)).catch(() => null),
     ]);
   }
   return inFlight;

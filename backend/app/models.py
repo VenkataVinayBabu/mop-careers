@@ -504,6 +504,60 @@ class HiringPartner(Base):
     )
 
 
+class Program(Base):
+    """A programme in the public catalogue, and its own detail page.
+
+    STORAGE SHAPE, because it is the one decision here worth arguing about.
+    The columns below are the fields something actually filters, sorts or
+    looks up by — slug, published, featured, category, sort_order. Everything
+    the detail page renders (headline, why, roles, syllabus phases, projects,
+    FAQ) lives in one JSON `detail` document.
+
+    Normalising that into phase/project/role/faq tables was the alternative.
+    It would mean five more tables, five more sets of CRUD and five more
+    ordering columns, to gain integrity over content that is only ever written
+    as a whole page and only ever read as a whole page. Nothing joins to a
+    syllabus phase. `detail` is a document, so it is stored as one.
+
+    The JSON keeps exactly the shape the frontend already had, which is what
+    makes swapping the hardcoded catalogue for this an import change rather
+    than a rewrite of the pages.
+    """
+
+    __tablename__ = "programs"
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True)
+    # The URL. Unique because /programs/{slug} has to resolve to one page.
+    slug: Mapped[str] = mapped_column(String(80), unique=True, index=True, nullable=False)
+    name: Mapped[str] = mapped_column(String(120), nullable=False)
+    category: Mapped[str] = mapped_column(String(20), default="", nullable=False)
+    badge: Mapped[str] = mapped_column(String(40), default="", nullable=False)
+    duration: Mapped[str] = mapped_column(String(60), default="", nullable=False)
+    ctc_avg: Mapped[str] = mapped_column(String(60), default="", nullable=False)
+    ctc_high: Mapped[str] = mapped_column(String(60), default="", nullable=False)
+    summary: Mapped[str] = mapped_column(Text, default="", nullable=False)
+    for_whom: Mapped[str] = mapped_column(Text, default="", nullable=False)
+    skills: Mapped[list] = mapped_column(JSON, default=list, nullable=False)
+
+    featured: Mapped[bool] = mapped_column(Boolean, default=False, nullable=False)
+    # False for the two programmes that appear only in the prototype and that
+    # MOP has never confirmed it runs. Admin-facing only; the public site does
+    # not read it — `published` is what hides a programme.
+    confirmed: Mapped[bool] = mapped_column(Boolean, default=True, nullable=False)
+    published: Mapped[bool] = mapped_column(Boolean, default=True, nullable=False)
+
+    # Everything the programme's own page renders. Every key optional: a
+    # section with no data does not render at all, so a programme can be
+    # published with nothing but the basics and filled in over time.
+    detail: Mapped[dict] = mapped_column(JSON, default=dict, nullable=False)
+
+    sort_order: Mapped[int] = mapped_column(Integer, default=0, nullable=False, index=True)
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
+    updated_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), server_default=func.now(), onupdate=func.now()
+    )
+
+
 class PasswordResetToken(Base):
     """Single-use, expiring token backing the forgot-password flow.
 

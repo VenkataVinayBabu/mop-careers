@@ -7,11 +7,12 @@ marketing site (no auth) and an authenticated platform (admin / teacher / studen
 > verified and **deployed live**. The public site has been rebuilt to a new design and
 > all eight programme pages are complete and live.
 >
-> **The admin area so Bala can edit the site himself is under way.** Site settings
-> are built (`Admin > Website`); courses, mentors and stories are next — see Open
-> thread 1. **Read Open thread 2 before touching anything public**:
-> a lot of what is currently live is unverified, and seven of the eight syllabi plus
-> nine mentors were written in-session rather than by MOP.
+> **The admin area so Bala can edit the site himself is BUILT.** Everything on the
+> marketing site — settings, programmes, mentors, stories, hiring partners — is
+> editable at `Admin > Website` with no deploy. **Read Open thread 2 before
+> touching anything public**: a lot of what is currently live is unverified, and
+> seven of the eight syllabi plus nine mentors were written in-session rather than
+> by MOP. None of that needs a developer to fix any more — it needs MOP's words.
 >
 > Jump to **"Open threads"** at the bottom — that is the live to-do list.
 >
@@ -746,6 +747,71 @@ Python 3.13.2 · Node v22.17.0 (npm 10.9.2) · Git 2.50.1 · PostgreSQL 17.9
   shared data shape changes, grep for every consumer**, and check a page that
   is not the one being worked on.
 
+- **Admin content management, part 4 — programmes ✅. The thread is done.**
+  Every piece of the marketing site is now editable at `Admin > Website`.
+  1 new table (`programs`), 19 tables total, 7 migrations.
+  - **Seven of the eight syllabi were written in-session, and correcting one
+    was the single largest thing on the to-do list that still needed a
+    developer.** It is now a form: phase titles, topics, the Placements Exit
+    company lists, salary bands, projects and FAQs.
+  - `Admin > Website > Programs` lists the catalogue; **one programme is a
+    whole page** (`/admin/website/programs/:id`), not a modal, because it
+    carries eight sections and a four-phase syllabus.
+  - The list flags the two **unconfirmed** programmes (Cloud Computing, Cyber
+    Security) with a banner saying nobody has confirmed MOP runs them.
+
+  **The storage decision, which is the one worth arguing about.** CLAUDE.md
+  said courses "need real tables". They got *one* real table: typed columns
+  for what is filtered, sorted or looked up by (`slug`, `published`,
+  `featured`, `category`, `sort_order`) and a single JSON `detail` document
+  for everything the programme page renders.
+  - Normalising `detail` into phase/project/role/faq tables would mean four
+    more tables, four more sets of CRUD and four more ordering columns, to
+    gain integrity over content that is **only ever written as a whole page
+    and only ever read as a whole page**. Nothing joins to a syllabus phase.
+  - `detail` is still **typed at the API** (`ProgramDetail` and friends in
+    `schemas.py`) — storing a document does not mean accepting any shape, and
+    those models are the only readable description of what a programme page
+    can contain.
+  - Sending `detail` on an update **replaces it wholesale**. Merging half a
+    syllabus into another is not something anyone means to do.
+
+  Decisions worth remembering:
+  - **The whole published catalogue is one request** (~40KB for eight). A
+    programme page therefore needs no fetch of its own and has no loading
+    state — cheaper than a second round trip to a backend that may be waking.
+  - **The slug is derived from the name when left blank**, and a duplicate is
+    a **409 with the clashing programme named**, not a 500 from the database
+    constraint. Changing a slug breaks existing links, so the form says so.
+  - **`confirmed` is admin-facing only.** The public site never reads it —
+    `published` is what hides a programme. It exists to mark "nobody has
+    checked this" without taking the page down.
+  - `TagList` commits on **blur as well as Enter**, or anything typed and not
+    confirmed is silently dropped when the programme is saved.
+  - **Tailwind class names cannot be interpolated.** `text-${tone}` produces a
+    class that was never generated and silently does nothing; the two tones
+    are written out. Same trap as the missing navy-500 ramp.
+
+  Verification: **51/51 API assertions** (208 across the four suites, re-run
+  green together) — RBAC, the seeded eight with the right two featured and the
+  right two unconfirmed, whole `detail` blocks round-tripping unchanged,
+  detail replacing rather than merging, slug derivation, 409 on a duplicate
+  slug both on create and on rename, five rejected payloads including a
+  malformed FAQ pair and a phase with no title, the published filter, reorder
+  with a stale id, and 404s. In the browser: the editor loading all eight
+  sections of a real programme (4 phases, 4 roles, 6 reasons, 4 projects, 2
+  questions, 116 tag chips), a phase renamed and a topic added, saved, and the
+  correction appearing on the public page — then **all eight programme pages
+  walked** to confirm each still renders.
+
+  **A bug this introduced, found by walking those pages.** Renaming
+  `LIVE_PROGRAMS.map(` to `programs.map(` hit `PublicFooter` as well as
+  `PublicHeader`, and the footer is a separate component with no `programs` in
+  scope. Every programme page threw `ReferenceError: programs is not defined`.
+  **The build passed** — a ReferenceError is not a compile error — which is
+  exactly why "it builds" is not verification. Same shape as the `COMPANIES`
+  bug: a second consumer inside the file being edited.
+
 ---
 
 ## Open threads
@@ -753,25 +819,21 @@ Python 3.13.2 · Node v22.17.0 (npm 10.9.2) · Git 2.50.1 · PostgreSQL 17.9
 Everything below is decided-but-not-built, or known-but-unresolved. This is the
 to-do list.
 
-### 1. Admin content management — Bala's request, and now the priority
+### 1. Admin content management — ✅ DONE
 
 Bala's words, via the user: he wants to *"just fill a form"* to add or remove a
 course, a trainer or a story, change the fees, the WhatsApp number or the enquiry
 email. He does not write code. This is a normal thing to build: a **Website** section
 in the admin sidebar backed by real tables.
 
-Scope, in the order it should be built:
+Everything on the marketing site is now editable at **Admin > Website**:
+settings, programmes, mentors, stories and hiring partners. All five tables
+ship seeded from what used to be hardcoded, so an empty list is a real answer
+rather than "not set up yet".
 
-1. ~~**Site settings**~~ — **built.** See the progress log entry above.
-2. **Courses** — the biggest entity, and it carries the detail pages above.
-   `programs.js` is ~900 lines of nested content per program (syllabus phases,
-   projects, roles, FAQs), so this one does *not* fit the flat key/value shape
-   site settings used. It needs real tables.
-3. ~~**Mentors, stories, companies**~~ — **all built.** See the progress log.
-   **Courses are the only entity left**, and they are the hard one.
-4. **Photos** — blocked on the storage decision below. Mentors, stories and
-   partners all accept an image *link* in the meantime, which covers anything
-   MOP already hosts.
+The one piece left is **photos** — blocked on the object-storage decision
+below. Mentors, stories and partners each accept an image *link* meanwhile,
+which covers anything MOP already hosts.
 
 The decisions this raised:
 
@@ -797,12 +859,11 @@ with a live counter. A longer quote does not break the layout but drags the row
 taller and hollows out the other cards — constrain the input rather than truncating
 what someone wrote.
 
-**Why this is now the priority.** The programme pages are built and the site is
-complete. What remains is almost entirely *content correction* — seven invented
-syllabi, nine fake mentors, unverified figures, two unconfirmed programmes. Every
-one of those currently needs a developer and a git push. Built once, Bala fixes his
-own syllabus or deletes a fake mentor in about a minute. The data files are already
-shaped like the API rows, so the swap is an import change.
+**What this changes.** Every item in thread 2 below — the seven invented
+syllabi, the nine fabricated mentors, the unverified quotes and packages, the
+two unconfirmed programmes — used to need a developer and a git push. All of
+them are now a form Bala can use himself. The content is still wrong; it is no
+longer *expensively* wrong.
 
 ### 2. Content that is live but unconfirmed
 
@@ -813,13 +874,17 @@ of how much it would matter if wrong:
   Science came from MOP's own material. Salary bands are market estimates; the
   Placements Exit company lists are the strongest claim on any page; AWS SAA, CEH
   and Security+ certification claims must match what is actually taught.
+  **All of it is now editable at Admin > Website > Programs** — phases, topics,
+  exit companies, salary bands, projects and FAQs — so correcting a syllabus is
+  a form rather than a developer.
 - **Nine mentors do not exist.** Still live, still visibly marked — but this no
   longer needs a developer. They are rows in the `mentors` table now, flagged
   as stand-ins, and **Bala can delete or replace each one at Admin > Website >
   Mentors in about a minute.** The screen counts them and says so at the top.
 - **Cloud Computing and Cyber Security** appear only in the Emergent prototype. They
-  are **not** on mopcareers.in and MOP has not confirmed it runs them. Both are
-  flagged `confirmed: false` in `programs.js`; set `published: false` to remove them.
+  are **not** on mopcareers.in and MOP has not confirmed it runs them. Both carry
+  the `confirmed` flag unticked, which puts a banner on Admin > Website >
+  Programs; untick **Show on the public site** there to take either down.
 - **Real mentors' details and programme assignments are unverified.** One name was
   already wrong (Kuppola Rajesh → Vinay K), so the employers and years beside the
   other three are equally suspect. Who teaches what is inferred. Also editable

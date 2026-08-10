@@ -2,7 +2,7 @@ import { useState } from 'react';
 
 import { api, errorMessage } from '../../api/client';
 import { Spinner } from '../../components/ui';
-import { PROGRAM_OPTIONS } from '../../data/programs';
+import { useProgramOptions } from '../../data/siteSettings';
 import useSlowRequest from '../../hooks/useSlowRequest';
 
 /*
@@ -18,6 +18,9 @@ export default function EnquiryForm() {
   });
   const [status, setStatus] = useState({ state: 'idle', text: '' });
   const slow = useSlowRequest(status.state === 'sending');
+  /* Derived from the live catalogue, so a programme an admin adds appears in
+     this dropdown without anyone remembering to update a second list. */
+  const programOptions = useProgramOptions();
 
   const set = (k) => (e) => setForm({ ...form, [k]: e.target.value });
 
@@ -87,7 +90,7 @@ export default function EnquiryForm() {
         <label className="label" htmlFor="en-program">Which program?</label>
         <select id="en-program" className="input" value={form.programme} onChange={set('programme')}>
           <option value="">Select a program…</option>
-          {PROGRAM_OPTIONS.map((o) => (
+          {programOptions.map((o) => (
             <option key={o.value} value={o.value}>{o.label}</option>
           ))}
         </select>

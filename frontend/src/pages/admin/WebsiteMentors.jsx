@@ -1,9 +1,8 @@
-import { useCallback, useMemo, useState } from 'react';
+import { useCallback, useEffect, useMemo, useState } from 'react';
 
 import Avatar from '../../components/Avatar';
 import { EmptyState, ErrorState, Loading, Modal, PageHeader } from '../../components/ui';
-import { LIVE_PROGRAMS } from '../../data/programs';
-import { applyMentors } from '../../data/siteSettings';
+import { applyMentors, refreshPublicContent, usePrograms } from '../../data/siteSettings';
 import ReorderButtons from './ReorderButtons';
 import WebsiteTabs from './WebsiteTabs';
 import { useContentList } from './websiteContent';
@@ -32,10 +31,7 @@ const BLANK = {
   published: true,
 };
 
-const programName = (slug) =>
-  LIVE_PROGRAMS.find((p) => p.slug === slug)?.name || slug;
-
-function MentorForm({ value, errors, onChange }) {
+function MentorForm({ value, errors, onChange, programs }) {
   const set = (key) => (e) => onChange({ ...value, [key]: e.target.value });
 
   const toggleProgram = (slug) => (e) => {
@@ -95,7 +91,7 @@ function MentorForm({ value, errors, onChange }) {
           This is what puts them on a programme page. Tick none and they appear only on the home page.
         </p>
         <div className="grid gap-1.5 sm:grid-cols-2">
-          {LIVE_PROGRAMS.map((p) => (
+          {programs.map((p) => (
             <label key={p.slug} className="flex cursor-pointer items-center gap-2.5 text-sm text-navy-700">
               <input
                 type="checkbox"
@@ -147,6 +143,16 @@ export default function AdminWebsiteMentors() {
      Memoised so the list hook's load effect does not re-run every render. */
   const adopt = useCallback((all) => applyMentors(all.filter((m) => m.published)), []);
   const list = useContentList('/admin/website/mentors', adopt, 'mentor');
+  /* The programme tick-boxes come from the live catalogue, so a programme an
+     admin has just added is assignable straight away. */
+  const programs = usePrograms();
+  const programName = (slug) => programs.find((p) => p.slug === slug)?.name || slug;
+
+  /* The admin app never renders the public header, so nothing has asked for
+     the catalogue yet. Deduplicated, so this costs one request per session. */
+  useEffect(() => {
+    refreshPublicContent();
+  }, []);
 
   const counts = useMemo(() => ({
     total: list.rows.length,
@@ -279,7 +285,7 @@ export default function AdminWebsiteMentors() {
             it is wired back with form="mentor-form" rather than duplicating a
             second submit inside. */}
         <form id="mentor-form" onSubmit={submit}>
-          <MentorForm value={draft} errors={list.errors} onChange={setDraft} />
+          <MentorForm value={draft} errors={list.errors} onChange={setDraft} programs={programs} />
         </form>
       </Modal>
     </div>

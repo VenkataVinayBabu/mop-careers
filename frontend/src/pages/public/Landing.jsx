@@ -3,12 +3,11 @@ import { useCallback, useEffect, useRef, useState } from 'react';
 import { warmUp } from '../../api/client';
 import Avatar from '../../components/Avatar';
 import CountUp from '../../components/CountUp';
-import { FEATURED_PROGRAMS, LIVE_PROGRAMS, OTHER_PROGRAMS } from '../../data/programs';
 import {
   FAQ, OUTCOMES, PAP_EXPLAINER, PAP_FEATURES, PAP_STEPS, REFERRAL, STATS,
 } from '../../data/site';
 import {
-  useMentors, usePartners, usePlacementsTicker, useSite, useStories,
+  useMentors, usePartners, usePlacementsTicker, usePrograms, useSite, useStories,
 } from '../../data/siteSettings';
 import ProgramCard from './ProgramCard';
 import EnquiryForm from './EnquiryForm';
@@ -144,6 +143,11 @@ export default function Landing() {
   const stories = useStories();
   const partners = usePartners();
   const ticker = usePlacementsTicker();
+  /* Admin-managed. `featured` splits the catalogue into the two lead cards
+     and the rest, exactly as FEATURED_PROGRAMS/OTHER_PROGRAMS used to. */
+  const programs = usePrograms();
+  const featured = programs.filter((p) => p.featured);
+  const others = programs.filter((p) => !p.featured);
 
   useEffect(() => {
     document.title = 'MOP Careers — Your Future. Our Priority.';
@@ -203,7 +207,7 @@ export default function Landing() {
           <div className="mt-8 flex flex-wrap justify-center gap-3">
             <a href="#enquire" className="pbtn-primary">Book a free 1:1 call &rarr;</a>
             <button type="button" onClick={openPrograms} className="pbtn-outline">
-              Explore all {LIVE_PROGRAMS.length} programs
+              Explore all {programs.length} programs
             </button>
           </div>
 
@@ -236,7 +240,7 @@ export default function Landing() {
         <div className="mx-auto max-w-[1240px] px-6">
           <div className="mb-11 grid gap-6 lg:grid-cols-[1.35fr_1fr] lg:items-end lg:gap-12">
             <div>
-              <Eyebrow>All {LIVE_PROGRAMS.length} programs</Eyebrow>
+              <Eyebrow>All {programs.length} programs</Eyebrow>
               <h2 className="mt-3.5 text-[clamp(1.85rem,4vw,2.9rem)] font-extrabold leading-[1.05] tracking-tight text-navy">
                 Career launchpads. <span className="ser text-teal">Built for hiring.</span>
               </h2>
@@ -248,17 +252,17 @@ export default function Landing() {
           </div>
 
           <div className="mb-4 grid gap-4 lg:grid-cols-2">
-            {FEATURED_PROGRAMS.map((c, i) => (
+            {featured.map((c, i) => (
               <ProgramCard key={c.slug} program={c} index={i} featured href={`/programs/${c.slug}`} />
             ))}
           </div>
 
           <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
-            {OTHER_PROGRAMS.map((c, i) => (
+            {others.map((c, i) => (
               <ProgramCard
                 key={c.slug}
                 program={c}
-                index={FEATURED_PROGRAMS.length + i}
+                index={featured.length + i}
                 href={`/programs/${c.slug}`}
               />
             ))}
