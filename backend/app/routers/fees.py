@@ -1,6 +1,6 @@
 """Fee management. **Admin only — students must never see fee data.**
 
-The router-level `dependencies=[Depends(require_admin)]` is the hard lock: every
+The router-level `dependencies=[Depends(require_member)]` is the hard lock: every
 route inherits it, so a new endpoint added here cannot accidentally be exposed to
 a student or teacher.
 
@@ -14,7 +14,7 @@ from sqlalchemy import func, select
 from sqlalchemy.orm import Session
 
 from app.database import get_db
-from app.deps import get_student_or_404, require_admin
+from app.deps import get_student_or_404, require_member
 from app.models import ROLE_STUDENT, Batch, FeePayment, FeeRecord, User
 from app.schemas import (
     BatchCollectionSummary,
@@ -26,7 +26,10 @@ from app.schemas import (
     StudentFeeOut,
 )
 
-router = APIRouter(prefix="/admin/fees", tags=["fees"], dependencies=[Depends(require_admin)])
+# Admins and members only. A contributor is deliberately outside this: the one
+# thing the role was defined as never seeing is fees, and a router-level lock
+# is what stops a future endpoint in this file quietly forgetting that.
+router = APIRouter(prefix="/admin/fees", tags=["fees"], dependencies=[Depends(require_member)])
 
 ZERO = Decimal("0.00")
 

@@ -1,4 +1,4 @@
-"""Admin-only endpoints: batches, teacher assignment, accounts, milestones."""
+﻿"""Admin-only endpoints: batches, teacher assignment, accounts, milestones."""
 import secrets
 from datetime import date
 
@@ -8,10 +8,11 @@ from sqlalchemy.orm import Session, selectinload
 
 from app.curriculum import batch_total_days, ensure_curriculum
 from app.database import get_db
-from app.deps import get_student_or_404, require_admin
+from app.deps import get_student_or_404, require_back_office, require_member
 from app.mail import send_new_account
 from app.milestones import get_or_create_milestone as _get_or_create_milestone
 from app.models import (
+    ROLE_CONTRIBUTOR,
     ROLE_STUDENT,
     ROLE_TEACHER,
     ROLE_VIEWER,
@@ -41,7 +42,15 @@ from app.schemas import (
 )
 from app.security import hash_password
 
-router = APIRouter(prefix="/admin", tags=["admin"], dependencies=[Depends(require_admin)])
+# The floor is the back office â€” admin, member, contributor. It is NOT the
+# whole permission story: almost everything below carries its own tighter
+# guard, and the two that do not (reading batches, reading accounts) are the
+# lookups a contributor needs to do their job.
+#
+# Written per endpoint rather than per router because this file is where the
+# three back-office roles actually differ. Fees and the website queue get
+# router-level locks precisely because they do not.
+router = APIRouter(prefix="/admin", tags=["admin"], dependencies=[Depends(require_back_office)])
 
 
 def _batch_out(db: Session, batch: Batch) -> BatchOut:
@@ -67,7 +76,8 @@ def list_batches(db: Session = Depends(get_db)) -> list[BatchOut]:
 
 
 @router.post("/batches", response_model=BatchOut, status_code=status.HTTP_201_CREATED)
-def create_batch(payload: BatchCreate, db: Session = Depends(get_db)) -> BatchOut:
+def create_batch(payload: BatchCreate, db: Session = Depends(get_db),
+                 _: User = Depends(require_member)) -> BatchOut:
     if db.scalar(select(Batch).where(func.lower(Batch.name) == payload.name.lower())):
         raise HTTPException(status.HTTP_409_CONFLICT, "A batch with that name already exists")
 
@@ -137,7 +147,8 @@ def update_batch(
 
 
 @router.delete("/batches/{batch_id}", response_model=MessageResponse)
-def delete_batch(batch_id: int, db: Session = Depends(get_db)) -> MessageResponse:
+def delete_batch(batch_id: int, db: Session = Depends(get_db),
+                 _: User = Depends(require_member)) -> MessageResponse:
     batch = db.get(Batch, batch_id)
     if batch is None:
         raise HTTPException(status.HTTP_404_NOT_FOUND, "Batch not found")
@@ -148,7 +159,7 @@ def delete_batch(batch_id: int, db: Session = Depends(get_db)) -> MessageRespons
     if enrolled:
         raise HTTPException(
             status.HTTP_409_CONFLICT,
-            f"Cannot delete — {enrolled} student(s) are still assigned to this batch",
+            f"Cannot delete â€” {enrolled} student(s) are still assigned to this batch",
         )
 
     db.delete(batch)
@@ -221,7 +232,20 @@ def list_users(
 
 
 @router.post("/users", response_model=UserOut, status_code=status.HTTP_201_CREATED)
-def create_user(payload: UserCreate, db: Session = Depends(get_db)) -> UserOut:
+def create_user(
+    payload: UserCreate,
+    db: Session = Depends(get_db),
+    actor: User = Depends(require_back_office),
+) -> UserOut:
+    # A contributor onboards learners and teachers. Letting them create a
+    # member would let them create their own approver, which is the one account
+    # that must not be self-service.
+    if actor.role == ROLE_CONTRIBUTOR and payload.role not in (ROLE_STUDENT, ROLE_TEACHER):
+        raise HTTPException(
+            status.HTTP_403_FORBIDDEN,
+            "You can onboard students and teachers. Ask an admin for anything else.",
+        )
+
     email = payload.email.lower()
     if db.scalar(select(User).where(User.email == email)):
         raise HTTPException(status.HTTP_409_CONFLICT, "An account with that email already exists")
@@ -275,7 +299,8 @@ def create_user(payload: UserCreate, db: Session = Depends(get_db)) -> UserOut:
 
 
 @router.patch("/users/{user_id}", response_model=UserOut)
-def update_user(user_id: int, payload: UserUpdate, db: Session = Depends(get_db)) -> UserOut:
+def update_user(user_id: int, payload: UserUpdate, db: Session = Depends(get_db),
+                _: User = Depends(require_member)) -> UserOut:
     user = db.get(User, user_id)
     if user is None:
         raise HTTPException(status.HTTP_404_NOT_FOUND, "User not found")
@@ -306,7 +331,9 @@ def toggle_block(
     user_id: int,
     payload: BlockToggleRequest,
     db: Session = Depends(get_db),
-    admin: User = Depends(require_admin),
+    # Cutting off somebody's access is a member-and-above decision, not part of
+    # the onboarding a contributor does.
+    admin: User = Depends(require_member),
 ) -> UserOut:
     user = db.get(User, user_id)
     if user is None:
@@ -322,14 +349,16 @@ def toggle_block(
 
 # --- milestones -----------------------------------------------------------
 @router.get("/students/{student_id}/milestones", response_model=MilestoneOut)
-def get_milestones(student_id: int, db: Session = Depends(get_db)) -> MilestoneOut:
+def get_milestones(student_id: int, db: Session = Depends(get_db),
+                   _: User = Depends(require_member)) -> MilestoneOut:
     get_student_or_404(db, student_id)
     return MilestoneOut.model_validate(_get_or_create_milestone(db, student_id))
 
 
 @router.patch("/students/{student_id}/milestones", response_model=MilestoneOut)
 def update_milestones(
-    student_id: int, payload: MilestoneUpdate, db: Session = Depends(get_db)
+    student_id: int, payload: MilestoneUpdate, db: Session = Depends(get_db),
+    _: User = Depends(require_member),
 ) -> MilestoneOut:
     get_student_or_404(db, student_id)
     ms = _get_or_create_milestone(db, student_id)
@@ -341,10 +370,13 @@ def update_milestones(
 
 
 # --- enquiries (Phase 5) --------------------------------------------------
+# Member and above. An enquiry is a named member of the public with their phone
+# number on it, and handling leads was not part of the contributor's job.
 @router.get("/enquiries", response_model=list[EnquiryOut])
 def list_enquiries(
     enquiry_status: str | None = Query(default=None, alias="status"),
     db: Session = Depends(get_db),
+    _: User = Depends(require_member),
 ) -> list[EnquiryOut]:
     stmt = select(Enquiry)
     if enquiry_status:
@@ -355,7 +387,8 @@ def list_enquiries(
 
 @router.patch("/enquiries/{enquiry_id}", response_model=EnquiryOut)
 def update_enquiry_status(
-    enquiry_id: int, payload: EnquiryStatusUpdate, db: Session = Depends(get_db)
+    enquiry_id: int, payload: EnquiryStatusUpdate, db: Session = Depends(get_db),
+    _: User = Depends(require_member),
 ) -> EnquiryOut:
     enquiry = db.get(Enquiry, enquiry_id)
     if enquiry is None:
@@ -367,7 +400,8 @@ def update_enquiry_status(
 
 
 @router.delete("/enquiries/{enquiry_id}", response_model=MessageResponse)
-def delete_enquiry(enquiry_id: int, db: Session = Depends(get_db)) -> MessageResponse:
+def delete_enquiry(enquiry_id: int, db: Session = Depends(get_db),
+                   _: User = Depends(require_member)) -> MessageResponse:
     enquiry = db.get(Enquiry, enquiry_id)
     if enquiry is None:
         raise HTTPException(status.HTTP_404_NOT_FOUND, "Enquiry not found")
@@ -378,7 +412,7 @@ def delete_enquiry(enquiry_id: int, db: Session = Depends(get_db)) -> MessageRes
 
 # --- overview -------------------------------------------------------------
 @router.get("/stats")
-def admin_stats(db: Session = Depends(get_db)) -> dict:
+def admin_stats(db: Session = Depends(get_db), _: User = Depends(require_member)) -> dict:
     return {
         "batches": db.scalar(select(func.count(Batch.id))) or 0,
         "students": db.scalar(select(func.count(User.id)).where(User.role == ROLE_STUDENT)) or 0,

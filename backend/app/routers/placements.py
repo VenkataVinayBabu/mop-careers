@@ -1,7 +1,7 @@
-"""Placements: companies, applications and interview rounds.
+﻿"""Placements: companies, applications and interview rounds.
 
 Admin-only, enforced at router level. Students reach their own applications
-read-only through /student/applications (see routers/student.py) — teachers get
+read-only through /student/applications (see routers/student.py) â€” teachers get
 nothing here, per the spec.
 """
 from decimal import Decimal
@@ -11,7 +11,7 @@ from sqlalchemy import func, select
 from sqlalchemy.orm import Session, selectinload
 
 from app.database import get_db
-from app.deps import get_student_or_404, require_admin
+from app.deps import get_student_or_404, require_back_office
 from app.models import (
     PLACED_STATUSES,
     ROLE_STUDENT,
@@ -36,7 +36,7 @@ from app.schemas import (
 )
 
 router = APIRouter(prefix="/admin/placements", tags=["placements"],
-                   dependencies=[Depends(require_admin)])
+                   dependencies=[Depends(require_back_office)])
 
 
 def _app_out(app: Application) -> ApplicationOut:
@@ -123,7 +123,7 @@ def delete_company(company_id: int, db: Session = Depends(get_db)) -> MessageRes
     if count:
         raise HTTPException(
             status.HTTP_409_CONFLICT,
-            f"Cannot delete — {count} application(s) reference this company",
+            f"Cannot delete â€” {count} application(s) reference this company",
         )
 
     db.delete(company)

@@ -1,4 +1,4 @@
-import { useCallback } from 'react';
+﻿import { useCallback } from 'react';
 import { Link } from 'react-router-dom';
 
 import { EmptyState, ErrorState, Loading, PageHeader } from '../../components/ui';
@@ -8,12 +8,12 @@ import WebsiteTabs from './WebsiteTabs';
 import { useContentList } from './websiteContent';
 
 /*
- * Admin > Website > Programs — the list.
+ * Admin > Website > Programs â€” the list.
  *
  * Editing one is a whole page of its own (WebsiteProgramEditor), not a modal:
  * a programme carries a syllabus, roles, projects and an FAQ, which is far
  * more than fits in a dialog. This screen does the things that make sense
- * across the catalogue — order, publish, delete — and hands off for the rest.
+ * across the catalogue â€” order, publish, delete â€” and hands off for the rest.
  */
 
 const CATEGORY_LABEL = {
@@ -34,14 +34,14 @@ function detailSummary(detail = {}) {
     ['question', (detail.faq || []).length],
   ].filter(([, n]) => n > 0);
   if (!parts.length) return 'No page content yet';
-  return parts.map(([word, n]) => `${n} ${word}${n === 1 ? '' : 's'}`).join(' · ');
+  return parts.map(([word, n]) => `${n} ${word}${n === 1 ? '' : 's'}`).join(' Â· ');
 }
 
 export default function AdminWebsitePrograms() {
   const adopt = useCallback((all) => applyPrograms(all.filter((p) => p.published)), []);
-  const list = useContentList('/admin/website/programs', adopt, 'program');
+  const list = useContentList('/admin/website/programs', adopt, 'program', 'program');
 
-  if (list.loading) return <Loading label="Loading programmes…" />;
+  if (list.loading) return <Loading label="Loading programmesâ€¦" />;
   if (list.loadError) return <ErrorState message={list.loadError} onRetry={list.load} />;
 
   const live = list.rows.filter((p) => p.published).length;
@@ -52,7 +52,7 @@ export default function AdminWebsitePrograms() {
       <WebsiteTabs />
       <PageHeader
         title="Programs"
-        subtitle={`${live} on the site${list.rows.length !== live ? ` · ${list.rows.length - live} hidden` : ''}`}
+        subtitle={`${live} on the site${list.rows.length !== live ? ` Â· ${list.rows.length - live} hidden` : ''}`}
         action={<Link to="/admin/website/programs/new" className="btn-cta">Add a program</Link>}
       />
 
@@ -62,7 +62,7 @@ export default function AdminWebsitePrograms() {
             {unconfirmed} {unconfirmed === 1 ? 'programme is' : 'programmes are'} marked unconfirmed.
           </strong>{' '}
           Nobody has confirmed MOP actually runs {unconfirmed === 1 ? 'it' : 'them'}. Hide
-          {unconfirmed === 1 ? ' it' : ' them'} until someone has, or tick “MOP confirms it runs this”
+          {unconfirmed === 1 ? ' it' : ' them'} until someone has, or tick â€œMOP confirms it runs thisâ€
           on the programme.
         </div>
       )}
@@ -90,15 +90,15 @@ export default function AdminWebsitePrograms() {
                   </div>
                   <p className="mt-0.5 text-xs text-navy-400">
                     /programs/{p.slug}
-                    {p.category && ` · ${CATEGORY_LABEL[p.category] || p.category}`}
-                    {p.duration && ` · ${p.duration}`}
+                    {p.category && ` Â· ${CATEGORY_LABEL[p.category] || p.category}`}
+                    {p.duration && ` Â· ${p.duration}`}
                   </p>
                   <p className="mt-1.5 line-clamp-2 text-sm text-navy-600">{p.summary}</p>
                   <p className="mt-2 text-xs text-navy-400">
                     {detailSummary(p.detail)}
-                    {' · '}
+                    {' Â· '}
                     {/* The training side, which is what a new batch is built
-                        from — invisible on the public site but the thing a
+                        from â€” invisible on the public site but the thing a
                         wrongly-set day count would quietly break. */}
                     {p.total_days} class days
                     {(p.curriculum || []).length > 0

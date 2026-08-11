@@ -1,4 +1,4 @@
-import { useCallback, useState } from 'react';
+﻿import { useCallback, useState } from 'react';
 
 import Avatar from '../../components/Avatar';
 import { EmptyState, ErrorState, Loading, Modal, PageHeader } from '../../components/ui';
@@ -8,7 +8,7 @@ import WebsiteTabs from './WebsiteTabs';
 import { useContentList } from './websiteContent';
 
 /*
- * Admin > Website > Stories — the learner testimonials on the home page.
+ * Admin > Website > Stories â€” the learner testimonials on the home page.
  *
  * These are words attributed to named people, which shapes two things here:
  * the quote is capped at 200 characters at the INPUT rather than truncated at
@@ -29,7 +29,7 @@ export default function AdminWebsiteStories() {
   /* The admin list carries unpublished rows too; the public store only wants
      what is live. Memoised so the list hook's effect does not re-run. */
   const adopt = useCallback((all) => applyStories(all.filter((s) => s.published)), []);
-  const list = useContentList('/admin/website/stories', adopt, 'story');
+  const list = useContentList('/admin/website/stories', adopt, 'story', 'story');
 
   const openNew = () => { setEditing(BLANK); setDraft(BLANK); list.setErrors({}); };
   const openEdit = (story) => { setEditing(story); setDraft({ ...BLANK, ...story }); list.setErrors({}); };
@@ -49,7 +49,7 @@ export default function AdminWebsiteStories() {
   const set = (key) => (e) => setDraft((d) => ({ ...d, [key]: e.target.value }));
   const err = list.errors;
 
-  if (list.loading) return <Loading label="Loading stories…" />;
+  if (list.loading) return <Loading label="Loading storiesâ€¦" />;
   if (list.loadError) return <ErrorState message={list.loadError} onRetry={list.load} />;
 
   const live = list.rows.filter((s) => s.published).length;
@@ -59,13 +59,13 @@ export default function AdminWebsiteStories() {
       <WebsiteTabs />
       <PageHeader
         title="Learner stories"
-        subtitle={`${live} on the site${list.rows.length !== live ? ` · ${list.rows.length - live} hidden` : ''}`}
+        subtitle={`${live} on the site${list.rows.length !== live ? ` Â· ${list.rows.length - live} hidden` : ''}`}
         action={<button type="button" className="btn-cta" onClick={openNew}>Add a story</button>}
       />
 
       <div className="mb-5 rounded-xl border border-navy-100 bg-navy-50 p-4 text-sm text-navy-600">
         These are quotes attributed to real learners. Get their written consent before publishing
-        one, and never edit a quote to fit the layout — shorten the wording with them, or leave it.
+        one, and never edit a quote to fit the layout â€” shorten the wording with them, or leave it.
       </div>
 
       {list.rows.length === 0 ? (
@@ -132,7 +132,7 @@ export default function AdminWebsiteStories() {
           <>
             <button type="button" className="btn-ghost" onClick={() => setEditing(null)}>Cancel</button>
             <button type="submit" form="story-form" className="btn-cta" disabled={list.saving}>
-              {list.saving ? 'Saving…' : 'Save'}
+              {list.saving ? 'Savingâ€¦' : 'Save'}
             </button>
           </>
         }
@@ -175,7 +175,7 @@ export default function AdminWebsiteStories() {
           <div>
             <label className="label" htmlFor="story-photo_url">Photo link</label>
             <input id="story-photo_url" type="text" value={draft.photo_url} onChange={set('photo_url')}
-                   placeholder="https://…" aria-invalid={Boolean(err.photo_url)}
+                   placeholder="https://â€¦" aria-invalid={Boolean(err.photo_url)}
                    className={`input ${err.photo_url ? 'border-orange focus:border-orange focus:ring-orange' : ''}`} />
             <p className={`mt-1.5 text-xs ${err.photo_url ? 'font-medium text-orange-ink' : 'text-navy-400'}`}>
               {err.photo_url || 'Optional, and only with their consent. Blank shows their initials instead.'}

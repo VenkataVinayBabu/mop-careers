@@ -17,6 +17,7 @@ import AdminEnquiries from './pages/admin/Enquiries';
 import AdminFees from './pages/admin/Fees';
 import AdminPlacements from './pages/admin/Placements';
 import AdminWebsite from './pages/admin/Website';
+import AdminWebsiteChanges from './pages/admin/WebsiteChanges';
 import AdminWebsiteMentors from './pages/admin/WebsiteMentors';
 import AdminWebsiteProgramEditor from './pages/admin/WebsiteProgramEditor';
 import AdminWebsitePrograms from './pages/admin/WebsitePrograms';
@@ -129,10 +130,27 @@ export default function App() {
       <Route path="/reset-password" element={<ResetPassword />} />
       <Route path="/change-password" element={<ChangePassword />} />
 
-      {/* Admin */}
+      {/* Admin only. Fees sit here rather than in the back-office block below
+          because a contributor must never see them; the API enforces that
+          independently of this guard. */}
       <Route
         element={
-          <ProtectedRoute roles={['admin']}>
+          <ProtectedRoute roles={['admin', 'member']}>
+            <Layout />
+          </ProtectedRoute>
+        }
+      >
+        <Route path="/admin/fees" element={<AdminFees />} />
+        <Route path="/admin/enquiries" element={<AdminEnquiries />} />
+      </Route>
+
+      {/* The back office: admin, member and contributor. What each may
+          actually do inside these screens differs, and the API is what decides
+          — a contributor's website save becomes a proposal rather than a
+          publish, and the stricter endpoints refuse them outright. */}
+      <Route
+        element={
+          <ProtectedRoute roles={['admin', 'member', 'contributor']}>
             <Layout />
           </ProtectedRoute>
         }
@@ -140,14 +158,11 @@ export default function App() {
         <Route path="/admin" element={<AdminDashboard />} />
         <Route path="/admin/batches" element={<AdminBatches />} />
         <Route path="/admin/accounts" element={<AdminAccounts />} />
-        {/* Fees and placements are admin-only — the route guard above is the
-            frontend half; the API enforces it independently. */}
-        <Route path="/admin/fees" element={<AdminFees />} />
         <Route path="/admin/placements" element={<AdminPlacements />} />
-        <Route path="/admin/enquiries" element={<AdminEnquiries />} />
         <Route path="/admin/doubts" element={<DoubtsInbox />} />
-        {/* Content management for the public site. Admin-only on both sides —
-            the API router carries its own admin dependency. */}
+        <Route path="/admin/website/approvals" element={<AdminWebsiteChanges />} />
+        <Route path="/admin/website/my-changes" element={<AdminWebsiteChanges mine />} />
+        {/* Content management for the public site. */}
         <Route path="/admin/website" element={<AdminWebsite />} />
         <Route path="/admin/website/programs" element={<AdminWebsitePrograms />} />
         {/* One programme is a page, not a modal — it carries a whole syllabus. */}

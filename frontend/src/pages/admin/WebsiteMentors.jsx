@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useState } from 'react';
+﻿import { useCallback, useEffect, useMemo, useState } from 'react';
 
 import Avatar from '../../components/Avatar';
 import { EmptyState, ErrorState, Loading, Modal, PageHeader } from '../../components/ui';
@@ -17,7 +17,7 @@ import { useContentList } from './websiteContent';
  *
  * The list is the database's, not the bundle's. The mentors table ships seeded
  * with the rows that used to be hardcoded, so an empty list here really does
- * mean an empty section on the site — see the mentors migration for why that
+ * mean an empty section on the site â€” see the mentors migration for why that
  * distinction matters.
  */
 
@@ -62,7 +62,7 @@ function MentorForm({ value, errors, onChange, programs }) {
   return (
     <div className="grid gap-4">
       {field('name', 'Name', 'As it should appear on the card.')}
-      {field('former', 'Experience line', 'Shown above the name, e.g. “Ex-TCS · 8 yrs”.')}
+      {field('former', 'Experience line', 'Shown above the name, e.g. â€œEx-TCS Â· 8 yrsâ€.')}
 
       <div>
         <label className="label" htmlFor="mentor-focus">What they teach</label>
@@ -83,7 +83,7 @@ function MentorForm({ value, errors, onChange, programs }) {
         </div>
       </div>
 
-      {field('photo_url', 'Photo link', 'Optional. A link to a hosted image — uploads need object storage, which is not set up yet. Leave blank for initials on a coloured tile.', { placeholder: 'https://…' })}
+      {field('photo_url', 'Photo link', 'Optional. A link to a hosted image â€” uploads need object storage, which is not set up yet. Leave blank for initials on a coloured tile.', { placeholder: 'https://â€¦' })}
 
       <div>
         <span className="label">Programmes they teach</span>
@@ -142,7 +142,7 @@ export default function AdminWebsiteMentors() {
      what is live, so another tab of this app is correct straight away.
      Memoised so the list hook's load effect does not re-run every render. */
   const adopt = useCallback((all) => applyMentors(all.filter((m) => m.published)), []);
-  const list = useContentList('/admin/website/mentors', adopt, 'mentor');
+  const list = useContentList('/admin/website/mentors', adopt, 'mentor', 'mentor');
   /* The programme tick-boxes come from the live catalogue, so a programme an
      admin has just added is assignable straight away. */
   const programs = usePrograms();
@@ -181,7 +181,7 @@ export default function AdminWebsiteMentors() {
     if (ok) setEditing(null);
   };
 
-  if (list.loading) return <Loading label="Loading mentors…" />;
+  if (list.loading) return <Loading label="Loading mentorsâ€¦" />;
   if (list.loadError) return <ErrorState message={list.loadError} onRetry={list.load} />;
 
   return (
@@ -189,7 +189,7 @@ export default function AdminWebsiteMentors() {
       <WebsiteTabs />
       <PageHeader
         title="Mentors"
-        subtitle={`${counts.live} on the site${counts.total !== counts.live ? ` · ${counts.total - counts.live} hidden` : ''}`}
+        subtitle={`${counts.live} on the site${counts.total !== counts.live ? ` Â· ${counts.total - counts.live} hidden` : ''}`}
         action={<button type="button" className="btn-cta" onClick={openNew}>Add a mentor</button>}
       />
 
@@ -236,7 +236,7 @@ export default function AdminWebsiteMentors() {
                   <p className="mt-1.5 text-sm text-navy-600">{m.focus}</p>
                   <p className="mt-2 text-xs text-navy-400">
                     {m.programs.length
-                      ? m.programs.map(programName).join(' · ')
+                      ? m.programs.map(programName).join(' Â· ')
                       : 'Not on any programme page'}
                   </p>
                 </div>
@@ -276,7 +276,7 @@ export default function AdminWebsiteMentors() {
           <>
             <button type="button" className="btn-ghost" onClick={() => setEditing(null)}>Cancel</button>
             <button type="submit" form="mentor-form" className="btn-cta" disabled={list.saving}>
-              {list.saving ? 'Saving…' : 'Save'}
+              {list.saving ? 'Savingâ€¦' : 'Save'}
             </button>
           </>
         }

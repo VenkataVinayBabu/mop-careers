@@ -22,6 +22,11 @@ marketing site (no auth) and an authenticated platform (admin / teacher / studen
 > curriculum template and day count, so a Java batch no longer arrives holding
 > 55 days of Python topics. Nothing in the platform assumes 55 any more.
 >
+> **Thread 4 is closed: all six roles are built.** Admin, teacher, student,
+> Coordinator (viewer), Contributor and Member. A contributor edits the public
+> website but publishes nothing — every save queues for a member to approve or
+> send back with feedback.
+>
 > **If you are starting fresh and want work to do**, the one item left with real
 > substance is **object storage** in thread 1, which unblocks photo uploads and
 > stops notes PDFs vanishing on redeploy. Everything else is either waiting on
@@ -91,6 +96,14 @@ emails a reset link. Forced password change on first login.
   other batches.
 - **student** — own data only. Blocked students see *"Please contact MOP administration"*
   at login.
+- **contributor** — edits every word of the public website, but **publishes nothing**:
+  each save becomes a pending change for a member to approve or send back with feedback.
+  Onboards students and teachers, runs the class schedule and curriculum, and keeps
+  placement records — those apply immediately. **Never sees fees or enquiries**, cannot
+  block an account or create any role above a teacher.
+- **member** — everything a contributor can, plus approving their changes, fees,
+  enquiries, milestones, batch creation, account blocking, and the coordinator's
+  follow-up screens. Sits between Bala and the contributor.
 - **viewer** (shown as **Coordinator**) — read-only across *every* batch: who teaches it,
   who is enrolled, which classes have been taught, whether the recording and notes were
   uploaded, and how many attended. Exists to chase whoever has fallen behind, so teachers'
@@ -1073,6 +1086,70 @@ Python 3.13.2 · Node v22.17.0 (npm 10.9.2) · Git 2.50.1 · PostgreSQL 17.9
   notes 11 Aug 8:16pm" with "Marked taught — date not recorded" for the half
   that predates the columns. Clean console on a full reload.
 
+- **Contributor and member ✅ — all six roles now exist.** A contributor edits
+  the public site and publishes nothing; a member approves or sends it back
+  with feedback. 1 new table (`website_changes`), 22 tables total, 10
+  migrations. **No role migration** — `users.role` is a `String(20)`, which is
+  the third time that Phase 1 decision has paid for itself.
+  - **Approval is blocking, which was the expensive of the two options** in
+    thread 4 and the one recorded as "does not fit in a week". The user chose
+    it explicitly.
+  - **Approval covers the public website only.** Onboarding, the class
+    schedule, curriculum and placement records apply immediately. The reason
+    for the queue was that the website must not change without review; that
+    reasoning does not extend to setting a class date, and a curriculum edit
+    waiting on approval would make the role useless for daily work. Stated as
+    an assumption when built.
+  - **One table describes any change**: entity, entity_id, action, and the
+    proposed values as JSON. That is what lets creates, deletes and reordering
+    queue alongside edits. The alternative — shadow `draft_*` columns on every
+    content table — doubles every column and still cannot express "create this
+    row".
+  - **`website_apply.apply` is the only place a website change is applied**,
+    used by both an admin's direct save and a member's approval. Two
+    implementations would drift, and the difference would only ever surface as
+    "it worked when Bala did it".
+  - **`require_publisher` is what makes "a contributor cannot publish" true**
+    rather than conventional: the direct endpoints refuse them with a message
+    pointing at the queue. The router guard widened to `require_website_editor`
+    so they can still *read* what they are editing.
+  - **Rejection requires a reason** (422 without one). "Rejected" with no
+    explanation is what makes an approval queue hated — the contributor cannot
+    act on it, so they resubmit the same thing.
+  - **A contributor's screens keep showing the live values**, with a standing
+    notice in the tab strip saying so and a count of what is waiting. Anything
+    else and they would save, see no change, and reasonably conclude it failed.
+    Reordering is deliberately *not* applied locally either, or they would be
+    looking at an arrangement no visitor has.
+  - **A contributor cannot create a member** — they would be minting their own
+    approver, which is the one account that must not be self-service.
+  - `assert_batch_access` now lets contributors and members reach every batch:
+    both are organisation-wide roles, and only a teacher is batch-scoped.
+
+  Two bugs found by the suites, both the kind that only show up under a real
+  login:
+  - `Role` in `schemas.py` never learned the new values. `UserCreate` accepted
+    `contributor`, but **logging in as one returned 500**, because `UserOut`
+    still declared four roles.
+  - Validating a proposal happens *inside* a handler, and a raw Pydantic
+    `ValidationError` there is not converted by FastAPI — so a contributor
+    typing a two-letter name got "Internal Server Error" instead of a field
+    message. Re-raised in FastAPI's own shape so the form highlights the field.
+
+  Verification: **49 assertions on the workflow and 42 on the permission
+  matrix**, re-run green with the earlier three (**264 together**). The
+  load-bearing one is asserted directly rather than inferred: after a
+  contributor saves, both the admin list *and* the public payload are
+  unchanged, and only after approval do they move. Also: a contributor refused
+  on every direct write path, on fees, enquiries, milestones, stats, account
+  edits and batch creation; unable to see another contributor's proposal or
+  open it by id; unable to approve their own; rejection leaving the live row
+  untouched; withdraw; create and delete queuing; and settings queuing. In the
+  browser, the whole loop end to end across two real logins: contributor hides
+  a mentor → row does not move, "1 waiting" → member's queue shows it with a
+  badge → sent back with a note → contributor sees "Sent back" and the feedback
+  on their own screen. Clean console in a fresh tab.
+
 ---
 
 ## Open threads
@@ -1183,10 +1260,14 @@ saving it in the dashboard does nothing until the frontend is redeployed.
 
 Auto-deploy is confirmed **On Commit** for both `mop-careers` and `mop-careers-api`.
 
-### 4. Six roles — one built, two still blocked on Bala
+### 4. Six roles — ✅ ALL BUILT
 
-Four roles exist (admin, teacher, student, **viewer**). Two more are specified
-but not built:
+All six exist: admin, teacher, student, viewer (Coordinator), contributor and
+member. The two decisions that used to block this are answered — approval
+**blocks** the change, and a contributor **does** edit public website copy —
+and both are built to those answers. What remains is the record of what each
+role is, kept here because it is the only place the whole ladder is written
+down:
 
 - ~~**Viewer**~~ — **built.** The earlier note here described it as "read-only;
   student count, tech stack, experience… described as HR", which turned out to
@@ -1197,27 +1278,30 @@ but not built:
   HR — is **answered as internal staff**, which is why teachers' phone numbers
   appear. If an external-HR view is ever wanted it is a different role, not a
   setting on this one.
-- **Contributor** — updates next scheduled class, curriculum, placement details, and
-  possibly public website content.
-- **Member** — reviews and approves what a Contributor entered.
+- ~~**Contributor**~~ — **built.** Edits every word of the public website, and
+  publishes none of it: each save queues for a member. Onboards students and
+  teachers, runs the class schedule and curriculum, keeps placement records —
+  those apply immediately. Never sees fees or enquiries.
+- ~~**Member**~~ — **built.** Approves or sends back with feedback, plus fees,
+  enquiries, milestones, batch creation, account blocking and the coordinator
+  screens.
 
-Confirmed: all sit under admin; one role per person (only admin acts across roles, and
-never as a student); the three new roles are organisation-wide, not batch-scoped.
+Confirmed and honoured: all sit under admin; one role per person (only admin acts
+across roles, and never as a student); the three added roles are organisation-wide,
+not batch-scoped.
 
-**Two decisions block the remaining two roles**, and both determine whether the
-stated one-week launch is achievable:
-
-1. Does approval **block** the change, or happen **after** it? Review-after is a
-   fraction of the work; approval-first does not fit in a week.
-2. Does a Contributor need to edit **public website copy**? That means building a
-   content editor — likely the largest single item, and it does not fit in a week.
-
-Also unresolved: whether Viewers are MOP staff or external company HR (a privacy
-question, not just permissions — recommend an anonymised or opt-in view if external),
-and whether teachers keep attendance.
+**Still open, and now the only role question left:** whether teachers keep taking
+attendance, or whether that moves to a contributor. Nothing was changed — teachers
+still take it, and a contributor can too, because both pass `require_staff`.
 
 A shareable summary of all six roles was produced for Bala:
 <https://claude.ai/code/artifact/2fa3f337-6e8b-40bf-a65f-2283840a9d35>
+It predates the build and describes Viewer as an HR-style read-only role, which
+is not what was built.
+
+**What is deliberately NOT in the approval queue**, in case it is wanted later:
+onboarding (an account can be blocked afterwards; a wrong claim on the public
+site cannot be un-read), the class schedule, curriculum and placement records.
 
 ### 5. Before real students use the live site
 

@@ -78,14 +78,19 @@ def require_student(user: User = Depends(get_active_user)) -> User:
 
 
 def require_staff(user: User = Depends(get_active_user)) -> User:
-    """Admins and teachers.
+    """Who may run a class: admins, teachers, and the back-office roles.
 
-    A viewer is deliberately NOT staff. This guard sits on the teacher router,
-    which marks days complete, uploads notes and takes attendance — adding a
+    Contributors and members are here because keeping the class schedule and
+    curriculum up to date is part of both jobs — the original brief for a
+    contributor said exactly that.
+
+    A viewer is deliberately NOT staff, and that distinction is the whole
+    reason this guard is worth reading twice. It sits on the teacher router,
+    which marks days complete, uploads notes and takes attendance; adding a
     read-only role here would hand it every one of those writes in one line.
     Viewers get their own router instead.
     """
-    if user.role not in (ROLE_ADMIN, ROLE_TEACHER):
+    if user.role not in (ROLE_ADMIN, ROLE_TEACHER, ROLE_CONTRIBUTOR, ROLE_MEMBER):
         raise HTTPException(status.HTTP_403_FORBIDDEN, "Staff access required")
     return user
 
@@ -104,6 +109,19 @@ def require_member(user: User = Depends(get_active_user)) -> User:
     contributor does not. Admins included — Bala sits above a member."""
     if user.role not in (ROLE_ADMIN, ROLE_MEMBER):
         raise HTTPException(status.HTTP_403_FORBIDDEN, "Member access required")
+    return user
+
+
+def require_back_office(user: User = Depends(get_active_user)) -> User:
+    """Runs the institute day to day: admin, member or contributor.
+
+    The floor for the shared back-office screens. It is not permission to do
+    everything on them — fees stay behind `require_member` and account changes
+    behind stricter guards — but it is what separates staff who administer the
+    business from teachers, students and coordinators.
+    """
+    if user.role not in (ROLE_ADMIN, ROLE_MEMBER, ROLE_CONTRIBUTOR):
+        raise HTTPException(status.HTTP_403_FORBIDDEN, "Not available for your role")
     return user
 
 
@@ -148,7 +166,8 @@ def assert_batch_access(db: Session, user: User, batch_id: int) -> None:
     Raises 404 rather than 403 for an unassigned batch so the API does not leak
     which batch ids exist.
     """
-    if user.role == ROLE_ADMIN:
+    # Organisation-wide roles reach every batch; only a teacher is scoped.
+    if user.role in (ROLE_ADMIN, ROLE_CONTRIBUTOR, ROLE_MEMBER):
         return
     if user.role == ROLE_TEACHER and batch_id in teacher_batch_ids(db, user):
         return
@@ -156,9 +175,9 @@ def assert_batch_access(db: Session, user: User, batch_id: int) -> None:
 
 
 def assert_student_access(db: Session, user: User, student: User) -> None:
-    """Who may read one student's records: the student, an admin, or a teacher
-    assigned to that student's batch."""
-    if user.role == ROLE_ADMIN:
+    """Who may read one student's records: the student, an organisation-wide
+    staff role, or a teacher assigned to that student's batch."""
+    if user.role in (ROLE_ADMIN, ROLE_CONTRIBUTOR, ROLE_MEMBER):
         return
     if user.id == student.id:
         return

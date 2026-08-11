@@ -47,6 +47,28 @@ const NAV = {
     { to: '/teacher', label: 'My Batches', icon: GraduationCap, end: true },
     { to: '/teacher/doubts', label: 'Doubts', icon: MessageSquare },
   ],
+  // Everything a contributor does, minus fees and enquiries, plus the queue
+  // they approve from and the coordinator's follow-up list.
+  member: [
+    { to: '/admin', label: 'Dashboard', icon: LayoutDashboard, end: true },
+    { to: '/admin/website/approvals', label: 'Approvals', icon: Globe },
+    { to: '/admin/batches', label: 'Batches', icon: GraduationCap },
+    { to: '/admin/accounts', label: 'Accounts', icon: UserCog },
+    { to: '/admin/fees', label: 'Fees', icon: IndianRupee },
+    { to: '/admin/placements', label: 'Placements', icon: Briefcase },
+    { to: '/admin/enquiries', label: 'Enquiries', icon: Inbox },
+    { to: '/watch', label: 'Follow-ups', icon: HelpCircle },
+    { to: '/admin/doubts', label: 'Doubts', icon: MessageSquare },
+  ],
+  // No fees and no enquiries — the two things the role was defined without.
+  // Website is first because it is the bulk of the job.
+  contributor: [
+    { to: '/admin/website', label: 'Website', icon: Globe, end: true },
+    { to: '/admin/batches', label: 'Batches', icon: GraduationCap },
+    { to: '/admin/accounts', label: 'Accounts', icon: UserCog },
+    { to: '/admin/placements', label: 'Placements', icon: Briefcase },
+    { to: '/admin/doubts', label: 'Doubts', icon: MessageSquare },
+  ],
   // A read-only coordinator. Follow-ups first, because that is the job — the
   // batch list is where they go to answer a question, not where they start.
   viewer: [
@@ -69,6 +91,8 @@ const ROLE_LABEL = {
   teacher: 'Teacher',
   student: 'Student',
   viewer: 'Coordinator',
+  member: 'Member',
+  contributor: 'Contributor',
 };
 
 function initials(name = '') {

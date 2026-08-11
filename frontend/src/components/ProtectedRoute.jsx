@@ -10,6 +10,10 @@ export const HOME_FOR_ROLE = {
   // A viewer lands on the follow-ups list rather than a dashboard: their job
   // is what is outstanding, so that is the first thing they should see.
   viewer: '/watch',
+  // A member's first question is "is anything waiting for me?", and a
+  // contributor's is "what came back?" — both live under Website.
+  member: '/admin/website/approvals',
+  contributor: '/admin/website',
 };
 
 /**

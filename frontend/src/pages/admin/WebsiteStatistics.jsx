@@ -1,4 +1,4 @@
-import { useCallback, useState } from 'react';
+﻿import { useCallback, useState } from 'react';
 
 import { EmptyState, ErrorState, Loading, Modal, PageHeader } from '../../components/ui';
 import { applyStatistics } from '../../data/siteSettings';
@@ -11,13 +11,13 @@ import { useContentList } from './websiteContent';
  * Admin > Website > Statistics.
  *
  * The four figures under the hero and the four in the outcomes grid. One list,
- * split by section — they were two hardcoded arrays agreeing on three of their
+ * split by section â€” they were two hardcoded arrays agreeing on three of their
  * four numbers, which is two places to remember when a figure changes.
  *
- * THESE ARE THE LEAST VERIFIED CLAIMS ON THE SITE. 1,050 placements, ₹47.6L,
+ * THESE ARE THE LEAST VERIFIED CLAIMS ON THE SITE. 1,050 placements, â‚¹47.6L,
  * 500 hiring partners, 87% placement rate. They came from mopcareers.in, and
  * nobody has checked them against records. Editing them here does not make
- * them true — it makes them correctable, which they were not before.
+ * them true â€” it makes them correctable, which they were not before.
  */
 
 const SECTIONS = [
@@ -46,7 +46,7 @@ export default function AdminWebsiteStatistics() {
   const [draft, setDraft] = useState(BLANK);
 
   const adopt = useCallback((all) => applyStatistics(all.filter((s) => s.published)), []);
-  const list = useContentList('/admin/website/statistics', adopt, 'statistic');
+  const list = useContentList('/admin/website/statistics', adopt, 'statistic', 'statistic');
 
   const openNew = (section) => () => {
     setEditing({ ...BLANK, section });
@@ -70,7 +70,7 @@ export default function AdminWebsiteStatistics() {
 
   const err = list.errors;
 
-  if (list.loading) return <Loading label="Loading statistics…" />;
+  if (list.loading) return <Loading label="Loading statisticsâ€¦" />;
   if (list.loadError) return <ErrorState message={list.loadError} onRetry={list.load} />;
 
   return (
@@ -85,7 +85,7 @@ export default function AdminWebsiteStatistics() {
         <strong className="font-semibold">These are the strongest claims on the site.</strong>{' '}
         The figures here came from mopcareers.in and have never been checked against MOP&apos;s own
         records. A placement count or a placement rate is the first thing a sceptical parent will
-        ask you to back up — only publish what you can.
+        ask you to back up â€” only publish what you can.
       </div>
 
       {SECTIONS.map((section) => {
@@ -169,7 +169,7 @@ export default function AdminWebsiteStatistics() {
           <>
             <button type="button" className="btn-ghost" onClick={() => setEditing(null)}>Cancel</button>
             <button type="submit" form="stat-form" className="btn-cta" disabled={list.saving}>
-              {list.saving ? 'Saving…' : 'Save'}
+              {list.saving ? 'Savingâ€¦' : 'Save'}
             </button>
           </>
         }
@@ -209,14 +209,14 @@ export default function AdminWebsiteStatistics() {
               aria-invalid={Boolean(err.value)}
             />
             <p className={`mt-1.5 text-xs ${err.value ? 'font-medium text-orange-ink' : 'text-navy-400'}`}>
-              {err.value || 'Digits only — the counter animates up to this. Decimals are kept: 47.6 shows as 47.6.'}
+              {err.value || 'Digits only â€” the counter animates up to this. Decimals are kept: 47.6 shows as 47.6.'}
             </p>
           </div>
 
           <div className="grid gap-4 sm:grid-cols-2">
             <Field id="stat-prefix" label="Before the number" max={8} value={draft.prefix}
                    error={err.prefix} onChange={(v) => setDraft((d) => ({ ...d, prefix: v }))}
-                   placeholder="₹" hint="Usually the rupee sign, or nothing." />
+                   placeholder="â‚¹" hint="Usually the rupee sign, or nothing." />
             <Field id="stat-suffix" label="After the number" max={8} value={draft.suffix}
                    error={err.suffix} onChange={(v) => setDraft((d) => ({ ...d, suffix: v }))}
                    placeholder="+" hint="Such as +, % or L." />

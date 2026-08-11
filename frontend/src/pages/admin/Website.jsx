@@ -2,6 +2,7 @@ import { useCallback, useEffect, useMemo, useState } from 'react';
 
 import { api, errorMessage } from '../../api/client';
 import { useToast } from '../../components/Toast';
+import { useAuth } from '../../context/AuthContext';
 import { ErrorState, Loading, PageHeader } from '../../components/ui';
 import { applySiteSettings } from '../../data/siteSettings';
 import WebsiteTabs from './WebsiteTabs';
@@ -137,6 +138,7 @@ function Toggle({ checked, onChange, label, id }) {
 
 export default function AdminWebsite() {
   const toast = useToast();
+  const { user } = useAuth();
   const [initial, setInitial] = useState(null);
   const [form, setForm] = useState(null);
   const [errors, setErrors] = useState({});
@@ -196,6 +198,16 @@ export default function AdminWebsite() {
     setSaving(true);
     setErrors({});
     try {
+      /* A contributor publishes nothing: this becomes a proposal, and the form
+         deliberately keeps showing the live values underneath it. */
+      if (user?.role === 'contributor') {
+        await api.post('/admin/website/changes', {
+          entity: 'settings', action: 'update', entity_id: null, payload: changed,
+        });
+        toast.success('Sent for approval. It goes live once a member approves it.');
+        setSaving(false);
+        return;
+      }
       const { data } = await api.put('/admin/website/settings', changed);
       setInitial(data);
       setForm(data);

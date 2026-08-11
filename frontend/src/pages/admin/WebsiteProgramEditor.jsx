@@ -3,6 +3,7 @@ import { Link, useNavigate, useParams } from 'react-router-dom';
 
 import { api, errorMessage } from '../../api/client';
 import { useToast } from '../../components/Toast';
+import { useAuth } from '../../context/AuthContext';
 import { ErrorState, Loading, PageHeader } from '../../components/ui';
 import { applyPrograms, refreshPublicContent, useFees } from '../../data/siteSettings';
 import { Field, Repeater, TagList } from './ContentInputs';
@@ -201,6 +202,7 @@ export default function AdminWebsiteProgramEditor() {
   const isNew = programId === 'new';
   const navigate = useNavigate();
   const toast = useToast();
+  const { user } = useAuth();
 
   const [initial, setInitial] = useState(isNew ? BLANK : null);
   const [form, setForm] = useState(isNew ? BLANK : null);
@@ -272,6 +274,22 @@ export default function AdminWebsiteProgramEditor() {
       // The server derives a slug from the name when one is not given. Sending
       // an empty string on create would fail min_length instead.
       if (isNew && !body.slug) delete body.slug;
+
+      /* A contributor proposes rather than publishes. The form keeps showing
+         what it was showing — which is the live programme — because that is
+         still what the public sees. */
+      if (user?.role === 'contributor') {
+        await api.post('/admin/website/changes', {
+          entity: 'program',
+          action: isNew ? 'create' : 'update',
+          entity_id: isNew ? null : Number(programId),
+          payload: body,
+        });
+        toast.success('Sent for approval. It goes live once a member approves it.');
+        setSaving(false);
+        return;
+      }
+
       const { data } = isNew
         ? (await api.post('/admin/website/programs', body))
         : (await api.put(`/admin/website/programs/${programId}`, body));
