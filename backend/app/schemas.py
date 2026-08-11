@@ -1210,6 +1210,10 @@ class ViewerDayRow(BaseModel):
     status: DayStatus
     has_recording: bool
     has_notes: bool
+    taught_marked_at: datetime | None = None
+    recording_uploaded_at: datetime | None = None
+    notes_uploaded_at: datetime | None = None
+    chases: list[ChaseOut] = []
     # The link itself, so a viewer can check it actually opens rather than
     # trusting a tick. Notes are reported as a filename only — handing out the
     # download would be a new file-access path for a read-only role.
@@ -1233,6 +1237,24 @@ class ViewerBatchDetail(BaseModel):
     students: list[ViewerStudentRow]
 
 
+class ChaseOut(ORMModel):
+    """One logged phone call."""
+
+    id: int
+    chased_by_name: str
+    chased_at: datetime
+    note: str = ""
+
+
+class ChaseCreate(BaseModel):
+    note: str = Field(default="", max_length=300)
+
+    @field_validator("note", mode="before")
+    @classmethod
+    def _trim(cls, v: object) -> object:
+        return v.strip() if isinstance(v, str) else v
+
+
 class ViewerFollowUp(BaseModel):
     kind: FollowUpKind
     batch_id: int
@@ -1245,6 +1267,34 @@ class ViewerFollowUp(BaseModel):
     # count of days since: an undated class cannot be overdue.
     days_overdue: int | None = None
     teachers: list[TeacherContact] = []
+    # The chase trail so far. Present on an item that is still outstanding —
+    # a chase records that somebody rang, it does not resolve anything.
+    chases: list[ChaseOut] = []
+    last_chased_at: datetime | None = None
+
+
+class ViewerClosedItem(BaseModel):
+    """A class somebody chased that has since been delivered.
+
+    Only days with at least one logged chase appear here. A day that was never
+    chased and simply got uploaded on time is not a follow-up story, and
+    listing it would drown the ones that are.
+    """
+
+    batch_id: int
+    batch_name: str
+    day_id: int
+    day_number: int
+    topic: str
+    scheduled_date: date | None = None
+    chases: list[ChaseOut] = []
+    # Null means the delivery predates these columns — "not recorded", never a
+    # guess. See the migration.
+    taught_marked_at: datetime | None = None
+    recording_uploaded_at: datetime | None = None
+    notes_uploaded_at: datetime | None = None
+    # The last of whatever was actually needed, which is when the chase ended.
+    closed_at: datetime | None = None
 
 
 class ViewerOverview(BaseModel):

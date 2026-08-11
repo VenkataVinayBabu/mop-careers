@@ -2,7 +2,16 @@ import { useCallback, useEffect, useMemo, useState } from 'react';
 import { Link } from 'react-router-dom';
 
 import { api, errorMessage } from '../../api/client';
-import { EmptyState, ErrorState, Loading, PageHeader, StatCard } from '../../components/ui';
+import { useToast } from '../../components/Toast';
+import {
+  EmptyState,
+  ErrorState,
+  Loading,
+  Modal,
+  PageHeader,
+  Spinner,
+  StatCard,
+} from '../../components/ui';
 import { formatDate } from '../../constants';
 
 /*
@@ -13,9 +22,14 @@ import { formatDate } from '../../constants';
  * every outstanding item, oldest first, each one already carrying the phone
  * number of the person to call.
  *
- * Nothing on this screen writes. There is no "mark as chased" — that would be
- * a new thing to keep in step with reality, and the item disappears on its own
- * the moment the teacher actually uploads.
+ * The one thing on this screen that writes is "I called them", and it is
+ * deliberately not a "mark as done": the item stays until the file actually
+ * turns up, and simply gains "chased twice, still nothing". A button that made
+ * the row disappear would let this screen say "all clear" while a student
+ * still had no recording — the list is a mirror of the class records, and its
+ * whole value is that it cannot be wrong.
+ *
+ * Closing happens by itself, and the trail lives under Closed.
  */
 
 const KINDS = [
@@ -39,6 +53,43 @@ const KIND_LABEL = {
   no_recording: 'No recording',
   no_notes: 'No notes',
 };
+
+/** "18 Aug, 2:40 pm" — a chase needs the time of day, unlike a class date:
+ *  two calls on the same day are a different story from one. */
+function whenChased(iso) {
+  const d = new Date(iso);
+  return `${d.toLocaleDateString('en-IN', { day: 'numeric', month: 'short' })}, ${d
+    .toLocaleTimeString('en-IN', { hour: 'numeric', minute: '2-digit' })
+    .toLowerCase()}`;
+}
+
+function daysSince(iso) {
+  return Math.floor((Date.now() - new Date(iso).getTime()) / 86400000);
+}
+
+/** The chase trail under an outstanding item. */
+function ChaseTrail({ chases }) {
+  if (!chases || chases.length === 0) return null;
+  const last = chases[chases.length - 1];
+  const since = daysSince(last.chased_at);
+  return (
+    <div className="mt-1.5 border-l-2 border-navy-100 pl-2.5">
+      <p className="text-xs font-medium text-navy-600">
+        Chased {chases.length === 1 ? 'once' : `${chases.length} times`} · last{' '}
+        {since === 0 ? 'today' : since === 1 ? 'yesterday' : `${since} days ago`} — still
+        not uploaded
+      </p>
+      <ul className="mt-0.5 space-y-0.5">
+        {chases.map((c) => (
+          <li key={c.id} className="text-xs text-navy-400">
+            {whenChased(c.chased_at)} · {c.chased_by_name || 'someone'}
+            {c.note && <span className="text-navy-500"> — “{c.note}”</span>}
+          </li>
+        ))}
+      </ul>
+    </div>
+  );
+}
 
 /** How to say "call this person" for however many teachers a batch has. */
 function TeacherCall({ teachers }) {
@@ -71,10 +122,163 @@ function TeacherCall({ teachers }) {
   );
 }
 
+/** A delivery date, or an honest admission that we do not have one.
+ *  Everything uploaded before the timestamps existed reads "not recorded" —
+ *  inventing a date from the row's creation would look like data and be
+ *  fiction. */
+function Delivered({ at, label }) {
+  return (
+    <li className="text-xs text-navy-500">
+      <span className="font-medium text-navy-700">{label}</span>{' '}
+      {at ? whenChased(at) : <span className="text-navy-300">date not recorded</span>}
+    </li>
+  );
+}
+
+/**
+ * Closed — the point of the whole exercise: rang on these dates, arrived on
+ * that one.
+ *
+ * Only classes somebody actually chased appear. A class that was uploaded on
+ * time without anybody having to ring is not a follow-up story, and listing
+ * every one of them would bury the handful that are.
+ */
+function ClosedTrail({ items }) {
+  if (items.length === 0) {
+    return (
+      <div className="card">
+        <EmptyState
+          title="Nothing closed out yet"
+          message="Once you log a call and the teacher uploads, the class moves here with both sets of dates."
+        />
+      </div>
+    );
+  }
+
+  return (
+    <div className="space-y-3">
+      {items.map((c) => (
+        <div key={c.day_id} className="card p-5">
+          <div className="flex flex-wrap items-start justify-between gap-3">
+            <div className="min-w-0">
+              <p className="font-semibold text-navy">
+                Day {c.day_number} · {c.topic}
+              </p>
+              <p className="text-xs text-navy-400">
+                <Link to={`/watch/batches/${c.batch_id}`} className="text-teal-ink hover:underline">
+                  {c.batch_name}
+                </Link>
+                {c.scheduled_date && ` · scheduled ${formatDate(c.scheduled_date)}`}
+              </p>
+            </div>
+            <span className="shrink-0 rounded-full bg-teal-50 px-3 py-1 text-xs font-semibold text-teal-ink">
+              Closed{c.closed_at ? ` ${whenChased(c.closed_at)}` : ''}
+            </span>
+          </div>
+
+          <div className="mt-4 grid gap-4 sm:grid-cols-2">
+            <div>
+              <p className="text-xs font-semibold uppercase tracking-wide text-navy-400">
+                You followed up
+              </p>
+              <ul className="mt-1.5 space-y-0.5">
+                {c.chases.map((ch) => (
+                  <li key={ch.id} className="text-xs text-navy-500">
+                    <span className="font-medium text-navy-700">{whenChased(ch.chased_at)}</span>
+                    {' · '}
+                    {ch.chased_by_name || 'someone'}
+                    {ch.note && <span> — “{ch.note}”</span>}
+                  </li>
+                ))}
+              </ul>
+            </div>
+            <div>
+              <p className="text-xs font-semibold uppercase tracking-wide text-navy-400">
+                The teacher delivered
+              </p>
+              <ul className="mt-1.5 space-y-0.5">
+                <Delivered at={c.taught_marked_at} label="Marked taught" />
+                <Delivered at={c.recording_uploaded_at} label="Recording" />
+                <Delivered at={c.notes_uploaded_at} label="Notes" />
+              </ul>
+            </div>
+          </div>
+        </div>
+      ))}
+    </div>
+  );
+}
+
+/** Logging a call. The note is optional — "no answer" and "says tonight" are
+ *  worth keeping, but requiring one would just get it filled with a full
+ *  stop. */
+function ChaseModal({ item, onClose, onLogged }) {
+  const toast = useToast();
+  const [note, setNote] = useState('');
+  const [saving, setSaving] = useState(false);
+
+  const save = async () => {
+    setSaving(true);
+    try {
+      await api.post(`/viewer/days/${item.day_id}/chase`, { note: note.trim() });
+      toast.success(`Logged. Day ${item.day_number} stays on the list until it is uploaded.`);
+      onLogged();
+      onClose();
+    } catch (err) {
+      toast.error(errorMessage(err));
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  return (
+    <Modal
+      open
+      title={`Log a call about day ${item.day_number}`}
+      onClose={onClose}
+      footer={
+        <>
+          <button type="button" onClick={onClose} className="btn-ghost">
+            Cancel
+          </button>
+          <button type="button" onClick={save} disabled={saving} className="btn-cta">
+            {saving && <Spinner className="h-4 w-4" />}
+            {saving ? 'Saving…' : 'Log the call'}
+          </button>
+        </>
+      }
+    >
+      <div className="space-y-4">
+        <p className="rounded-lg bg-navy-50 p-3.5 text-xs text-navy-600">
+          This records that you followed up — it does <strong>not</strong> tick the class off.
+          Day {item.day_number} of {item.batch_name} stays on this list until{' '}
+          {item.teachers[0]?.name || 'the teacher'} actually uploads, and then closes itself.
+        </p>
+        <div>
+          <label className="label" htmlFor="chase-note">
+            What did they say? <span className="font-normal text-navy-400">(optional)</span>
+          </label>
+          <input
+            id="chase-note"
+            className="input"
+            maxLength={300}
+            placeholder="No answer · Says he'll upload tonight"
+            value={note}
+            onChange={(e) => setNote(e.target.value)}
+          />
+        </div>
+      </div>
+    </Modal>
+  );
+}
+
 export default function ViewerFollowUps() {
   const [items, setItems] = useState([]);
+  const [closedItems, setClosedItems] = useState([]);
   const [overview, setOverview] = useState(null);
   const [kind, setKind] = useState('');
+  const [view, setView] = useState('open');
+  const [chasing, setChasing] = useState(null);
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(true);
 
@@ -82,12 +286,14 @@ export default function ViewerFollowUps() {
     setLoading(true);
     setError('');
     try {
-      const [f, o] = await Promise.all([
+      const [f, o, c] = await Promise.all([
         api.get('/viewer/follow-ups'),
         api.get('/viewer/overview'),
+        api.get('/viewer/closed'),
       ]);
       setItems(f.data);
       setOverview(o.data);
+      setClosedItems(c.data);
     } catch (err) {
       setError(errorMessage(err));
     } finally {
@@ -130,6 +336,31 @@ export default function ViewerFollowUps() {
         <StatCard label="No notes" value={overview?.notes_missing ?? 0} />
       </div>
 
+      <div className="mb-4 flex gap-2 border-b border-navy-100 pb-3">
+        {[
+          ['open', `Outstanding (${items.length})`],
+          ['closed', `Closed (${closedItems.length})`],
+        ].map(([id, label]) => (
+          <button
+            key={id}
+            type="button"
+            onClick={() => setView(id)}
+            aria-pressed={view === id}
+            className={
+              view === id
+                ? 'rounded-lg bg-navy px-3.5 py-2 text-sm font-semibold text-white'
+                : 'rounded-lg border border-navy-200 bg-white px-3.5 py-2 text-sm font-medium text-navy-600 transition hover:bg-navy-50'
+            }
+          >
+            {label}
+          </button>
+        ))}
+      </div>
+
+      {view === 'closed' ? (
+        <ClosedTrail items={closedItems} />
+      ) : (
+      <>
       <div className="mb-4 flex flex-wrap gap-2">
         {KINDS.map((k) => (
           <button
@@ -171,6 +402,7 @@ export default function ViewerFollowUps() {
                   <th className="th">Batch</th>
                   <th className="th">Scheduled</th>
                   <th className="th">Who to call</th>
+                  <th className="th" />
                 </tr>
               </thead>
               <tbody className="divide-y divide-navy-100">
@@ -186,6 +418,7 @@ export default function ViewerFollowUps() {
                     <td className="td">
                       <p className="font-semibold text-navy">Day {f.day_number}</p>
                       <p className="text-xs text-navy-400">{f.topic}</p>
+                      <ChaseTrail chases={f.chases} />
                     </td>
                     <td className="td">
                       <Link
@@ -206,12 +439,29 @@ export default function ViewerFollowUps() {
                     <td className="td">
                       <TeacherCall teachers={f.teachers} />
                     </td>
+                    <td className="td">
+                      <div className="flex justify-end">
+                        <button
+                          type="button"
+                          onClick={() => setChasing(f)}
+                          className="btn-ghost btn-sm whitespace-nowrap"
+                        >
+                          {f.chases.length > 0 ? 'Chase again' : 'Log a call'}
+                        </button>
+                      </div>
+                    </td>
                   </tr>
                 ))}
               </tbody>
             </table>
           </div>
         </div>
+      )}
+      </>
+      )}
+
+      {chasing && (
+        <ChaseModal item={chasing} onClose={() => setChasing(null)} onLogged={load} />
       )}
     </div>
   );

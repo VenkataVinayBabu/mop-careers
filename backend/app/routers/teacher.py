@@ -3,6 +3,7 @@ teachers are restricted to their assigned batches by assert_batch_access.
 """
 import re
 import secrets
+from datetime import datetime, timezone
 from pathlib import Path
 
 from fastapi import APIRouter, Depends, File, HTTPException, UploadFile, status
@@ -101,8 +102,28 @@ def update_day(
     """Set the date, paste a recording link, edit the topic, mark complete."""
     day = _get_day(db, day_id, user)
     updates = payload.model_dump(exclude_unset=True)
+
+    # What the coordinator's trail needs: when each thing actually arrived.
+    # Compared before and after rather than on the presence of the key, so
+    # re-saving a day that already has a recording does not restamp it and
+    # make an old upload look like today's work.
+    had_recording = bool(day.recording_url and day.recording_url.strip())
+    was_taught = day.status == DAY_COMPLETED
+
     for field, value in updates.items():
         setattr(day, field, value)
+
+    now = datetime.now(timezone.utc)
+    if not had_recording and bool(day.recording_url and day.recording_url.strip()):
+        day.recording_uploaded_at = now
+    elif not (day.recording_url and day.recording_url.strip()):
+        # The link was cleared, so the date it arrived is no longer true.
+        day.recording_uploaded_at = None
+
+    if not was_taught and day.status == DAY_COMPLETED:
+        day.taught_marked_at = now
+    elif day.status != DAY_COMPLETED:
+        day.taught_marked_at = None
 
     # Completing day 28 or the final day advances the students' roadmap.
     if "status" in updates:
@@ -151,6 +172,10 @@ async def upload_notes(
             old.unlink(missing_ok=True)
 
     day.notes_file = stored
+    # A replacement is a real delivery too — a new file genuinely arrived, and
+    # the coordinator chasing a corrected PDF wants today's date, not the
+    # date of the one that was wrong.
+    day.notes_uploaded_at = datetime.now(timezone.utc)
     db.commit()
     db.refresh(day)
     return CurriculumDayOut.model_validate(day)
@@ -166,6 +191,7 @@ def delete_notes(
         if path.is_file() and path.parent == NOTES_DIR:
             path.unlink(missing_ok=True)
         day.notes_file = None
+        day.notes_uploaded_at = None
         db.commit()
         db.refresh(day)
     return CurriculumDayOut.model_validate(day)

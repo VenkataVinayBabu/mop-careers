@@ -210,10 +210,63 @@ class CurriculumDay(Base):
     recording_url: Mapped[str | None] = mapped_column(String(500))
     notes_file: Mapped[str | None] = mapped_column(String(300))
 
+    # When each of the three things a coordinator chases actually arrived.
+    # Stamped on the transition, not on every save: re-uploading a notes PDF
+    # updates the date because a new file really did arrive, but editing the
+    # topic of a day that already has one does not.
+    #
+    # NULL means "we were not recording this yet" — every row that existed
+    # before these columns did. That is why the UI says "date not recorded"
+    # rather than showing a blank or, worse, guessing.
+    taught_marked_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
+    recording_uploaded_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
+    notes_uploaded_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
+
     batch: Mapped[Batch] = relationship(back_populates="curriculum_days")
     attendance: Mapped[list[Attendance]] = relationship(
         back_populates="curriculum_day", cascade="all, delete-orphan"
     )
+    chases: Mapped[list[ClassChase]] = relationship(
+        back_populates="curriculum_day",
+        cascade="all, delete-orphan",
+        order_by="ClassChase.chased_at",
+    )
+
+
+class ClassChase(Base):
+    """One "I rang the teacher about this class" entry.
+
+    Attached to the class day rather than to a particular missing item: a
+    coordinator makes one phone call about day 9, not one call about the
+    recording and another about the notes.
+
+    A chase never hides anything. The follow-up list is computed from whether
+    the file is actually there, so an unanswered chase leaves the item exactly
+    where it was — it just gains "chased twice, still nothing", which is more
+    useful than either a tick or silence.
+    """
+
+    __tablename__ = "class_chases"
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True)
+    curriculum_day_id: Mapped[int] = mapped_column(
+        ForeignKey("curriculum_days.id", ondelete="CASCADE"), nullable=False, index=True
+    )
+    # SET NULL rather than CASCADE: deleting the coordinator who made the call
+    # must not delete the record that the call happened.
+    chased_by_id: Mapped[int | None] = mapped_column(
+        ForeignKey("users.id", ondelete="SET NULL"), index=True
+    )
+    # Kept as text as well, so the trail still reads properly once the account
+    # is gone. An audit line naming nobody is not much of an audit line.
+    chased_by_name: Mapped[str] = mapped_column(String(120), default="", nullable=False)
+    chased_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), server_default=func.now(), nullable=False
+    )
+    note: Mapped[str] = mapped_column(String(300), default="", nullable=False)
+
+    curriculum_day: Mapped[CurriculumDay] = relationship(back_populates="chases")
+    chased_by: Mapped[User | None] = relationship()
 
 
 class Attendance(Base):

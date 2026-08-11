@@ -94,8 +94,9 @@ emails a reset link. Forced password change on first login.
 - **viewer** (shown as **Coordinator**) — read-only across *every* batch: who teaches it,
   who is enrolled, which classes have been taught, whether the recording and notes were
   uploaded, and how many attended. Exists to chase whoever has fallen behind, so teachers'
-  phone numbers are in its payloads. **Writes nothing anywhere**, and never sees fees,
-  placements, enquiries, doubts, website content or students' contact details.
+  phone numbers are in its payloads. Never sees fees, placements, enquiries, doubts,
+  website content or students' contact details. Its **only** write anywhere is logging
+  its own phone calls (the chase log) — it cannot change a single class record.
 
 ---
 
@@ -1011,6 +1012,66 @@ Python 3.13.2 · Node v22.17.0 (npm 10.9.2) · Git 2.50.1 · PostgreSQL 17.9
   coordinator typing `/admin/fees` being bounced to `/watch`, and the admin's
   Coordinators tab with its plain-language explanation of the role. Clean
   console on a fresh load.
+
+- **The chase log ✅ — the follow-up trail closes itself.** The user asked
+  whether a coordinator can mark an item done once the teacher uploads. The
+  answer was "the item already removes itself", demonstrated end to end; what
+  they actually wanted was the **record**: which dates they followed up, which
+  date the teacher delivered, closing automatically on delivery. 1 new table
+  (`class_chases`), 3 new columns, 21 tables total, 10 migrations.
+  - **"Mark as done" was refused, deliberately, and this is the decision to
+    keep.** A manual tick would let a coordinator clear an item while the
+    recording was still missing, so the screen would say "all clear" while a
+    student had nothing to watch. The list is computed from whether the file is
+    actually there; its entire value is that it cannot be wrong. Chasing
+    therefore **records a phone call and resolves nothing** — the item stays
+    and gains "chased twice, still nothing", which is more useful than either a
+    tick or silence.
+  - **The viewer is no longer strictly read-only, and that was a conscious
+    reversal.** It was built and verified as GET-only. Logging "I rang Ravi on
+    the 5th" is the coordinator's own note about their own call: it touches no
+    class record, no student, no teacher, and cannot hide a follow-up. The
+    structural assertion was **changed rather than dropped** — the suites now
+    assert the only non-GET under `/viewer` is `POST /days/{id}/chase`, so a
+    second write still cannot appear unnoticed.
+  - **Nothing recorded when a teacher delivered**, so
+    `taught_marked_at`, `recording_uploaded_at` and `notes_uploaded_at` were
+    added to `curriculum_days`. Stamped **on the transition**, not on every
+    save: re-saving a day that already has a recording does not restamp it and
+    make an old upload look like today's work. Clearing a recording or deleting
+    the notes clears the date with it, because it is no longer true.
+  - **Existing rows get NULL, and the UI says "date not recorded".** Every
+    upload that happened before these columns existed has no date, and
+    backfilling one from `created_at` would look like data and be fiction.
+  - **A chase attaches to a class day, not to a missing item.** One phone call
+    covers "day 9 has neither the recording nor the notes", so both outstanding
+    rows for that day show the same trail.
+  - Chases are **appended, never edited** — "we have asked three times" is the
+    useful fact.
+  - `chased_by_name` is stored alongside the user FK, which is `SET NULL`:
+    deleting the coordinator must not delete the record that the call happened,
+    and an audit line naming nobody is not much of an audit line.
+
+  **A bug the suite caught.** `closed_at` originally required all three
+  timestamps, so any class marked taught before the migration — every existing
+  one — would have shown no close date forever, even with both uploads dated.
+  It now takes the last of the stamps that exist, and the three individual
+  dates are on the payload anyway, each admitting to itself when it is unknown.
+
+  Verification: **42/42 API assertions**, re-run green with the other two
+  suites (**173 together**). The load-bearing ones: chasing leaves the item
+  outstanding on both counts, does not reduce the overview total, and cannot
+  alter the class record; chases accumulate in order; the recording clears one
+  kind and not the other; the day leaves the list entirely when the notes
+  arrive; the trail then carries all three calls and both delivery dates;
+  editing a topic does not restamp anything; clearing a recording clears its
+  date and brings the follow-up back; and a day nobody chased never appears in
+  the closed list. In the browser: logging a call from the day 9 row with a
+  note, both day 9 rows then reading "Chased once · last today — still not
+  uploaded" with the count still at 4, the teacher uploading, the count
+  dropping to 2, and the Closed tab showing "rang 11 Aug 8:16pm — recording and
+  notes 11 Aug 8:16pm" with "Marked taught — date not recorded" for the half
+  that predates the columns. Clean console on a full reload.
 
 ---
 

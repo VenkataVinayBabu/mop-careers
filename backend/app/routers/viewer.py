@@ -11,14 +11,22 @@ this router answers three questions and no others:
 
 RBAC is at router level, the same way fees is, and for the mirror-image
 reason: fees locks a router nobody outside admin may read, this one locks a
-router that must never gain a write. Every endpoint below is a GET, and the
-guard is declared once so a later addition cannot quietly skip it.
+router whose only write is the coordinator's own notebook.
+
+THAT ONE WRITE, because the rule used to be "no writes at all" and it is worth
+saying why it changed. Logging "I rang Ravi on the 5th" is the coordinator's
+own record of their own phone call. It touches no class record, no student, no
+teacher, and it cannot resolve or hide a follow-up — the list is still
+computed from whether the file is actually there. Everything else here is a
+GET, and the suite asserts that `POST /viewer/days/{id}/chase` is the only
+exception, so a second one cannot appear unnoticed.
 
 Note what is NOT here: fees, placements, enquiries, doubts, website content,
 and any student's contact details. A viewer chases teachers, so teachers'
 phone numbers are in these payloads; students appear as a name and an
 attendance figure, which is what "how many are there and who are they" needs.
 """
+import logging
 from datetime import date
 
 from fastapi import APIRouter, Depends, HTTPException, Query, status
@@ -34,19 +42,25 @@ from app.models import (
     ROLE_TEACHER,
     Attendance,
     Batch,
+    ClassChase,
     CurriculumDay,
     TeacherBatch,
     User,
 )
 from app.schemas import (
+    ChaseCreate,
+    ChaseOut,
     TeacherContact,
     ViewerBatchDetail,
     ViewerBatchRow,
+    ViewerClosedItem,
     ViewerDayRow,
     ViewerFollowUp,
     ViewerOverview,
     ViewerStudentRow,
 )
+
+logger = logging.getLogger("mop.viewer")
 
 router = APIRouter(
     prefix="/viewer",
@@ -58,6 +72,21 @@ router = APIRouter(
 def _has(value: str | None) -> bool:
     """A column that is NULL or an empty string both mean "not uploaded"."""
     return bool(value and value.strip())
+
+
+def _chases_by_day(db: Session, day_ids: list[int] | None = None) -> dict[int, list[ChaseOut]]:
+    """Chase history keyed by class day, in one query."""
+    stmt = select(ClassChase).order_by(ClassChase.chased_at)
+    if day_ids is not None:
+        if not day_ids:
+            return {}
+        stmt = stmt.where(ClassChase.curriculum_day_id.in_(day_ids))
+    out: dict[int, list[ChaseOut]] = {}
+    for chase in db.scalars(stmt).all():
+        out.setdefault(chase.curriculum_day_id, []).append(
+            ChaseOut.model_validate(chase, from_attributes=True)
+        )
+    return out
 
 
 def _teachers_by_batch(db: Session) -> dict[int, list[TeacherContact]]:
@@ -201,6 +230,8 @@ def batch_detail(batch_id: int, db: Session = Depends(get_db)) -> ViewerBatchDet
         ).all()
     )
 
+    chases = _chases_by_day(db, [d.id for d in days])
+
     return ViewerBatchDetail(
         batch=row,
         days=[
@@ -214,6 +245,10 @@ def batch_detail(batch_id: int, db: Session = Depends(get_db)) -> ViewerBatchDet
                 has_notes=_has(d.notes_file),
                 recording_url=d.recording_url or None,
                 notes_file=d.notes_file or None,
+                taught_marked_at=d.taught_marked_at,
+                recording_uploaded_at=d.recording_uploaded_at,
+                notes_uploaded_at=d.notes_uploaded_at,
+                chases=chases.get(d.id, []),
                 attended=present_by_day.get(d.id, 0),
                 student_count=row.student_count,
             )
@@ -256,6 +291,7 @@ def follow_ups(
     """
     today = date.today()
     teachers = _teachers_by_batch(db)
+    chases = _chases_by_day(db)
 
     days = db.scalars(
         select(CurriculumDay)
@@ -276,6 +312,8 @@ def follow_ups(
         if d.batch is None:                            # pragma: no cover - defensive
             continue
 
+        logged = chases.get(d.id, [])
+
         def item(what: str) -> ViewerFollowUp:
             return ViewerFollowUp(
                 kind=what,
@@ -287,6 +325,11 @@ def follow_ups(
                 scheduled_date=d.scheduled_date,
                 days_overdue=(today - d.scheduled_date).days if d.scheduled_date else None,
                 teachers=teachers.get(d.batch_id, []),
+                # Every outstanding item for a day carries that day's calls:
+                # one call was about the whole day, so it answers for both the
+                # missing recording and the missing notes.
+                chases=logged,
+                last_chased_at=logged[-1].chased_at if logged else None,
             )
 
         if d.status == DAY_PENDING:
@@ -299,4 +342,107 @@ def follow_ups(
 
     if kind:
         out = [f for f in out if f.kind == kind]
+    return out
+
+
+@router.post("/days/{day_id}/chase", response_model=ChaseOut, status_code=status.HTTP_201_CREATED)
+def log_chase(
+    day_id: int,
+    payload: ChaseCreate,
+    db: Session = Depends(get_db),
+    user: User = Depends(require_viewer),
+) -> ClassChase:
+    """Record that somebody rang the teacher about this class.
+
+    The only write on this router. It deliberately does **not** resolve
+    anything: the follow-up stays exactly where it was until the file actually
+    turns up, and simply gains "chased twice, still nothing". A button that
+    made the item disappear would let the screen say "all clear" while a
+    student still had no recording.
+
+    Chases are appended, never edited. Two calls on two days are two lines,
+    which is the point — "we have asked three times" is the useful fact.
+    """
+    day = db.get(CurriculumDay, day_id)
+    if day is None:
+        raise HTTPException(status.HTTP_404_NOT_FOUND, "Class day not found")
+
+    chase = ClassChase(
+        curriculum_day_id=day.id,
+        chased_by_id=user.id,
+        chased_by_name=user.name,
+        note=payload.note,
+    )
+    db.add(chase)
+    db.commit()
+    db.refresh(chase)
+    logger.info(
+        "Class day #%s chased by %s%s", day.id, user.email,
+        f" ({payload.note})" if payload.note else "",
+    )
+    return chase
+
+
+@router.get("/closed", response_model=list[ViewerClosedItem])
+def closed(db: Session = Depends(get_db)) -> list[ViewerClosedItem]:
+    """Chases that ended — the class was chased, and the teacher delivered.
+
+    This is the trail: rang on these dates, arrived on that one. Only days
+    with a logged chase appear, because a day nobody had to chase is not a
+    follow-up story and would bury the ones that are.
+
+    Most recently closed first, since the usual question is "what came in this
+    week" rather than "what happened in July".
+    """
+    chases = _chases_by_day(db)
+    if not chases:
+        return []
+
+    days = db.scalars(
+        select(CurriculumDay)
+        .options(selectinload(CurriculumDay.batch))
+        .where(CurriculumDay.id.in_(list(chases)))
+    ).all()
+
+    out: list[ViewerClosedItem] = []
+    for d in days:
+        # Still outstanding on any count? Then the chase has not ended.
+        if d.status != DAY_COMPLETED or not _has(d.recording_url) or not _has(d.notes_file):
+            continue
+
+        # When the last recorded delivery landed. Built from the stamps that
+        # exist rather than demanding all three: a class marked taught before
+        # these columns existed, whose recording and notes arrived after,
+        # genuinely closed on the later upload — insisting on the missing
+        # third would leave every such class with no close date forever.
+        # None only when nothing at all was dated. The three individual dates
+        # are on the payload too, each saying "not recorded" for itself, so
+        # nothing here has to be inferred from this one number.
+        known = [s for s in (d.taught_marked_at, d.recording_uploaded_at, d.notes_uploaded_at)
+                 if s is not None]
+        closed_at = max(known) if known else None
+
+        out.append(
+            ViewerClosedItem(
+                batch_id=d.batch_id,
+                batch_name=d.batch.name if d.batch else "",
+                day_id=d.id,
+                day_number=d.day_number,
+                topic=d.topic,
+                scheduled_date=d.scheduled_date,
+                chases=chases.get(d.id, []),
+                taught_marked_at=d.taught_marked_at,
+                recording_uploaded_at=d.recording_uploaded_at,
+                notes_uploaded_at=d.notes_uploaded_at,
+                closed_at=closed_at,
+            )
+        )
+
+    # Anything with no recorded close date sorts last rather than first — an
+    # unknown date is not "the beginning of time". Reduced to a number so two
+    # unknowns never end up comparing None with None.
+    out.sort(
+        key=lambda i: (i.closed_at is not None, i.closed_at.timestamp() if i.closed_at else 0.0),
+        reverse=True,
+    )
     return out
