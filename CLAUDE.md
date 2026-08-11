@@ -7,14 +7,25 @@ marketing site (no auth) and an authenticated platform (admin / teacher / studen
 > verified and **deployed live**. The public site has been rebuilt to a new design and
 > all eight programme pages are complete and live.
 >
-> **The admin area so Bala can edit the site himself is BUILT.** Everything on the
-> marketing site — settings, programmes, mentors, stories, hiring partners — is
-> editable at `Admin > Website` with no deploy. **Read Open thread 2 before
-> touching anything public**: a lot of what is currently live is unverified, and
-> seven of the eight syllabi plus nine mentors were written in-session rather than
-> by MOP. None of that needs a developer to fix any more — it needs MOP's words.
+> **The admin area so Bala can edit the site himself is BUILT, and thread 1 is
+> closed.** Six tabs at `Admin > Website` — settings (incl. the standard fees),
+> programmes and their whole detail pages, statistics, mentors, stories and
+> hiring partners. Six seeded tables; nothing on the marketing site is
+> hardcoded any more. **Read Open thread 2 before touching anything public**:
+> a lot of what is live is unverified, and seven of the eight syllabi plus nine
+> mentors were written in-session rather than by MOP. None of that needs a
+> developer any more — it needs MOP's words.
 >
 > Jump to **"Open threads"** at the bottom — that is the live to-do list.
+>
+> **If you are starting fresh and want work to do**, the two with real substance
+> are **thread 6** (a Java batch still gets 55 days of Python topics — much more
+> tractable now programmes are a real table) and **object storage** in thread 1,
+> which unblocks photo uploads and stops notes PDFs vanishing on redeploy.
+> Everything else is either waiting on MOP or on a decision.
+>
+> **Most urgent regardless:** the free database expiry in thread 5. `backup.ps1`
+> exists and is tested; a backup of production has not been taken.
 >
 > - Live site: <https://mop-careers.onrender.com>
 > - Live API: <https://mop-careers-api.onrender.com> (`/docs` for the API browser)
