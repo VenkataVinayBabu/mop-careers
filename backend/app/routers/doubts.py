@@ -19,6 +19,8 @@ from app.models import (
     DOUBT_ANSWERED,
     DOUBT_CLASS,
     ROLE_ADMIN,
+    ROLE_CONTRIBUTOR,
+    ROLE_MEMBER,
     ROLE_STUDENT,
     ROLE_TEACHER,
     Batch,
@@ -31,6 +33,12 @@ from app.schemas import DoubtCreate, DoubtOut, DoubtStatusUpdate
 
 logger = logging.getLogger("mop.doubts")
 router = APIRouter(prefix="/doubts", tags=["doubts"])
+
+# Who may work the shared inbox. Written as an allowlist on purpose: this file
+# guards itself inline rather than through `require_staff`, so widening that
+# dependency does not reach here — which is exactly how a member ended up with
+# a Doubts entry in their sidebar and a 403 behind it.
+INBOX_ROLES = (ROLE_ADMIN, ROLE_MEMBER, ROLE_CONTRIBUTOR, ROLE_TEACHER)
 
 TYPE_LABEL = {
     "class_doubt": "Class doubt",
@@ -146,13 +154,16 @@ def list_doubts(
     db: Session = Depends(get_db),
     user: User = Depends(get_active_user),
 ) -> list[DoubtOut]:
-    """Admins see everything; teachers only their own batches' students.
+    """The shared inbox. Organisation-wide staff see everything; teachers only
+    their own batches' students.
 
     Students are pushed to /doubts/mine rather than served here, so this route
     can never leak one student's queries to another.
     """
     if user.role == ROLE_STUDENT:
         raise HTTPException(status.HTTP_403_FORBIDDEN, "Use /doubts/mine")
+    if user.role not in INBOX_ROLES:
+        raise HTTPException(status.HTTP_403_FORBIDDEN, "Staff access required")
 
     stmt = select(Doubt).options(selectinload(Doubt.student))
 
@@ -161,8 +172,6 @@ def list_doubts(
         if not allowed:
             return []
         stmt = stmt.join(User, Doubt.student_id == User.id).where(User.batch_id.in_(allowed))
-    elif user.role != ROLE_ADMIN:
-        raise HTTPException(status.HTTP_403_FORBIDDEN, "Staff access required")
 
     if doubt_status:
         stmt = stmt.where(Doubt.status == doubt_status)
@@ -178,9 +187,18 @@ def set_status(
     db: Session = Depends(get_db),
     user: User = Depends(get_active_user),
 ) -> DoubtOut:
-    """Only admins and the assigned batch's teachers can mark a doubt answered."""
+    """Who may mark a doubt answered: organisation-wide staff, and the assigned
+    batch's teachers.
+
+    Checked against an allowlist rather than "anyone who is not a student".
+    That used to mean the same thing, back when the only other roles were admin
+    and teacher — but it silently started letting a coordinator write the
+    moment a fourth role existed, and a coordinator is meant to write nothing.
+    """
     if user.role == ROLE_STUDENT:
         raise HTTPException(status.HTTP_403_FORBIDDEN, "Students cannot change a doubt's status")
+    if user.role not in INBOX_ROLES:
+        raise HTTPException(status.HTTP_403_FORBIDDEN, "Staff access required")
 
     doubt = db.scalar(
         select(Doubt).options(selectinload(Doubt.student)).where(Doubt.id == doubt_id)

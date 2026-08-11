@@ -1136,7 +1136,19 @@ Python 3.13.2 · Node v22.17.0 (npm 10.9.2) · Git 2.50.1 · PostgreSQL 17.9
     typing a two-letter name got "Internal Server Error" instead of a field
     message. Re-raised in FastAPI's own shape so the form highlights the field.
 
-  Verification: **49 assertions on the workflow and 42 on the permission
+  **A bug the user found by clicking Doubts, and the hole behind it.**
+  `doubts.py` guards itself **inline** rather than through `require_staff`, so
+  widening that dependency never reached it: a member had a Doubts entry in
+  their sidebar and a 403 behind it. Worse, the inline check was
+  `elif user.role != ROLE_ADMIN` on the read and "anyone who is not a student"
+  on the write — which meant the *coordinator* could mark a doubt answered, a
+  role documented and verified as writing nothing anywhere. Correct while only
+  admin and teacher existed; silently wrong the moment a fourth role did. Both
+  are now an explicit `INBOX_ROLES` allowlist. **The lesson: a widened
+  dependency only reaches the files that actually use it — grep for hand-rolled
+  role checks whenever the role set changes.**
+
+  Verification: **49 assertions on the workflow and 47 on the permission
   matrix**, re-run green with the earlier three (**264 together**). The
   load-bearing one is asserted directly rather than inferred: after a
   contributor saves, both the admin list *and* the public payload are
