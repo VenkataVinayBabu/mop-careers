@@ -5,7 +5,7 @@ from sqlalchemy import select
 from sqlalchemy.orm import Session
 
 from app.database import get_db
-from app.models import ROLE_ADMIN, ROLE_STUDENT, ROLE_TEACHER, TeacherBatch, User
+from app.models import ROLE_ADMIN, ROLE_STUDENT, ROLE_TEACHER, ROLE_VIEWER, TeacherBatch, User
 from app.security import decode_access_token
 
 bearer_scheme = HTTPBearer(auto_error=False)
@@ -68,8 +68,23 @@ def require_student(user: User = Depends(get_active_user)) -> User:
 
 
 def require_staff(user: User = Depends(get_active_user)) -> User:
+    """Admins and teachers.
+
+    A viewer is deliberately NOT staff. This guard sits on the teacher router,
+    which marks days complete, uploads notes and takes attendance — adding a
+    read-only role here would hand it every one of those writes in one line.
+    Viewers get their own router instead.
+    """
     if user.role not in (ROLE_ADMIN, ROLE_TEACHER):
         raise HTTPException(status.HTTP_403_FORBIDDEN, "Staff access required")
+    return user
+
+
+def require_viewer(user: User = Depends(get_active_user)) -> User:
+    """The read-only coordinator view. Admins are allowed through so they can
+    see exactly what a viewer sees without a second account."""
+    if user.role not in (ROLE_ADMIN, ROLE_VIEWER):
+        raise HTTPException(status.HTTP_403_FORBIDDEN, "Viewer access required")
     return user
 
 

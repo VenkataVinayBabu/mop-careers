@@ -29,7 +29,11 @@ from app.database import Base
 ROLE_ADMIN = "admin"
 ROLE_TEACHER = "teacher"
 ROLE_STUDENT = "student"
-ROLES = (ROLE_ADMIN, ROLE_TEACHER, ROLE_STUDENT)
+# Read-only coordinator. Sees every batch — who teaches it, who is in it, which
+# classes have been taught and whether the recording and notes were uploaded —
+# so they can chase the teacher who has not. Writes nothing, anywhere.
+ROLE_VIEWER = "viewer"
+ROLES = (ROLE_ADMIN, ROLE_TEACHER, ROLE_STUDENT, ROLE_VIEWER)
 
 DAY_PENDING = "pending"
 DAY_COMPLETED = "completed"
@@ -135,6 +139,10 @@ class User(Base):
     @property
     def is_student(self) -> bool:
         return self.role == ROLE_STUDENT
+
+    @property
+    def is_viewer(self) -> bool:
+        return self.role == ROLE_VIEWER
 
 
 class Batch(Base):

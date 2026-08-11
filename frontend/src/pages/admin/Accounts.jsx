@@ -15,7 +15,22 @@ import { MILESTONE_STEPS } from '../../constants';
 const TABS = [
   { key: 'student', label: 'Students' },
   { key: 'teacher', label: 'Teachers' },
+  // Read-only coordinators. Last, because there will be one or two of them
+  // against dozens of the others.
+  { key: 'viewer', label: 'Coordinators' },
 ];
+
+/** What the New button and the modal call each role, and the one line of
+ *  explanation the admin creating the account needs. */
+const ROLE_COPY = {
+  student: { noun: 'student', title: 'New student' },
+  teacher: { noun: 'teacher', title: 'New teacher' },
+  viewer: {
+    noun: 'coordinator',
+    title: 'New coordinator',
+    hint: 'A coordinator sees every batch read-only — who is teaching, who is enrolled, which classes have been taught and whether the recording and notes were uploaded. They cannot change anything, and never see fees or placements.',
+  },
+};
 
 /** Which milestones the system sets on its own — shown read-only to explain why. */
 const AUTO_MILESTONES = {
@@ -169,7 +184,7 @@ function CreateUserModal({ role, batches, onClose, onSaved }) {
         body.yoe_it = form.yoe_it === '' ? null : Number(form.yoe_it);
       }
       await api.post('/admin/users', body);
-      toast.success(`${role === 'student' ? 'Student' : 'Teacher'} account created.`);
+      toast.success(`${ROLE_COPY[role].title.replace('New ', '')} account created.`);
       onSaved();
       onClose();
     } catch (err) {
@@ -182,7 +197,7 @@ function CreateUserModal({ role, batches, onClose, onSaved }) {
   return (
     <Modal
       open
-      title={role === 'student' ? 'New student' : 'New teacher'}
+      title={ROLE_COPY[role].title}
       onClose={onClose}
       footer={
         <>
@@ -197,6 +212,11 @@ function CreateUserModal({ role, batches, onClose, onSaved }) {
       }
     >
       <div className="space-y-4">
+        {ROLE_COPY[role].hint && (
+          <p className="rounded-lg bg-navy-50 p-3.5 text-xs text-navy-600">
+            {ROLE_COPY[role].hint}
+          </p>
+        )}
         <div>
           <label className="label" htmlFor="name">
             Full name
@@ -361,7 +381,7 @@ export default function AdminAccounts() {
         subtitle="There is no self-registration — every login is created here"
         action={
           <button type="button" onClick={() => setCreating(true)} className="btn-cta">
-            New {tab}
+            New {ROLE_COPY[tab].noun}
           </button>
         }
       />
@@ -395,11 +415,11 @@ export default function AdminAccounts() {
       <div className="card">
         {visible.length === 0 ? (
           <EmptyState
-            title={query ? 'No matches' : `No ${tab}s yet`}
+            title={query ? 'No matches' : `No ${ROLE_COPY[tab].noun}s yet`}
             message={
               query
                 ? 'Try a different search term.'
-                : `Create a ${tab} account to get started.`
+                : `Create a ${ROLE_COPY[tab].noun} account to get started.`
             }
           />
         ) : (

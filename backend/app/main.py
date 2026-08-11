@@ -15,6 +15,7 @@ from app.routers import (
     public,
     student,
     teacher,
+    viewer,
     website,
 )
 
@@ -47,6 +48,7 @@ app.include_router(fees.router)
 app.include_router(placements.router)
 app.include_router(teacher.router)
 app.include_router(student.router)
+app.include_router(viewer.router)
 app.include_router(files.router)
 
 

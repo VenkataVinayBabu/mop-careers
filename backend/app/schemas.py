@@ -11,7 +11,7 @@ from pydantic import BaseModel, ConfigDict, EmailStr, Field, field_validator, mo
 # drift apart.
 from app.models import DEFAULT_CURRICULUM_DAYS
 
-Role = Literal["admin", "teacher", "student"]
+Role = Literal["admin", "teacher", "student", "viewer"]
 BatchStatus = Literal["upcoming", "active", "completed"]
 DayStatus = Literal["pending", "completed"]
 
@@ -76,7 +76,7 @@ class UserCreate(BaseModel):
     name: str = Field(min_length=2, max_length=120)
     email: EmailStr
     phone: str | None = Field(default=None, max_length=20)
-    role: Literal["teacher", "student"]
+    role: Literal["teacher", "student", "viewer"]
     password: PasswordStr | None = None
     yoe_it: float | None = Field(default=None, ge=0, le=50)
     batch_id: int | None = None
@@ -1162,6 +1162,100 @@ class ProgramUpdate(BaseModel):
         if not slug:
             raise ValueError("Enter a web address using letters or numbers")
         return slug
+
+
+# ==========================================================================
+#  Viewer — the read-only coordinator view
+# ==========================================================================
+# A viewer watches every batch and chases whoever has fallen behind: a class
+# that should have been taught and has not been marked, or one that was taught
+# with no recording or no notes uploaded. So these payloads carry two things
+# the other roles' schemas do not bother with — what is *missing*, and the
+# phone number of the person to ring about it.
+FollowUpKind = Literal["not_taught", "no_recording", "no_notes"]
+
+
+class TeacherContact(BaseModel):
+    """Who to call. The whole point of the role, so the phone number is not an
+    optional extra here."""
+
+    id: int
+    name: str
+    phone: str | None = None
+    email: EmailStr
+
+
+class ViewerBatchRow(BaseModel):
+    batch_id: int
+    name: str
+    course_type: str
+    status: BatchStatus
+    start_date: date | None = None
+    student_count: int
+    total_days: int
+    classes_taught: int
+    # The three things a viewer chases, counted per batch so the list itself
+    # says where the problem is.
+    overdue_classes: int
+    recordings_missing: int
+    notes_missing: int
+    teachers: list[TeacherContact] = []
+
+
+class ViewerDayRow(BaseModel):
+    day_id: int
+    day_number: int
+    topic: str
+    scheduled_date: date | None = None
+    status: DayStatus
+    has_recording: bool
+    has_notes: bool
+    # The link itself, so a viewer can check it actually opens rather than
+    # trusting a tick. Notes are reported as a filename only — handing out the
+    # download would be a new file-access path for a read-only role.
+    recording_url: str | None = None
+    notes_file: str | None = None
+    attended: int
+    student_count: int
+
+
+class ViewerStudentRow(BaseModel):
+    student_id: int
+    name: str
+    classes_attended: int
+    attendance_percent: float
+    is_blocked: bool
+
+
+class ViewerBatchDetail(BaseModel):
+    batch: ViewerBatchRow
+    days: list[ViewerDayRow]
+    students: list[ViewerStudentRow]
+
+
+class ViewerFollowUp(BaseModel):
+    kind: FollowUpKind
+    batch_id: int
+    batch_name: str
+    day_id: int
+    day_number: int
+    topic: str
+    scheduled_date: date | None = None
+    # None when the class has no date set, which is why it is not simply a
+    # count of days since: an undated class cannot be overdue.
+    days_overdue: int | None = None
+    teachers: list[TeacherContact] = []
+
+
+class ViewerOverview(BaseModel):
+    batches: int
+    active_batches: int
+    students: int
+    teachers: int
+    follow_ups: int
+    overdue_classes: int
+    recordings_missing: int
+    notes_missing: int
 
 
 # Resolve the forward reference in TokenResponse.

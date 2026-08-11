@@ -7,6 +7,9 @@ export const HOME_FOR_ROLE = {
   admin: '/admin',
   teacher: '/teacher',
   student: '/app',
+  // A viewer lands on the follow-ups list rather than a dashboard: their job
+  // is what is outstanding, so that is the first thing they should see.
+  viewer: '/watch',
 };
 
 /**

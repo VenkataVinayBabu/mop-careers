@@ -91,6 +91,11 @@ emails a reset link. Forced password change on first login.
   other batches.
 - **student** — own data only. Blocked students see *"Please contact MOP administration"*
   at login.
+- **viewer** (shown as **Coordinator**) — read-only across *every* batch: who teaches it,
+  who is enrolled, which classes have been taught, whether the recording and notes were
+  uploaded, and how many attended. Exists to chase whoever has fallen behind, so teachers'
+  phone numbers are in its payloads. **Writes nothing anywhere**, and never sees fees,
+  placements, enquiries, doubts, website content or students' contact details.
 
 ---
 
@@ -952,6 +957,61 @@ Python 3.13.2 · Node v22.17.0 (npm 10.9.2) · Git 2.50.1 · PostgreSQL 17.9
   form appearing as day 1 of a batch created afterwards, and the public
   programme page and its localStorage cache carrying neither field.
 
+- **The viewer role ✅ — the first of the three extra roles is built.** A
+  non-technical coordinator who watches every batch and rings whoever has not
+  uploaded. **No migration**: `users.role` is a `String(20)` rather than a
+  native enum, exactly so a new role costs nothing — that decision, made in
+  Phase 1, paid off here.
+  - **The screen that matters is `/watch`, a worklist, not a dashboard.** The
+    brief was "if not uploaded the viewer will call the teacher", so the home
+    screen is every outstanding item, oldest first, each already carrying the
+    teacher's phone number as a `tel:` link. A read-only copy of the teacher
+    workspace would have made them hunt for the same information.
+  - **Three kinds of follow-up**, and the first is the one a naive build
+    misses: `not_taught` (dated in the past, still not marked complete),
+    `no_recording` and `no_notes`. An **undated** class is never overdue — a
+    batch that has not scheduled day 40 yet is not behind on it, and reporting
+    it would bury the real ones.
+  - **A viewer is deliberately not `require_staff`.** That guard sits on the
+    teacher router, which marks days complete, uploads notes and takes
+    attendance; adding a read-only role to it would have handed over every one
+    of those writes in one line. Viewers get their own router with
+    `dependencies=[Depends(require_viewer)]` — the same router-level lock fees
+    uses, for the mirror-image reason: fees locks a router nobody may read,
+    this one locks a router that must never gain a write.
+  - **Admins can open `/watch` too**, so there is no need for a second account
+    to see what a coordinator sees.
+  - **Teachers' contact details are in; students' are not.** A coordinator
+    chases teachers, so that is the data the job needs. Students appear as a
+    name and an attendance figure, which is what "how many are there and who
+    are they" asks for. Being internal staff makes names fine; it does not make
+    every field fine.
+  - **A viewer cannot be put in a batch** — the API refuses it (400) rather
+    than ignoring it, because an admin who picked a batch expected it to mean
+    something.
+  - The sidebar calls the role **Coordinator**. "Viewer" is what the spec and
+    the database say; it is not what anybody at MOP would call a person.
+
+  Verification: **63/63 API assertions**, and 24 of them are denials — a
+  read-only role that can read everything is one forgotten guard from being an
+  admin, so the suite asserts 403 on fees, placements, accounts, batches,
+  enquiries, stats, all of website, every teacher route and the student
+  dashboard, plus nine write attempts. It also asserts **structurally** that
+  every path under `/viewer` in the OpenAPI schema is a GET, which catches a
+  future write endpoint added to that router. Then: the seeded shape, follow-up
+  detection of all three kinds against real data, the filter, the overview
+  totals agreeing with the list, a 404 for a missing batch, and a blocked
+  viewer being turned away on an already-issued token. Re-run green alongside
+  the 68 curriculum assertions. In the browser: signing in as a coordinator
+  landing on the worklist with the right four items and Ravi Kumar's number on
+  every row, the filter narrowing to 2, the class-day table showing
+  Missing/Missing for a class with nothing uploaded and an Open link where the
+  recording exists, dashes rather than false alarms on an untaught day, the
+  roster with attendance and no email addresses anywhere on the page, a
+  coordinator typing `/admin/fees` being bounced to `/watch`, and the admin's
+  Coordinators tab with its plain-language explanation of the role. Clean
+  console on a fresh load.
+
 ---
 
 ## Open threads
@@ -1062,11 +1122,20 @@ saving it in the dashboard does nothing until the frontend is redeployed.
 
 Auto-deploy is confirmed **On Commit** for both `mop-careers` and `mop-careers-api`.
 
-### 4. Six roles — blocked on Bala
+### 4. Six roles — one built, two still blocked on Bala
 
-Three roles exist (admin, teacher, student). Three more are specified but not built:
+Four roles exist (admin, teacher, student, **viewer**). Two more are specified
+but not built:
 
-- **Viewer** — read-only; student count, tech stack, experience. Described as "HR".
+- ~~**Viewer**~~ — **built.** The earlier note here described it as "read-only;
+  student count, tech stack, experience… described as HR", which turned out to
+  be wrong about the job. The user's actual brief: a non-technical coordinator
+  who watches every batch, checks whether the class was taught and the
+  recording and notes went up, and phones the teacher when they have not. Built
+  to that. The privacy question that was open — MOP staff or external company
+  HR — is **answered as internal staff**, which is why teachers' phone numbers
+  appear. If an external-HR view is ever wanted it is a different role, not a
+  setting on this one.
 - **Contributor** — updates next scheduled class, curriculum, placement details, and
   possibly public website content.
 - **Member** — reviews and approves what a Contributor entered.
@@ -1074,8 +1143,8 @@ Three roles exist (admin, teacher, student). Three more are specified but not bu
 Confirmed: all sit under admin; one role per person (only admin acts across roles, and
 never as a student); the three new roles are organisation-wide, not batch-scoped.
 
-**Two decisions block this work**, and both determine whether the stated one-week
-launch is achievable:
+**Two decisions block the remaining two roles**, and both determine whether the
+stated one-week launch is achievable:
 
 1. Does approval **block** the change, or happen **after** it? Review-after is a
    fraction of the work; approval-first does not fit in a week.

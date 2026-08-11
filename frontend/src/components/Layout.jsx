@@ -47,6 +47,12 @@ const NAV = {
     { to: '/teacher', label: 'My Batches', icon: GraduationCap, end: true },
     { to: '/teacher/doubts', label: 'Doubts', icon: MessageSquare },
   ],
+  // A read-only coordinator. Follow-ups first, because that is the job — the
+  // batch list is where they go to answer a question, not where they start.
+  viewer: [
+    { to: '/watch', label: 'Follow-ups', icon: HelpCircle, end: true },
+    { to: '/watch/batches', label: 'All Batches', icon: GraduationCap },
+  ],
   student: [
     { to: '/app', label: 'Home', icon: Home, end: true },
     { to: '/app/curriculum', label: 'Curriculum', icon: BookOpen },
@@ -58,7 +64,12 @@ const NAV = {
   ],
 };
 
-const ROLE_LABEL = { admin: 'Administrator', teacher: 'Teacher', student: 'Student' };
+const ROLE_LABEL = {
+  admin: 'Administrator',
+  teacher: 'Teacher',
+  student: 'Student',
+  viewer: 'Coordinator',
+};
 
 function initials(name = '') {
   return name

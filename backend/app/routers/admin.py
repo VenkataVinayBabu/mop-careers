@@ -14,6 +14,7 @@ from app.milestones import get_or_create_milestone as _get_or_create_milestone
 from app.models import (
     ROLE_STUDENT,
     ROLE_TEACHER,
+    ROLE_VIEWER,
     Attendance,
     Batch,
     CurriculumDay,
@@ -206,7 +207,7 @@ def unassign_teacher(
 # --- accounts -------------------------------------------------------------
 @router.get("/users", response_model=list[UserOut])
 def list_users(
-    role: str | None = Query(default=None, pattern="^(teacher|student|admin)$"),
+    role: str | None = Query(default=None, pattern="^(teacher|student|admin|viewer)$"),
     batch_id: int | None = None,
     db: Session = Depends(get_db),
 ) -> list[UserOut]:
@@ -230,6 +231,14 @@ def create_user(payload: UserCreate, db: Session = Depends(get_db)) -> UserOut:
 
     if payload.role == ROLE_STUDENT and payload.batch_id is None:
         raise HTTPException(status.HTTP_400_BAD_REQUEST, "Students must be assigned to a batch")
+
+    # A viewer watches every batch, so being put in one means nothing. Refused
+    # rather than ignored: an admin who picked a batch expected it to matter.
+    if payload.role == ROLE_VIEWER and payload.batch_id is not None:
+        raise HTTPException(
+            status.HTTP_400_BAD_REQUEST,
+            "Viewers see every batch, so they are not assigned to one",
+        )
 
     # No self-registration exists, so a generated temporary password is emailed
     # to the account holder when the admin does not supply one.

@@ -30,6 +30,10 @@ import ProgramDetail from './pages/public/ProgramDetail';
 import BatchWorkspace from './pages/teacher/BatchWorkspace';
 import TeacherBatches from './pages/teacher/Batches';
 
+import ViewerBatchDetail from './pages/viewer/BatchDetail';
+import ViewerBatches from './pages/viewer/Batches';
+import ViewerFollowUps from './pages/viewer/FollowUps';
+
 import StudentApplications from './pages/student/Applications';
 import StudentCurriculum from './pages/student/Curriculum';
 import StudentDoubts from './pages/student/Doubts';
@@ -165,6 +169,22 @@ export default function App() {
         <Route path="/teacher" element={<TeacherBatches />} />
         <Route path="/teacher/batches/:batchId" element={<BatchWorkspace />} />
         <Route path="/teacher/doubts" element={<DoubtsInbox />} />
+      </Route>
+
+      {/* Viewer — the read-only coordinator. Admins may open it too, both
+          because they can do everything and because it is the only way to see
+          what a viewer sees without a second account. Every screen under here
+          is read-only; the API enforces that independently. */}
+      <Route
+        element={
+          <ProtectedRoute roles={['viewer', 'admin']}>
+            <Layout />
+          </ProtectedRoute>
+        }
+      >
+        <Route path="/watch" element={<ViewerFollowUps />} />
+        <Route path="/watch/batches" element={<ViewerBatches />} />
+        <Route path="/watch/batches/:batchId" element={<ViewerBatchDetail />} />
       </Route>
 
       {/* Student */}
