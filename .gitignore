@@ -18,6 +18,12 @@ backend/uploads/**
 !backend/uploads/notes/
 !backend/uploads/notes/.gitkeep
 
+# Database dumps from backup.ps1. A dump is every student record, every fee and
+# every password hash in one file — it belongs on a drive, never in the repo.
+backups/
+*.dump
+*.sql.gz
+
 # Node
 node_modules/
 dist/

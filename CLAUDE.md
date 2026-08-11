@@ -1006,9 +1006,14 @@ A shareable summary of all six roles was produced for Bala:
 
 - **The free PostgreSQL database expires.** This is the only item here with an actual
   deadline, and when it lapses the database is *deleted* — students, batches,
-  attendance, fees, placements, enquiries, all of it. Find the expiry date in the
-  Render dashboard under `mop-careers-db` and either upgrade or take backups. Treat
-  this as the most urgent thing on the whole list.
+  attendance, fees, placements, enquiries, and the six tables the public site now
+  reads from. Find the expiry date in the Render dashboard under `mop-careers-db`
+  and upgrade. Treat this as the most urgent thing on the whole list.
+  **`backup.ps1` at the repo root now exists and is tested** — it dumps any
+  database to a gitignored `backups/` folder and prints the matching
+  `pg_restore` command. Verified against the local database: 21 tables
+  captured. It does not remove the deadline, it makes lapsing survivable.
+  Backups are manual; schedule the command if the data starts to matter.
 - **Change `Teacher@123` and `Student@123`.** They are guessable and the site is on
   the public internet. Remove the demo accounts entirely before enrolment.
 - **SMTP is unconfigured**, so password resets and notifications only reach the Render

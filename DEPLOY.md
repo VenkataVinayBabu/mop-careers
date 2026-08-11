@@ -104,8 +104,31 @@ redeploys. Fixing this properly means either a paid Render Disk or moving
 uploads to object storage (S3, Cloudflare R2). Recordings and notes links are
 unaffected — only uploaded files.
 
-**The free database expires.** Render's free PostgreSQL is time-limited. Check
-the current terms and move to a paid plan before real data goes in.
+**The free database expires — and expiring means DELETED.** Render's free
+PostgreSQL is time-limited, and when it lapses the instance is removed, not
+suspended. That is every student, batch, attendance mark, fee, payment,
+placement and enquiry, plus the six tables the public website now reads from.
+Find the date in the dashboard under `mop-careers-db` and move to a paid plan
+before real data goes in.
+
+**Take a backup today, whichever plan you are on.** From the repo root:
+
+```powershell
+$env:BACKUP_DATABASE_URL = "<External Database URL from the Render dashboard>"
+.\backup.ps1
+```
+
+It writes a timestamped `pg_dump` custom-format file into `backups/`, which is
+gitignored — a dump holds every student record and every password hash, so it
+belongs on a drive or in cloud storage, never in the repo and never pasted into
+a chat. `.\backup.ps1 -Local` does the same for the development database.
+
+The script prints the exact `pg_restore` command for putting it back. Restore
+into an **empty** database: restoring over one that already has these tables
+fails on conflicts.
+
+Backups are manual. If the data starts to matter, put that command on a
+schedule rather than relying on remembering.
 
 **The free web service sleeps.** After a period of inactivity the backend spins
 down, so the first request afterwards takes 30–60 seconds. Fine for a demo,
