@@ -349,6 +349,10 @@ Python 3.13.2 · Node v22.17.0 (npm 10.9.2) · Git 2.50.1 · PostgreSQL 17.9
   - The live database was seeded from a laptop against Render's External Database URL,
     then the published `Admin@123` was replaced. **Admin@123 no longer works in
     production**; teacher and student demo passwords are unchanged.
+    **The user holds the current production admin password** (set through
+    Render). It is not a blocker and does not need recovering — do not raise
+    it as one. Note this also means forgot-password has never had to work in
+    production, which is a separate problem while SMTP is unconfigured.
 
 - **Public site rebuilt to a new design ✅ live.** MOP supplied the real logo and an
   AI-generated prototype (Emergent) as the design direction, of which the
