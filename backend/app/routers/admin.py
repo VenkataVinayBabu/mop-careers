@@ -6,7 +6,7 @@ from fastapi import APIRouter, Depends, HTTPException, Query, status
 from sqlalchemy import func, select
 from sqlalchemy.orm import Session, selectinload
 
-from app.curriculum import ensure_curriculum
+from app.curriculum import batch_total_days, ensure_curriculum
 from app.database import get_db
 from app.deps import get_student_or_404, require_admin
 from app.mail import send_new_account
@@ -19,6 +19,7 @@ from app.models import (
     CurriculumDay,
     Enquiry,
     Milestone,
+    Program,
     TeacherBatch,
     User,
 )
@@ -48,6 +49,7 @@ def _batch_out(db: Session, batch: Batch) -> BatchOut:
     )
     data = BatchOut.model_validate(batch)
     data.student_count = count or 0
+    data.total_days = batch_total_days(db, batch.id)
     data.teachers = [link.teacher for link in batch.teacher_links]  # type: ignore[misc]
     return data
 
@@ -68,10 +70,22 @@ def create_batch(payload: BatchCreate, db: Session = Depends(get_db)) -> BatchOu
     if db.scalar(select(Batch).where(func.lower(Batch.name) == payload.name.lower())):
         raise HTTPException(status.HTTP_409_CONFLICT, "A batch with that name already exists")
 
-    batch = Batch(**payload.model_dump())
+    data = payload.model_dump()
+    program = None
+    if data.get("program_id") is not None:
+        program = db.get(Program, data["program_id"])
+        if program is None:
+            raise HTTPException(status.HTTP_404_NOT_FOUND, "Programme not found")
+        # The course name is a snapshot of the programme's name at creation, so
+        # a later rename does not change what an issued certificate says.
+        data["course_type"] = program.name[:80]
+
+    batch = Batch(**data)
     db.add(batch)
-    db.flush()                      # assign batch.id before building curriculum
-    ensure_curriculum(db, batch.id)  # every batch starts with all 55 days
+    db.flush()                       # assign batch.id before building curriculum
+    # Days come from the programme's own template and day count. A batch with no
+    # programme falls back to matching the course name, then to blank days.
+    ensure_curriculum(db, batch)
     db.commit()
     db.refresh(batch)
     return _batch_out(db, batch)
@@ -94,6 +108,14 @@ def update_batch(
         )
         if clash:
             raise HTTPException(status.HTTP_409_CONFLICT, "A batch with that name already exists")
+
+    if updates.get("program_id") is not None:
+        program = db.get(Program, updates["program_id"])
+        if program is None:
+            raise HTTPException(status.HTTP_404_NOT_FOUND, "Programme not found")
+        # Moving a batch to another programme re-labels it; it does not rebuild
+        # its class days, which by now carry dates, recordings and attendance.
+        updates.setdefault("course_type", program.name[:80])
 
     for field, value in updates.items():
         setattr(batch, field, value)

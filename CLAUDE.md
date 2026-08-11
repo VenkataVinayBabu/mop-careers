@@ -18,11 +18,14 @@ marketing site (no auth) and an authenticated platform (admin / teacher / studen
 >
 > Jump to **"Open threads"** at the bottom — that is the live to-do list.
 >
-> **If you are starting fresh and want work to do**, the two with real substance
-> are **thread 6** (a Java batch still gets 55 days of Python topics — much more
-> tractable now programmes are a real table) and **object storage** in thread 1,
-> which unblocks photo uploads and stops notes PDFs vanishing on redeploy.
-> Everything else is either waiting on MOP or on a decision.
+> **Thread 6 is closed too.** A batch is now built from its programme's own
+> curriculum template and day count, so a Java batch no longer arrives holding
+> 55 days of Python topics. Nothing in the platform assumes 55 any more.
+>
+> **If you are starting fresh and want work to do**, the one item left with real
+> substance is **object storage** in thread 1, which unblocks photo uploads and
+> stops notes PDFs vanishing on redeploy. Everything else is either waiting on
+> MOP or on a decision.
 >
 > **Most urgent regardless:** the free database expiry in thread 5. `backup.ps1`
 > exists and is tested; a backup of production has not been taken.
@@ -94,9 +97,10 @@ emails a reset link. Forced password change on first login.
 ## Data model (core)
 
 - **User** — name, email, phone, role, password_hash, must_change_password, is_blocked, yoe_it (students)
-- **Batch** — name, course_type, start_date, status; **TeacherBatch** link table
+- **Batch** — name, course_type, program_id, start_date, status; **TeacherBatch** link table
 - **Student** belongs to one Batch
-- **CurriculumDay** — batch_id, day_number 1–55, topic, description, scheduled_date, status, recording_url, notes_file
+- **Program** — the public catalogue *and* the curriculum template: slug, name, published, `detail` (the page), plus `total_days` and `curriculum` (the day-by-day plan a new batch is built from)
+- **CurriculumDay** — batch_id, day_number, topic, description, scheduled_date, status, recording_url, notes_file. How many a batch has comes from its programme; the count itself is never stored
 - **Attendance** — student_id, curriculum_day_id, present
 - **FeeRecord** — student_id, total_fee; **FeePayment** — student_id, amount, date, mode (UPI/cash/bank)
 - **Company**; **Application** — student, company, role_title, status (applied/shortlisted/interviewing/offered/rejected/joined), package_lpa; **InterviewRound** — round_name, date, result, feedback
@@ -324,13 +328,10 @@ Python 3.13.2 · Node v22.17.0 (npm 10.9.2) · Git 2.50.1 · PostgreSQL 17.9
     hardcoded constant, so a Java student no longer receives a certificate naming
     Python. Verified by flipping a batch to Java and back.
 
-  **Still single-programme internally, and deliberately so:** `TOTAL_CURRICULUM_DAYS`
-  is a global 55, and `curriculum.py` seeds the Python day 1-11 topics into *every*
-  new batch regardless of course type. A Java batch created today gets 55 days of
-  Python topics. Making that per-course is the real multi-course work — it needs a
-  `Course` entity, per-course curriculum templates and a per-course day count, and it
-  was consciously deferred. The user also noted "every course is 45 days" for later;
-  the platform still assumes 55.
+  **Still single-programme internally, and deliberately so** at the time: a global
+  55 days and the Python day 1-11 topics seeded into every new batch whatever it
+  taught. **Fixed later** — see "Per-programme curriculum templates" at the end of
+  this log.
 
 - **UI pass — collapsible sidebar, student profile menu, progress report ✅.**
   - Sidebar collapses to an 80px icon rail on all three roles, with `lucide-react`
@@ -876,6 +877,81 @@ Python 3.13.2 · Node v22.17.0 (npm 10.9.2) · Git 2.50.1 · PostgreSQL 17.9
   and coloured suffix in their own spans, and the decimal place correctly
   derived. The animation itself was verified when `CountUp` was built.
 
+- **Per-programme curriculum templates ✅ — thread 6 is closed.** A batch is
+  built from its programme's own day-by-day plan and day count. **A Java batch
+  created today gets 45 Java days, not 55 Python ones.** 1 new migration, no
+  new tables (20 total, 9 migrations).
+  - `programs` gained `total_days` and `curriculum`; `batches` gained
+    `program_id`. `TOTAL_CURRICULUM_DAYS` is gone.
+  - **The template lives on the programme rather than in a second `Course`
+    table.** CLAUDE.md called for a `Course` entity, but the marketing
+    catalogue *is* MOP's course list — a separate one would be two lists that
+    have to agree, which is the trap the hiring partners and the statistics
+    were both in. Admin > Batches picks from the same eight programmes the
+    public site lists.
+  - **It is two columns, not keys inside `detail`.** The website editor
+    replaces `detail` wholesale, so a syllabus a live batch is taught from
+    would be one careless marketing edit away from being wiped.
+  - **The public payload does not carry it.** `ProgramOut` is unchanged and
+    `ProgramAdminOut` adds the two fields, so the ~40KB catalogue every visitor
+    downloads does not grow an internal training plan. `applyPrograms()` strips
+    both before anything reaches the public store's localStorage cache.
+  - **A batch's length is derived, never stored** — it is the number of
+    `curriculum_days` rows the batch has, the same reasoning as the fee balance.
+    That is what lets a 55-day legacy batch and a 45-day new one coexist with
+    nothing having to remember which is which. `batch_total_days()` is the one
+    way to ask.
+  - **Days are materialised once, at creation.** Editing a template changes
+    what the *next* batch starts from; a running batch keeps its days, dates,
+    recordings and attendance. Moving a batch to another programme re-labels it
+    and nothing else. `ensure_curriculum` only ever adds days — shortening a
+    batch would delete rows that may carry attendance.
+  - **`midpoint_day28` keeps its column name and lost its meaning.** The
+    halfway day is now `(total_days + 1) // 2` — 23 on a 45-day batch, and
+    still exactly 28 on a 55-day one. Renaming the column is a migration for no
+    behavioural gain.
+  - **`total_days` seeds to 45 for all eight**, which is what MOP publishes
+    ("45-day course + 45-day internship") and what the user stated. Only Python
+    Full Stack gets a template with real topics — days 1-11 from the brief, the
+    only day-by-day curriculum MOP has supplied. **The other seven are
+    deliberately empty**, so their batches get correctly-counted placeholder
+    days rather than somebody else's syllabus. Filling them in is a form at
+    Website > Programs, not a developer.
+  - A batch can still be created by typing a course name, which is matched
+    against the programme list — so "Python Full Stack" still gets the Python
+    outline — and falls back to 45 blank days when nothing matches.
+  - `DoubtCreate.related_day` was capped at 55. A programme can now be longer,
+    so it is bounded at 365 for sanity rather than to a course length.
+
+  **A bug this found, and the general lesson.** A topic of nothing but spaces
+  was **accepted, written to the database, and then 500'd on the way back out**.
+  `Field(min_length=1)` with a plain `@field_validator` runs the constraint
+  *before* the validator, so "   " passed min_length, trimmed to "", saved, and
+  failed against the response model. `mode="before"` on the trim is the fix.
+  **Any `min_length` field with an "after" trim validator has the same
+  shape** — several exist in `schemas.py` (`ProgramCreate.name` among them);
+  they do not 500 because nothing re-validates them on the way out, but they
+  will happily store a value shorter than the minimum.
+
+  Verification: **68/68 API assertions** — RBAC across anonymous, teacher and
+  student; the public/admin payload split; the seeded eight at 45 days with
+  Python's 11 and Java's none; a Java batch whose day 1 is *not* Python's; a
+  Python batch keeping days 1-11 and a placeholder day 12; creation by name,
+  by unmatched name, and a 404 for a missing programme; the seeded 55-day batch
+  untouched and linked by the migration; seven rejected payloads including a
+  day past the end, a duplicate day, day 0 and the whitespace topic that caused
+  the bug above, each confirmed to have written nothing; wholesale replacement;
+  raising the length and planning a day past the old one in one request; the
+  teacher summary, the student dashboard and the progress report all reporting
+  45; and the midpoint milestone stamping on day 23 rather than day 28. The
+  migration was applied, rolled back and re-applied. In the browser: the
+  programme picker with its live "creates 45 class days, the first 11 already
+  filled in" hint, a Java batch created through the real form showing 45
+  placeholder days in the teacher workspace, the curriculum editor's overrun
+  warning and the server's matching 422 both rendering, a topic typed in the
+  form appearing as day 1 of a batch created afterwards, and the public
+  programme page and its localStorage cache carrying neither field.
+
 ---
 
 ## Open threads
@@ -1038,14 +1114,26 @@ A shareable summary of all six roles was produced for Bala:
   site itself is CDN-served and does **not** sleep.
 - A test enquiry named **"Deploy Check"** may still be in Admin > Enquiries.
 
-### 6. Still single-programme internally
+### 6. Multi-programme internally — ✅ DONE
 
-`TOTAL_CURRICULUM_DAYS` is a global 55 and `curriculum.py` seeds the Python day 1-11
-topics into *every* new batch regardless of course type. **A Java batch created today
-gets 55 days of Python topics.** The public site advertises three programmes, so this
-is the gap between what is sold and what the platform does. Fixing it needs a `Course`
-entity, per-course curriculum templates and a per-course day count. The user also
-noted "every course is 45 days" for later.
+Every batch used to be built from one hardcoded 55-day Python outline, so a Java
+batch arrived holding 55 days of Python topics. A batch is now built from its
+programme's own template and day count, and nothing assumes 55.
+
+What is left here is **content, not code**: seven of the eight programmes have a
+day count (45) and no planned days, so their batches open as placeholders for the
+teacher. Filling one in is a form at **Admin > Website > Programs > [programme] >
+Class curriculum** — the same place the marketing syllabus is edited, in a section
+marked internal. It needs MOP's curriculum, which nobody has supplied yet.
+
+Two things worth knowing before touching it:
+
+- **45 is a seeded default, not a verified fact.** It matches what the public site
+  says and what the user stated, and every programme is almost certainly not the
+  same length. It is one field per programme.
+- **A batch's days are fixed at creation.** Correcting a template does not reach a
+  batch already running, by design — those rows carry dates, recordings and
+  attendance. A running batch is corrected day by day in the teacher workspace.
 
 ### 7. Phases 3 and 4 — no longer being built
 

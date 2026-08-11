@@ -20,7 +20,6 @@ from sqlalchemy.orm import selectinload
 from app.models import (
     DAY_COMPLETED,
     DAY_PENDING,
-    TOTAL_CURRICULUM_DAYS,
     Application,
     Attendance,
     Batch,
@@ -72,7 +71,7 @@ def _days_for(db: Session, student: User) -> list[CurriculumDay]:
 def my_curriculum(
     db: Session = Depends(get_db), student: User = Depends(require_student)
 ) -> list[StudentDayView]:
-    """All 55 days for the student's own batch, each with their own attendance."""
+    """Every class day of the student's own batch, each with their own attendance."""
     attendance = _own_attendance_map(db, student)
     out: list[StudentDayView] = []
     for day in _days_for(db, student):
@@ -139,7 +138,8 @@ def dashboard(
     return StudentDashboard(
         student_name=student.name,
         batch_name=batch.name if batch else None,
-        total_days=TOTAL_CURRICULUM_DAYS,
+        # The batch's own length — days already loaded, so nothing extra to ask.
+        total_days=len(days),
         classes_held=classes_held,
         classes_attended=attended,
         attendance_percent=round(attended / classes_held * 100, 1) if classes_held else 0.0,
@@ -200,10 +200,9 @@ def progress_report(
 
     attendance = _own_attendance_map(db, student)
 
+    all_days = _days_for(db, student)
     in_range = [
-        d
-        for d in _days_for(db, student)
-        if d.scheduled_date and from_date <= d.scheduled_date <= to_date
+        d for d in all_days if d.scheduled_date and from_date <= d.scheduled_date <= to_date
     ]
     held = [d for d in in_range if d.status == DAY_COMPLETED]
     present = sum(1 for d in held if attendance.get(d.id, False))
@@ -245,7 +244,7 @@ def progress_report(
         classes_absent=len(held) - present,
         attendance_percent=round(present / len(held) * 100, 1) if held else 0.0,
         topics_covered=len(held),
-        total_days=TOTAL_CURRICULUM_DAYS,
+        total_days=len(all_days),
         doubts_raised=len(doubts),
         doubts_answered=sum(1 for d in doubts if d.status == "answered"),
         doubts_open=sum(1 for d in doubts if d.status == "open"),

@@ -94,7 +94,17 @@ export default function AdminWebsitePrograms() {
                     {p.duration && ` · ${p.duration}`}
                   </p>
                   <p className="mt-1.5 line-clamp-2 text-sm text-navy-600">{p.summary}</p>
-                  <p className="mt-2 text-xs text-navy-400">{detailSummary(p.detail)}</p>
+                  <p className="mt-2 text-xs text-navy-400">
+                    {detailSummary(p.detail)}
+                    {' · '}
+                    {/* The training side, which is what a new batch is built
+                        from — invisible on the public site but the thing a
+                        wrongly-set day count would quietly break. */}
+                    {p.total_days} class days
+                    {(p.curriculum || []).length > 0
+                      ? `, ${p.curriculum.length} planned`
+                      : ', none planned'}
+                  </p>
                 </div>
 
                 <div className="flex shrink-0 items-center gap-1.5">

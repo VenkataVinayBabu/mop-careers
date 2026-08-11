@@ -8,27 +8,37 @@ Which milestones are automatic and which are admin-ticked:
     enrolled          auto - when the student account is created
     batch_assigned    auto - when the student is put into a batch
     batch_started     auto - when the batch status flips to "active"
-    midpoint_day28    auto - when day 28 of the batch is marked complete
-    course_completed  auto - when all 55 days of the batch are complete
+    midpoint_day28    auto - when the batch passes its own halfway day
+    course_completed  auto - when every day of the batch is complete
     internship        admin-ticked
     placement_ready   admin-ticked
     offer_received    admin-ticked
+
+`midpoint_day28` keeps its column name but no longer means day 28 specifically:
+the halfway point of a 45-day programme is day 23, and a batch's length now
+comes from the programme it was built from. Renaming the column is a migration
+for no behavioural gain, so it is documented instead.
 """
 from datetime import date
 
 from sqlalchemy import func, select
 from sqlalchemy.orm import Session
 
+from app.curriculum import batch_total_days
 from app.models import (
     DAY_COMPLETED,
     ROLE_STUDENT,
-    TOTAL_CURRICULUM_DAYS,
     CurriculumDay,
     Milestone,
     User,
 )
 
-MIDPOINT_DAY = 28
+
+def midpoint_day(total_days: int) -> int:
+    """The day that counts as halfway. Rounds up, so a 45-day batch reaches its
+    midpoint on day 23 and a 55-day one on day 28 — the number this used to be
+    hardcoded to."""
+    return max(1, (total_days + 1) // 2)
 
 
 def get_or_create_milestone(db: Session, student_id: int) -> Milestone:
@@ -56,8 +66,9 @@ def sync_curriculum_milestones(db: Session, batch_id: int) -> None:
     if not completed_numbers:
         return
 
-    midpoint_done = MIDPOINT_DAY in completed_numbers
-    course_done = len(completed_numbers) >= TOTAL_CURRICULUM_DAYS
+    total = batch_total_days(db, batch_id)
+    midpoint_done = midpoint_day(total) in completed_numbers
+    course_done = total > 0 and len(completed_numbers) >= total
 
     if not (midpoint_done or course_done):
         return

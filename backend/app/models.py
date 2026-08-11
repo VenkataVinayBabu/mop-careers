@@ -38,7 +38,12 @@ BATCH_UPCOMING = "upcoming"
 BATCH_ACTIVE = "active"
 BATCH_COMPLETED = "completed"
 
-TOTAL_CURRICULUM_DAYS = 55
+# How many class days a batch gets when nothing says otherwise. Each programme
+# carries its own `total_days`, and a batch's real length is the number of
+# curriculum_days rows it actually has — never a constant, so a 45-day Java
+# batch and a 55-day legacy Python batch can coexist. This is only the fallback
+# for a batch created without a programme.
+DEFAULT_CURRICULUM_DAYS = 45
 
 # --- Phase 2 vocabularies -------------------------------------------------
 PAYMENT_MODES = ("UPI", "cash", "bank")
@@ -137,7 +142,16 @@ class Batch(Base):
 
     id: Mapped[int] = mapped_column(Integer, primary_key=True)
     name: Mapped[str] = mapped_column(String(120), unique=True, nullable=False)
+    # The programme name as it stood when the batch was created — a snapshot,
+    # not a lookup. Renaming a programme must not silently rename the course on
+    # a certificate already issued from this batch.
     course_type: Mapped[str] = mapped_column(String(80), default="Python Full Stack", nullable=False)
+    # Which programme's curriculum template this batch was built from. Kept for
+    # provenance only: the days are materialised at creation, so a batch keeps
+    # working if the programme is later edited or deleted (hence SET NULL).
+    program_id: Mapped[int | None] = mapped_column(
+        ForeignKey("programs.id", ondelete="SET NULL"), index=True
+    )
     start_date: Mapped[date | None] = mapped_column(Date)
     status: Mapped[str] = mapped_column(String(20), default=BATCH_UPCOMING, nullable=False)
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
@@ -151,6 +165,7 @@ class Batch(Base):
     curriculum_days: Mapped[list[CurriculumDay]] = relationship(
         back_populates="batch", cascade="all, delete-orphan", order_by="CurriculumDay.day_number"
     )
+    program: Mapped[Program | None] = relationship()
 
 
 class TeacherBatch(Base):
@@ -550,6 +565,19 @@ class Program(Base):
     # section with no data does not render at all, so a programme can be
     # published with nothing but the basics and filled in over time.
     detail: Mapped[dict] = mapped_column(JSON, default=dict, nullable=False)
+
+    # --- the training side, which the public site never sees -------------
+    # How many class days a batch of this programme runs for, and the day-by-day
+    # plan it starts from: [{day_number, topic, description}]. Sparse — only the
+    # days somebody has actually written; the rest are created as editable
+    # placeholders. Separate columns rather than keys inside `detail` on
+    # purpose: the website editor replaces `detail` wholesale, and someone
+    # correcting marketing copy must not be able to wipe the syllabus a live
+    # batch is taught from.
+    total_days: Mapped[int] = mapped_column(
+        Integer, default=DEFAULT_CURRICULUM_DAYS, nullable=False
+    )
+    curriculum: Mapped[list] = mapped_column(JSON, default=list, nullable=False)
 
     sort_order: Mapped[int] = mapped_column(Integer, default=0, nullable=False, index=True)
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())

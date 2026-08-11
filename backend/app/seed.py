@@ -13,7 +13,7 @@ from sqlalchemy import delete, func, select
 from sqlalchemy.orm import Session
 
 from app.config import NOTES_DIR
-from app.curriculum import ensure_curriculum
+from app.curriculum import batch_total_days, ensure_curriculum
 from app.database import SessionLocal
 from app.models import (
     BATCH_ACTIVE,
@@ -375,9 +375,13 @@ def seed(reset: bool = False) -> None:
         batch.status = BATCH_ACTIVE
         db.flush()
 
-        ensure_curriculum(db, batch.id)
+        # Days come from the Python Full Stack programme's template, matched on
+        # the course name above — so the demo batch still opens with the day
+        # 1-11 topics from the brief, and its length is whatever that
+        # programme says rather than a constant.
+        ensure_curriculum(db, batch)
         db.flush()
-        print(f"  Batch:   {batch.name} (55 curriculum days)")
+        print(f"  Batch:   {batch.name} ({batch_total_days(db, batch.id)} curriculum days)")
 
         # --- teacher ------------------------------------------------------
         teacher = upsert_user(db, name=TEACHER["name"], email=TEACHER["email"],

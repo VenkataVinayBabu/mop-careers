@@ -10,6 +10,7 @@ from sqlalchemy import func, select
 from sqlalchemy.orm import Session
 
 from app.config import NOTES_DIR
+from app.curriculum import batch_total_days
 from app.database import get_db
 from app.deps import assert_batch_access, require_staff, teacher_batch_ids
 from app.milestones import sync_curriculum_milestones
@@ -17,7 +18,6 @@ from app.models import (
     DAY_COMPLETED,
     ROLE_ADMIN,
     ROLE_STUDENT,
-    TOTAL_CURRICULUM_DAYS,
     Attendance,
     Batch,
     CurriculumDay,
@@ -70,6 +70,7 @@ def my_batches(
                 User.batch_id == batch.id, User.role == ROLE_STUDENT
             )
         ) or 0
+        data.total_days = batch_total_days(db, batch.id)
         data.teachers = [
             TeacherBrief.model_validate(link.teacher) for link in batch.teacher_links
         ]
@@ -274,7 +275,7 @@ def batch_summary(
     return BatchSummary(
         batch_id=batch.id,
         batch_name=batch.name,
-        total_days=TOTAL_CURRICULUM_DAYS,
+        total_days=batch_total_days(db, batch_id),
         completed_days=completed,
         student_count=student_count,
         average_attendance=average,

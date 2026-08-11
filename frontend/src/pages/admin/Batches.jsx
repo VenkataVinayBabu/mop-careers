@@ -13,36 +13,58 @@ import {
 } from '../../components/ui';
 import { formatDate } from '../../constants';
 
-const BLANK = { name: '', course_type: 'Python Full Stack', start_date: '', status: 'upcoming' };
+const BLANK = { name: '', course_type: '', start_date: '', status: 'upcoming' };
 
-function BatchForm({ initial, onClose, onSaved }) {
+// The value the programme picker uses for "none of these" — an empty string
+// would be indistinguishable from "nothing chosen yet" on a select.
+const OTHER = 'other';
+
+function BatchForm({ initial, programs, onClose, onSaved }) {
   const toast = useToast();
   const editing = Boolean(initial?.id);
   const [form, setForm] = useState({
     name: initial?.name || BLANK.name,
+    program_id: initial?.program_id ? String(initial.program_id) : editing ? OTHER : '',
     course_type: initial?.course_type || BLANK.course_type,
     start_date: initial?.start_date || '',
     status: initial?.status || BLANK.status,
   });
   const [saving, setSaving] = useState(false);
 
+  const chosen = programs.find((p) => String(p.id) === form.program_id) || null;
+  const planned = chosen ? chosen.curriculum.length : 0;
+
   const save = async () => {
     if (form.name.trim().length < 2) {
       toast.error('Batch name must be at least 2 characters.');
       return;
     }
+    if (!form.program_id) {
+      toast.error('Pick the programme this batch is running.');
+      return;
+    }
+    if (form.program_id === OTHER && !form.course_type.trim()) {
+      toast.error('Give the course a name.');
+      return;
+    }
     setSaving(true);
     try {
+      // With a programme chosen the course name comes from it, so it is left
+      // out of the body rather than sent as a second version of the same fact.
       const body = {
         name: form.name.trim(),
-        course_type: form.course_type.trim(),
         start_date: form.start_date || null,
         status: form.status,
+        ...(form.program_id === OTHER
+          ? { program_id: null, course_type: form.course_type.trim() }
+          : { program_id: Number(form.program_id) }),
       };
       const { data } = editing
         ? await api.patch(`/admin/batches/${initial.id}`, body)
         : await api.post('/admin/batches', body);
-      toast.success(editing ? 'Batch updated.' : 'Batch created with all 55 curriculum days.');
+      toast.success(
+        editing ? 'Batch updated.' : `Batch created with ${data.total_days} class days.`,
+      );
       onSaved(data);
       onClose();
     } catch (err) {
@@ -83,15 +105,50 @@ function BatchForm({ initial, onClose, onSaved }) {
           />
         </div>
         <div>
-          <label className="label" htmlFor="course">
-            Course type
+          <label className="label" htmlFor="program">
+            Programme
           </label>
-          <input
-            id="course"
+          <select
+            id="program"
             className="input"
-            value={form.course_type}
-            onChange={(e) => setForm({ ...form, course_type: e.target.value })}
-          />
+            value={form.program_id}
+            onChange={(e) => setForm({ ...form, program_id: e.target.value })}
+          >
+            <option value="">Select a programme…</option>
+            {programs.map((p) => (
+              <option key={p.id} value={p.id}>
+                {p.name} · {p.total_days} days
+              </option>
+            ))}
+            <option value={OTHER}>Something else — type the name</option>
+          </select>
+          {form.program_id === OTHER ? (
+            <input
+              className="input mt-2"
+              placeholder="Course name"
+              value={form.course_type}
+              onChange={(e) => setForm({ ...form, course_type: e.target.value })}
+            />
+          ) : null}
+          {/* What choosing this actually does, said before they click Create
+              rather than discovered afterwards in the workspace. */}
+          {editing ? (
+            <p className="mt-1.5 text-xs text-navy-400">
+              Changing this re-labels the batch. Its class days stay exactly as they are —
+              they already carry dates, recordings and attendance.
+            </p>
+          ) : chosen ? (
+            <p className="mt-1.5 text-xs text-navy-400">
+              Creates {chosen.total_days} class days
+              {planned > 0
+                ? `, the first ${planned} already filled in from this programme's curriculum.`
+                : '. No curriculum has been written for this programme yet, so every day starts as a placeholder for the teacher to fill in.'}
+            </p>
+          ) : form.program_id === OTHER ? (
+            <p className="mt-1.5 text-xs text-navy-400">
+              45 placeholder class days, since there is no programme to take a curriculum from.
+            </p>
+          ) : null}
         </div>
         <div className="grid gap-4 sm:grid-cols-2">
           <div>
@@ -237,6 +294,7 @@ export default function AdminBatches() {
   const toast = useToast();
   const [batches, setBatches] = useState([]);
   const [teachers, setTeachers] = useState([]);
+  const [programs, setPrograms] = useState([]);
   const [creating, setCreating] = useState(false);
   const [editing, setEditing] = useState(null);
   const [assigning, setAssigning] = useState(null);
@@ -247,12 +305,16 @@ export default function AdminBatches() {
     setLoading(true);
     setError('');
     try {
-      const [b, t] = await Promise.all([
+      const [b, t, p] = await Promise.all([
         api.get('/admin/batches'),
         api.get('/admin/users', { params: { role: 'teacher' } }),
+        // The catalogue is where curriculum templates live, so it is what a
+        // new batch is built from.
+        api.get('/admin/website/programs'),
       ]);
       setBatches(b.data);
       setTeachers(t.data);
+      setPrograms(p.data);
     } catch (err) {
       setError(errorMessage(err));
     } finally {
@@ -283,7 +345,7 @@ export default function AdminBatches() {
     <div>
       <PageHeader
         title="Batches"
-        subtitle="Each new batch is created with all 55 curriculum days"
+        subtitle="A new batch starts from its programme's curriculum template"
         action={
           <button type="button" onClick={() => setCreating(true)} className="btn-cta">
             New batch
@@ -322,7 +384,9 @@ export default function AdminBatches() {
                   <tr key={b.id}>
                     <td className="td">
                       <p className="font-semibold text-navy">{b.name}</p>
-                      <p className="text-xs text-navy-400">{b.course_type}</p>
+                      <p className="text-xs text-navy-400">
+                        {b.course_type} · {b.total_days} days
+                      </p>
                     </td>
                     <td className="td">{formatDate(b.start_date) || '—'}</td>
                     <td className="td">
@@ -374,9 +438,16 @@ export default function AdminBatches() {
         </div>
       )}
 
-      {creating && <BatchForm onClose={() => setCreating(false)} onSaved={load} />}
+      {creating && (
+        <BatchForm programs={programs} onClose={() => setCreating(false)} onSaved={load} />
+      )}
       {editing && (
-        <BatchForm initial={editing} onClose={() => setEditing(null)} onSaved={load} />
+        <BatchForm
+          initial={editing}
+          programs={programs}
+          onClose={() => setEditing(null)}
+          onSaved={load}
+        />
       )}
       {assigning && (
         <AssignTeacherModal

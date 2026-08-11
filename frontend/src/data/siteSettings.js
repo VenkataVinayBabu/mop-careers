@@ -318,7 +318,14 @@ export function applySiteSettings(row) {
 export const applyMentors = (rows) => mentorsStore.apply(rows);
 export const applyStories = (rows) => storiesStore.apply(rows);
 export const applyPartners = (rows) => partnersStore.apply(rows);
-export const applyPrograms = (rows) => programsStore.apply(rows);
+/* The admin screens hand this the admin payload, which carries the internal
+   curriculum template as well. Dropped here rather than at each call site:
+   this is the boundary into the public store, and the template has no business
+   in the cache the marketing site paints from. */
+export const applyPrograms = (rows) =>
+  programsStore.apply(
+    rows.map(({ total_days: _t, curriculum: _c, ...publicFields }) => publicFields),
+  );
 export const applyStatistics = (rows) => statsStore.apply(rows);
 
 /* Once per page load. Several public pages ask for the refresh (whichever one

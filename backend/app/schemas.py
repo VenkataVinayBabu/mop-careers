@@ -6,6 +6,11 @@ from typing import Annotated, Literal
 
 from pydantic import BaseModel, ConfigDict, EmailStr, Field, field_validator, model_validator
 
+# The only thing this module takes from the ORM layer, and it is taken rather
+# than copied: a default day count written out twice is two numbers that can
+# drift apart.
+from app.models import DEFAULT_CURRICULUM_DAYS
+
 Role = Literal["admin", "teacher", "student"]
 BatchStatus = Literal["upcoming", "active", "completed"]
 DayStatus = Literal["pending", "completed"]
@@ -99,6 +104,10 @@ class BlockToggleRequest(BaseModel):
 # --- batches --------------------------------------------------------------
 class BatchCreate(BaseModel):
     name: str = Field(min_length=2, max_length=120)
+    # Which programme's curriculum template to build the batch's days from.
+    # Optional: a batch can still be created by typing a course name, which is
+    # matched against the programme list, and falls back to blank days.
+    program_id: int | None = None
     course_type: str = Field(default="Python Full Stack", max_length=80)
     start_date: date | None = None
     status: BatchStatus = "upcoming"
@@ -106,6 +115,10 @@ class BatchCreate(BaseModel):
 
 class BatchUpdate(BaseModel):
     name: str | None = Field(default=None, min_length=2, max_length=120)
+    # Changing this re-points the label, not the days: a batch's class days are
+    # built once and then belong to the batch. Moving a running batch onto a
+    # different programme's syllabus would orphan its attendance.
+    program_id: int | None = None
     course_type: str | None = Field(default=None, max_length=80)
     start_date: date | None = None
     status: BatchStatus | None = None
@@ -121,9 +134,14 @@ class BatchOut(ORMModel):
     id: int
     name: str
     course_type: str
+    program_id: int | None = None
     start_date: date | None = None
     status: BatchStatus
     student_count: int = 0
+    # How long this batch actually is — counted from its class days rather than
+    # assumed, because batches created before per-programme lengths are 55 days
+    # and new ones follow their programme.
+    total_days: int = 0
     teachers: list[TeacherBrief] = []
 
 
@@ -450,7 +468,10 @@ class EnquiryStatusUpdate(BaseModel):
 
 class DoubtCreate(BaseModel):
     query_type: DoubtType
-    related_day: int | None = Field(default=None, ge=1, le=55)
+    # Bounded to keep nonsense out, not to a course length: batches no longer
+    # all run 55 days, and a student raising a doubt about day 60 of a long
+    # programme must not be turned away by a constant.
+    related_day: int | None = Field(default=None, ge=1, le=365)
     description: str = Field(min_length=5, max_length=4000)
 
 
@@ -961,7 +982,48 @@ class ProgramDetail(BaseModel):
     fees: ProgramFees | None = None
 
 
+class CurriculumTemplateDay(BaseModel):
+    """One planned class day of a programme.
+
+    The template is sparse — only the days somebody has actually written. Every
+    other day of the batch is created as an editable placeholder, which is how
+    days 12-55 have always worked.
+    """
+
+    day_number: int = Field(ge=1, le=365)
+    topic: str = Field(min_length=1, max_length=200)
+    description: str = Field(default="", max_length=1000)
+
+    # `mode="before"` matters here. An "after" validator runs *after* the
+    # length constraints, so a topic of three spaces satisfies min_length=1,
+    # gets trimmed to nothing, and is stored — then fails on the way back out
+    # as a 500 with the row already written. Trimming first makes min_length
+    # mean what it looks like it means.
+    @field_validator("topic", "description", mode="before")
+    @classmethod
+    def _trim(cls, v: object) -> object:
+        return v.strip() if isinstance(v, str) else v
+
+
+def _clean_template(days: list[CurriculumTemplateDay]) -> list[CurriculumTemplateDay]:
+    """Reject duplicate day numbers and keep the list in day order.
+
+    Two entries for day 3 is a form mistake with no sensible resolution — one
+    of them would silently win — so it is a 422 rather than a guess.
+    """
+    seen: set[int] = set()
+    for day in days:
+        if day.day_number in seen:
+            raise ValueError(f"Day {day.day_number} appears more than once")
+        seen.add(day.day_number)
+    return sorted(days, key=lambda d: d.day_number)
+
+
 class ProgramOut(ORMModel):
+    """The public shape. Deliberately carries no curriculum template: that is
+    the internal training plan, it is not on the marketing page, and the
+    catalogue is served to every visitor in one request."""
+
     id: int
     slug: str
     name: str
@@ -978,6 +1040,13 @@ class ProgramOut(ORMModel):
     published: bool = True
     detail: ProgramDetail = ProgramDetail()
     sort_order: int = 0
+
+
+class ProgramAdminOut(ProgramOut):
+    """What the admin screens see: the public programme plus its training plan."""
+
+    total_days: int = DEFAULT_CURRICULUM_DAYS
+    curriculum: list[CurriculumTemplateDay] = []
 
 
 def _slugify(value: str) -> str:
@@ -1009,6 +1078,13 @@ class ProgramCreate(BaseModel):
     confirmed: bool = True
     published: bool = True
     detail: ProgramDetail = Field(default_factory=ProgramDetail)
+    total_days: int = Field(default=DEFAULT_CURRICULUM_DAYS, ge=1, le=365)
+    curriculum: list[CurriculumTemplateDay] = Field(default_factory=list, max_length=365)
+
+    @field_validator("curriculum")
+    @classmethod
+    def _order_template(cls, v: list[CurriculumTemplateDay]) -> list[CurriculumTemplateDay]:
+        return _clean_template(v)
 
     @field_validator("name", "category", "badge", "duration", "ctc_avg", "ctc_high",
                      "summary", "for_whom")
@@ -1054,6 +1130,17 @@ class ProgramUpdate(BaseModel):
     confirmed: bool | None = None
     published: bool | None = None
     detail: ProgramDetail | None = None
+    total_days: int | None = Field(default=None, ge=1, le=365)
+    # Replaced wholesale when sent, the same way `detail` is. Merging one
+    # syllabus into another is not something anyone means to do.
+    curriculum: list[CurriculumTemplateDay] | None = Field(default=None, max_length=365)
+
+    @field_validator("curriculum")
+    @classmethod
+    def _order_template(
+        cls, v: list[CurriculumTemplateDay] | None
+    ) -> list[CurriculumTemplateDay] | None:
+        return _clean_template(v) if v is not None else None
 
     @field_validator("name", "category", "badge", "duration", "ctc_avg", "ctc_high",
                      "summary", "for_whom")

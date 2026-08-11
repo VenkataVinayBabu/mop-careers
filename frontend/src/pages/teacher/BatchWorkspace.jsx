@@ -383,7 +383,10 @@ export default function BatchWorkspace() {
 
       <PageHeader
         title={summary?.batch_name || 'Batch'}
-        subtitle={`${summary?.completed_days ?? 0} of ${summary?.total_days ?? 55} classes completed`}
+        /* No hardcoded fallback for the length any more: batches differ, and
+           guessing 55 would print a wrong number for a moment on every 45-day
+           batch. An em dash until the summary lands says nothing false. */
+        subtitle={`${summary?.completed_days ?? 0} of ${summary?.total_days ?? '—'} classes completed`}
       />
 
       <div className="mb-6 grid grid-cols-2 gap-4 lg:grid-cols-4">
@@ -391,7 +394,7 @@ export default function BatchWorkspace() {
         <StatCard
           label="Classes done"
           value={summary?.completed_days ?? 0}
-          suffix={`/ ${summary?.total_days ?? 55}`}
+          suffix={`/ ${summary?.total_days ?? '—'}`}
           tone="teal"
         />
         <StatCard
@@ -403,11 +406,11 @@ export default function BatchWorkspace() {
         <div className="card p-5">
           <p className="text-xs font-semibold uppercase tracking-wide text-navy-400">Progress</p>
           <p className="mt-2 text-3xl font-bold text-navy">
-            {Math.round(((summary?.completed_days ?? 0) / (summary?.total_days || 55)) * 100)}
+            {Math.round(((summary?.completed_days ?? 0) / (summary?.total_days || 1)) * 100)}
             <span className="text-lg text-navy-300">%</span>
           </p>
           <div className="mt-3">
-            <ProgressBar value={summary?.completed_days ?? 0} max={summary?.total_days || 55} />
+            <ProgressBar value={summary?.completed_days ?? 0} max={summary?.total_days || 1} />
           </div>
         </div>
       </div>

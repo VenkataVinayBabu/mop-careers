@@ -29,8 +29,8 @@ from app.schemas import (
     MentorOut,
     MentorUpdate,
     MessageResponse,
+    ProgramAdminOut,
     ProgramCreate,
-    ProgramOut,
     ProgramUpdate,
     ReorderRequest,
     SiteSettingsAdmin,
@@ -254,24 +254,43 @@ def _assert_slug_free(db: Session, slug: str, ignore_id: int | None = None) -> N
         )
 
 
-@router.get("/programs", response_model=list[ProgramOut])
+def _assert_template_fits(curriculum: list[dict], total_days: int) -> None:
+    """A planned day past the end of the programme would never be built into a
+    batch. Silently dropping it is the kind of thing nobody notices until a
+    class is missing, so it is refused."""
+    over = [
+        d["day_number"]
+        for d in curriculum
+        if isinstance(d, dict) and isinstance(d.get("day_number"), int)
+        and d["day_number"] > total_days
+    ]
+    if over:
+        raise HTTPException(
+            status.HTTP_422_UNPROCESSABLE_CONTENT,
+            f"This programme runs for {total_days} days, so day "
+            f"{over[0]} cannot be planned. Raise the length or move the day.",
+        )
+
+
+@router.get("/programs", response_model=list[ProgramAdminOut])
 def list_programs(db: Session = Depends(get_db)) -> list[Program]:
     return ordered(db, Program)
 
 
-@router.post("/programs", response_model=ProgramOut, status_code=status.HTTP_201_CREATED)
+@router.post("/programs", response_model=ProgramAdminOut, status_code=status.HTTP_201_CREATED)
 def create_program(
     payload: ProgramCreate, db: Session = Depends(get_db), admin: User = Depends(require_admin)
 ) -> Program:
     _assert_slug_free(db, payload.slug)
     data = payload.model_dump()
     data["detail"] = payload.detail.model_dump()
+    _assert_template_fits(data["curriculum"], data["total_days"])
     return _save_new(
         db, Program(**data, sort_order=next_sort_order(db, Program)), admin, "Program"
     )
 
 
-@router.put("/programs/{program_id}", response_model=ProgramOut)
+@router.put("/programs/{program_id}", response_model=ProgramAdminOut)
 def update_program(
     program_id: int,
     payload: ProgramUpdate,
@@ -283,9 +302,19 @@ def update_program(
 
     if "slug" in changes:
         _assert_slug_free(db, changes["slug"], ignore_id=program.id)
-    # The detail block is one document: replaced wholesale, never merged.
+    # The detail block is one document: replaced wholesale, never merged. The
+    # curriculum template is the same — half a syllabus merged into another is
+    # not something anyone means to do.
     if "detail" in changes and payload.detail is not None:
         changes["detail"] = payload.detail.model_dump()
+
+    # Checked against the merged pair, not the payload: raising the day count
+    # and adding a day that needs it can arrive in one request, and either half
+    # on its own is valid.
+    _assert_template_fits(
+        changes.get("curriculum", program.curriculum or []),
+        changes.get("total_days", program.total_days),
+    )
 
     for key, value in changes.items():
         setattr(program, key, value)
@@ -303,7 +332,7 @@ def delete_program(
     return _remove(db, get_or_404(db, Program, program_id, "Program"), admin, "Program")
 
 
-@router.post("/programs/reorder", response_model=list[ProgramOut])
+@router.post("/programs/reorder", response_model=list[ProgramAdminOut])
 def reorder_programs(
     payload: ReorderRequest, db: Session = Depends(get_db), admin: User = Depends(require_admin)
 ) -> list[Program]:
