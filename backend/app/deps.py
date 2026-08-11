@@ -5,7 +5,17 @@ from sqlalchemy import select
 from sqlalchemy.orm import Session
 
 from app.database import get_db
-from app.models import ROLE_ADMIN, ROLE_STUDENT, ROLE_TEACHER, ROLE_VIEWER, TeacherBatch, User
+from app.models import (
+    ROLE_ADMIN,
+    ROLE_CONTRIBUTOR,
+    ROLE_MEMBER,
+    ROLE_STUDENT,
+    ROLE_TEACHER,
+    ROLE_VIEWER,
+    ROLES_PUBLISH_DIRECTLY,
+    TeacherBatch,
+    User,
+)
 from app.security import decode_access_token
 
 bearer_scheme = HTTPBearer(auto_error=False)
@@ -81,10 +91,47 @@ def require_staff(user: User = Depends(get_active_user)) -> User:
 
 
 def require_viewer(user: User = Depends(get_active_user)) -> User:
-    """The read-only coordinator view. Admins are allowed through so they can
-    see exactly what a viewer sees without a second account."""
-    if user.role not in (ROLE_ADMIN, ROLE_VIEWER):
+    """The read-only coordinator view. Admins and members are allowed through:
+    admins can do everything, and a member's remit includes watching which
+    classes are missing recordings."""
+    if user.role not in (ROLE_ADMIN, ROLE_VIEWER, ROLE_MEMBER):
         raise HTTPException(status.HTTP_403_FORBIDDEN, "Viewer access required")
+    return user
+
+
+def require_member(user: User = Depends(get_active_user)) -> User:
+    """Approving website changes, and everything else a member sees that a
+    contributor does not. Admins included — Bala sits above a member."""
+    if user.role not in (ROLE_ADMIN, ROLE_MEMBER):
+        raise HTTPException(status.HTTP_403_FORBIDDEN, "Member access required")
+    return user
+
+
+def require_publisher(user: User = Depends(get_active_user)) -> User:
+    """May change the live public website directly.
+
+    Deliberately excludes contributors: their edits go to the approval queue
+    instead. This guard is what makes that true rather than a convention — a
+    contributor calling the direct endpoint gets a 403, not a silent publish.
+    """
+    if user.role not in ROLES_PUBLISH_DIRECTLY:
+        raise HTTPException(
+            status.HTTP_403_FORBIDDEN,
+            "Your changes need to be approved — submit them for review instead",
+        )
+    return user
+
+
+def require_website_editor(user: User = Depends(get_active_user)) -> User:
+    """May work on public website content at all.
+
+    Note this is not permission to *publish*: a contributor passes this guard
+    and still cannot change the live site, because their edits go through the
+    approval queue rather than the direct endpoints. See
+    `ROLES_PUBLISH_DIRECTLY`.
+    """
+    if user.role not in (ROLE_ADMIN, ROLE_MEMBER, ROLE_CONTRIBUTOR):
+        raise HTTPException(status.HTTP_403_FORBIDDEN, "Website access required")
     return user
 
 

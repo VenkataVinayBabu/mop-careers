@@ -33,7 +33,40 @@ ROLE_STUDENT = "student"
 # classes have been taught and whether the recording and notes were uploaded —
 # so they can chase the teacher who has not. Writes nothing, anywhere.
 ROLE_VIEWER = "viewer"
-ROLES = (ROLE_ADMIN, ROLE_TEACHER, ROLE_STUDENT, ROLE_VIEWER)
+# Edits the public website, but nothing they save goes live: it becomes a
+# pending change for a member to approve. Also onboards students and teachers,
+# runs the class schedule and keeps placement records — all of which apply
+# immediately. Never sees fees.
+ROLE_CONTRIBUTOR = "contributor"
+# Approves or rejects what a contributor submitted, with feedback the
+# contributor can read. Everything a contributor can do, plus fees, enquiries
+# and the coordinator's follow-up screens.
+ROLE_MEMBER = "member"
+ROLES = (
+    ROLE_ADMIN,
+    ROLE_TEACHER,
+    ROLE_STUDENT,
+    ROLE_VIEWER,
+    ROLE_CONTRIBUTOR,
+    ROLE_MEMBER,
+)
+
+# Who may change the public website without anybody else's say-so. A
+# contributor is deliberately absent — that is the entire point of the role.
+ROLES_PUBLISH_DIRECTLY = (ROLE_ADMIN, ROLE_MEMBER)
+
+# --- website change requests ---------------------------------------------
+CHANGE_PENDING = "pending"
+CHANGE_APPROVED = "approved"
+CHANGE_REJECTED = "rejected"
+CHANGE_WITHDRAWN = "withdrawn"
+CHANGE_STATUSES = (CHANGE_PENDING, CHANGE_APPROVED, CHANGE_REJECTED, CHANGE_WITHDRAWN)
+
+CHANGE_CREATE = "create"
+CHANGE_UPDATE = "update"
+CHANGE_DELETE = "delete"
+CHANGE_REORDER = "reorder"
+CHANGE_ACTIONS = (CHANGE_CREATE, CHANGE_UPDATE, CHANGE_DELETE, CHANGE_REORDER)
 
 DAY_PENDING = "pending"
 DAY_COMPLETED = "completed"
@@ -685,6 +718,68 @@ class Statistic(Base):
     updated_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True), server_default=func.now(), onupdate=func.now()
     )
+
+
+class WebsiteChange(Base):
+    """One edit to the public site, waiting for somebody to approve it.
+
+    THE SHAPE, because this is the decision worth arguing about. A contributor's
+    save must not reach the live tables, so the proposal has to live somewhere
+    else until it is approved. The alternatives were shadow `draft_*` columns on
+    every content table — which doubles every column and still cannot express
+    "create this row" or "delete that one" — or this: one table describing the
+    intended change.
+
+        entity     which content type ('mentor', 'program', 'settings', …)
+        entity_id  which row, or NULL when the change is to create one
+        action     create / update / delete / reorder
+        payload    the proposed values, exactly as the form submitted them
+
+    That covers creates, updates, deletes and reordering in one shape, leaves
+    the live tables untouched, and leaves an audit trail of who asked for what
+    and who allowed it — which a shadow column could never do.
+
+    The payload is validated against the same Pydantic schema the direct
+    endpoint uses, at submit time, so a contributor hears about a bad value
+    immediately rather than a member discovering it at approval.
+    """
+
+    __tablename__ = "website_changes"
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True)
+    entity: Mapped[str] = mapped_column(String(20), nullable=False, index=True)
+    entity_id: Mapped[int | None] = mapped_column(Integer)
+    action: Mapped[str] = mapped_column(String(10), nullable=False)
+    payload: Mapped[dict] = mapped_column(JSON, default=dict, nullable=False)
+    # A human label for the queue — "Mentor: Priya Sharma" — worked out at
+    # submit time. Stored rather than derived because the row it describes may
+    # be gone by the time anyone reads the history.
+    summary: Mapped[str] = mapped_column(String(200), default="", nullable=False)
+
+    status: Mapped[str] = mapped_column(
+        String(12), default=CHANGE_PENDING, nullable=False, index=True
+    )
+    # Names are kept alongside the ids for the same reason the chase log keeps
+    # them: deleting an account must not erase who asked for a change.
+    submitted_by_id: Mapped[int | None] = mapped_column(
+        ForeignKey("users.id", ondelete="SET NULL"), index=True
+    )
+    submitted_by_name: Mapped[str] = mapped_column(String(120), default="", nullable=False)
+    submitted_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), server_default=func.now(), nullable=False
+    )
+
+    reviewed_by_id: Mapped[int | None] = mapped_column(
+        ForeignKey("users.id", ondelete="SET NULL")
+    )
+    reviewed_by_name: Mapped[str] = mapped_column(String(120), default="", nullable=False)
+    reviewed_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
+    # The member's note back to the contributor. The point of rejecting rather
+    # than silently discarding: "the fee figure is out of date, check with Bala".
+    feedback: Mapped[str] = mapped_column(Text, default="", nullable=False)
+
+    submitted_by: Mapped[User | None] = relationship(foreign_keys=[submitted_by_id])
+    reviewed_by: Mapped[User | None] = relationship(foreign_keys=[reviewed_by_id])
 
 
 class PasswordResetToken(Base):

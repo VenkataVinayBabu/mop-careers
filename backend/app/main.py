@@ -17,6 +17,7 @@ from app.routers import (
     teacher,
     viewer,
     website,
+    website_changes,
 )
 
 logging.basicConfig(
@@ -43,6 +44,7 @@ app.include_router(public.router)
 app.include_router(auth.router)
 app.include_router(admin.router)
 app.include_router(website.router)
+app.include_router(website_changes.router)
 app.include_router(doubts.router)
 app.include_router(fees.router)
 app.include_router(placements.router)

@@ -11,7 +11,7 @@ from pydantic import BaseModel, ConfigDict, EmailStr, Field, field_validator, mo
 # drift apart.
 from app.models import DEFAULT_CURRICULUM_DAYS
 
-Role = Literal["admin", "teacher", "student", "viewer"]
+Role = Literal["admin", "teacher", "student", "viewer", "contributor", "member"]
 BatchStatus = Literal["upcoming", "active", "completed"]
 DayStatus = Literal["pending", "completed"]
 
@@ -76,7 +76,7 @@ class UserCreate(BaseModel):
     name: str = Field(min_length=2, max_length=120)
     email: EmailStr
     phone: str | None = Field(default=None, max_length=20)
-    role: Literal["teacher", "student", "viewer"]
+    role: Literal["teacher", "student", "viewer", "contributor", "member"]
     password: PasswordStr | None = None
     yoe_it: float | None = Field(default=None, ge=0, le=50)
     batch_id: int | None = None
@@ -1306,6 +1306,54 @@ class ViewerOverview(BaseModel):
     overdue_classes: int
     recordings_missing: int
     notes_missing: int
+
+
+# ==========================================================================
+#  Website change requests — the contributor / member approval flow
+# ==========================================================================
+ChangeEntity = Literal["settings", "program", "mentor", "story", "partner", "statistic"]
+ChangeAction = Literal["create", "update", "delete", "reorder"]
+ChangeStatus = Literal["pending", "approved", "rejected", "withdrawn"]
+
+
+class ChangeSubmit(BaseModel):
+    """A proposed edit to the public site.
+
+    The payload is whatever the matching direct endpoint would have taken, and
+    is validated against that same schema before this is accepted — so a
+    contributor hears about a bad value now, not when a member tries to
+    approve it.
+    """
+
+    entity: ChangeEntity
+    action: ChangeAction
+    # Null when creating, or for settings and reorder, which have no single row.
+    entity_id: int | None = None
+    payload: dict = Field(default_factory=dict)
+
+
+class ChangeReview(BaseModel):
+    feedback: str = Field(default="", max_length=2000)
+
+    @field_validator("feedback", mode="before")
+    @classmethod
+    def _trim(cls, v: object) -> object:
+        return v.strip() if isinstance(v, str) else v
+
+
+class WebsiteChangeOut(ORMModel):
+    id: int
+    entity: ChangeEntity
+    entity_id: int | None = None
+    action: ChangeAction
+    payload: dict = {}
+    summary: str = ""
+    status: ChangeStatus
+    submitted_by_name: str = ""
+    submitted_at: datetime
+    reviewed_by_name: str = ""
+    reviewed_at: datetime | None = None
+    feedback: str = ""
 
 
 # Resolve the forward reference in TokenResponse.
