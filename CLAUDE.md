@@ -188,7 +188,12 @@ emails a reset link. Forced password change on first login.
 - **Ask before adding any dependency outside the stack above.**
 - Fix all errors in a phase before moving on.
 - Work phase by phase: finish, run, and **verify** each phase before starting the next.
-- **Commit to git after each phase**, and append a short progress note to this file.
+- **Commit to git after each phase.**
+- **Write the detailed note in [HISTORY.md](HISTORY.md), not here.** This file is
+  loaded into every session, so anything added to it is paid for by every future
+  conversation. It once reached 23k tokens that way. In CLAUDE.md, only update the
+  open threads, the role definitions, and the one-paragraph summary under Progress
+  log — everything else goes in HISTORY.md.
 
 ---
 
