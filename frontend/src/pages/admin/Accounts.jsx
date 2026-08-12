@@ -13,17 +13,18 @@ import {
 } from '../../components/ui';
 import { MILESTONE_STEPS } from '../../constants';
 
-/* The staff ladder: Bala, then member, then contributor. Nobody may create or
-   administer an account at their own level or above — a member creating a
-   member would be minting their own peer. Mirrored from ROLE_RANK on the
-   server; the server is what actually enforces it. */
-const ROLE_RANK = {
-  student: 0,
-  teacher: 0,
-  viewer: 1,
-  contributor: 2,
-  member: 3,
-  admin: 4,
+/* Which accounts each role may administer — and therefore which tabs exist.
+   Mirrored from ROLE_MANAGES on the server, which is what actually enforces
+   it: the account list comes back already filtered, so a member could not see
+   another member's details even if this map were wrong.
+
+   Nobody manages their own role. A member creating a member would be minting
+   their own peer, and a screen listing accounts you cannot touch only invites
+   the question "why am I being shown this?". */
+const ROLE_MANAGES = {
+  admin: ['member', 'contributor', 'viewer', 'teacher', 'student'],
+  member: ['contributor', 'viewer', 'teacher', 'student'],
+  contributor: ['teacher', 'student'],
 };
 
 /* Learners and teachers first — there are dozens of them against one or two of
@@ -378,10 +379,17 @@ export default function AdminAccounts() {
     [batches],
   );
 
-  /* The staff ladder, mirrored from the API so the screen offers only what the
-     signed-in user can actually do. The API is what enforces it — this is so a
-     member is not shown a "New member" button that would 403. */
-  const canManage = (role) => (ROLE_RANK[user?.role] ?? -1) > (ROLE_RANK[role] ?? -1);
+  const canManage = (role) => (ROLE_MANAGES[user?.role] || []).includes(role);
+
+  const visibleTabs = useMemo(() => TABS.filter((t) => canManage(t.key)), [user?.role]);
+
+  /* Landing on a tab you cannot see — say a contributor whose remembered tab
+     was Members — would show an empty list with no way back. */
+  useEffect(() => {
+    if (visibleTabs.length && !visibleTabs.some((t) => t.key === tab)) {
+      setTab(visibleTabs[0].key);
+    }
+  }, [visibleTabs, tab]);
 
   const visible = useMemo(() => {
     const q = query.trim().toLowerCase();
@@ -414,25 +422,15 @@ export default function AdminAccounts() {
         title="Accounts"
         subtitle="There is no self-registration — every login is created here"
         action={
-          /* Only offered for roles the signed-in user actually outranks. A
-             member looking at the Members tab gets no button, because a member
-             creating a member is minting their own peer. The API refuses it
-             either way; this is so nobody is invited to try. */
-          canManage(tab) ? (
-            <button type="button" onClick={() => setCreating(true)} className="btn-cta">
-              New {ROLE_COPY[tab].noun}
-            </button>
-          ) : (
-            <span className="text-sm text-navy-400">
-              Only an administrator can add {ROLE_COPY[tab].noun}s
-            </span>
-          )
+          <button type="button" onClick={() => setCreating(true)} className="btn-cta">
+            New {ROLE_COPY[tab].noun}
+          </button>
         }
       />
 
       <div className="mb-5 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
         <div className="flex gap-2">
-          {TABS.map((t) => (
+          {visibleTabs.map((t) => (
             <button
               key={t.key}
               type="button"

@@ -55,24 +55,31 @@ ROLES = (
 # contributor is deliberately absent — that is the entire point of the role.
 ROLES_PUBLISH_DIRECTLY = (ROLE_ADMIN, ROLE_MEMBER)
 
-# The staff ladder: Bala, then member, then contributor. Nobody may create or
-# alter an account at their own level or above — a member creating a member
-# would be minting their own peer, the same objection as a contributor
-# creating their own approver. Learners and teachers sit outside the ladder
-# because neither administers anybody.
-ROLE_RANK = {
-    ROLE_STUDENT: 0,
-    ROLE_TEACHER: 0,
-    ROLE_VIEWER: 1,
-    ROLE_CONTRIBUTOR: 2,
-    ROLE_MEMBER: 3,
-    ROLE_ADMIN: 4,
+# Which accounts each role may administer — create, edit, block, and see on the
+# Accounts screen. One map rather than a numeric ladder, because the ladder was
+# not quite the rule: a contributor outranks a viewer but has no business
+# creating one, so a rank comparison would have shown them a list of viewers
+# they could do nothing with.
+#
+# Seeing and acting are deliberately the same set. A screen that lists accounts
+# you cannot touch invites exactly the question "why am I being shown this?".
+#
+# Nobody appears in their own list: a member creating a member would be minting
+# their own peer, the same objection as a contributor creating their own
+# approver. Admins are absent from every list but their own for the same
+# reason. (Creating an admin is refused separately, in `UserCreate` — they are
+# provisioned by the seed script only.)
+ROLE_MANAGES: dict[str, tuple[str, ...]] = {
+    ROLE_ADMIN: (ROLE_MEMBER, ROLE_CONTRIBUTOR, ROLE_VIEWER, ROLE_TEACHER, ROLE_STUDENT),
+    ROLE_MEMBER: (ROLE_CONTRIBUTOR, ROLE_VIEWER, ROLE_TEACHER, ROLE_STUDENT),
+    # A contributor onboards learners and their teachers, and nothing else.
+    ROLE_CONTRIBUTOR: (ROLE_TEACHER, ROLE_STUDENT),
 }
 
 
-def outranks(actor_role: str, target_role: str) -> bool:
-    """Whether `actor_role` may create or administer `target_role`."""
-    return ROLE_RANK.get(actor_role, -1) > ROLE_RANK.get(target_role, -1)
+def manages(actor_role: str, target_role: str) -> bool:
+    """Whether `actor_role` may create, administer or list `target_role`."""
+    return target_role in ROLE_MANAGES.get(actor_role, ())
 
 # --- website change requests ---------------------------------------------
 CHANGE_PENDING = "pending"

@@ -3,7 +3,7 @@ import secrets
 from datetime import date
 
 from fastapi import APIRouter, Depends, HTTPException, Query, status
-from sqlalchemy import func, select
+from sqlalchemy import func, or_, select
 from sqlalchemy.orm import Session, selectinload
 
 from app.curriculum import batch_total_days, ensure_curriculum
@@ -12,10 +12,12 @@ from app.deps import get_student_or_404, require_back_office, require_member
 from app.mail import send_new_account
 from app.milestones import get_or_create_milestone as _get_or_create_milestone
 from app.models import (
+    ROLE_ADMIN,
     ROLE_CONTRIBUTOR,
     ROLE_STUDENT,
     ROLE_TEACHER,
     ROLE_VIEWER,
+    ROLE_MANAGES,
     Attendance,
     Batch,
     CurriculumDay,
@@ -24,7 +26,7 @@ from app.models import (
     Program,
     TeacherBatch,
     User,
-    outranks,
+    manages,
 )
 from app.schemas import (
     AssignTeacherRequest,
@@ -219,11 +221,29 @@ def unassign_teacher(
 # --- accounts -------------------------------------------------------------
 @router.get("/users", response_model=list[UserOut])
 def list_users(
-    role: str | None = Query(default=None, pattern="^(teacher|student|admin|viewer)$"),
+    role: str | None = Query(
+        default=None, pattern="^(teacher|student|admin|viewer|contributor|member)$"
+    ),
     batch_id: int | None = None,
     db: Session = Depends(get_db),
+    actor: User = Depends(require_back_office),
 ) -> list[UserOut]:
+    """Accounts the caller may administer, plus their own.
+
+    Scoped by the same ladder that governs creating and blocking. This screen
+    was admin-only when it was written, so it returned everybody; opening it to
+    members and contributors without narrowing it would have handed a
+    contributor every member's and every student's email address.
+
+    An admin sees everyone, including other admins — there is nobody above
+    them for the rule to protect.
+    """
     stmt = select(User)
+    if actor.role != ROLE_ADMIN:
+        visible = list(ROLE_MANAGES.get(actor.role, ()))
+        # Their own account too, so a member can still find themselves on the
+        # screen even though they do not outrank their own role.
+        stmt = stmt.where(or_(User.role.in_(visible), User.id == actor.id))
     if role:
         stmt = stmt.where(User.role == role)
     if batch_id is not None:
@@ -238,17 +258,12 @@ def create_user(
     db: Session = Depends(get_db),
     actor: User = Depends(require_back_office),
 ) -> UserOut:
-    # A contributor onboards learners and teachers, and nothing else.
-    if actor.role == ROLE_CONTRIBUTOR and payload.role not in (ROLE_STUDENT, ROLE_TEACHER):
-        raise HTTPException(
-            status.HTTP_403_FORBIDDEN,
-            "You can onboard students and teachers. Ask an admin for anything else.",
-        )
-
-    # Nobody creates an account at their own level or above. A member creating
-    # a member would be minting their own peer — the same objection as a
-    # contributor creating their own approver, one rung up the ladder.
-    if not outranks(actor.role, payload.role):
+    # You create only what you administer: a contributor onboards learners and
+    # their teachers, a member adds contributors and viewers on top, and
+    # neither creates their own level. A member creating a member would be
+    # minting their own peer — the same objection as a contributor creating
+    # their own approver, one rung up.
+    if not manages(actor.role, payload.role):
         raise HTTPException(
             status.HTTP_403_FORBIDDEN,
             f"Only an administrator can create a {payload.role} account.",
@@ -315,7 +330,7 @@ def update_user(user_id: int, payload: UserUpdate, db: Session = Depends(get_db)
 
     # Same ladder as creation: a member does not get to edit another member's
     # account, or an admin's.
-    if user.id != actor.id and not outranks(actor.role, user.role):
+    if user.id != actor.id and not manages(actor.role, user.role):
         raise HTTPException(
             status.HTTP_403_FORBIDDEN,
             f"Only an administrator can change a {user.role} account.",
@@ -358,7 +373,7 @@ def toggle_block(
         raise HTTPException(status.HTTP_400_BAD_REQUEST, "You cannot block your own account")
     # Blocking is the sharpest thing on this screen — it cuts somebody off
     # mid-session. A member does not get to do it to a peer or to Bala.
-    if not outranks(admin.role, user.role):
+    if not manages(admin.role, user.role):
         raise HTTPException(
             status.HTTP_403_FORBIDDEN,
             f"Only an administrator can block a {user.role} account.",

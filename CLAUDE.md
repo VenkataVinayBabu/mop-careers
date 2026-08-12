@@ -1124,15 +1124,25 @@ Python 3.13.2 · Node v22.17.0 (npm 10.9.2) · Git 2.50.1 · PostgreSQL 17.9
     else and they would save, see no change, and reasonably conclude it failed.
     Reordering is deliberately *not* applied locally either, or they would be
     looking at an arrangement no visitor has.
-  - **Nobody creates or administers an account at their own level or above.**
-    `ROLE_RANK` in `models.py` is the ladder (student/teacher 0, viewer 1,
-    contributor 2, member 3, admin 4) and `outranks()` is the rule, applied to
-    creating, editing and blocking. A contributor cannot create their own
-    approver; **a member cannot create another member**, block one, or edit
-    one. The user spotted the member case from a "New member" button on their
-    own Members tab — the first version only stopped contributors, which was
-    half the rule. The Accounts screen mirrors `ROLE_RANK` so the button is not
-    offered in the first place, and the API refuses it regardless.
+  - **`ROLE_MANAGES` says which accounts each role may create, edit, block
+    *and see*, and it is the single rule.** Admin manages everyone below;
+    a member manages contributors, viewers, teachers and students; a
+    contributor manages teachers and students. **Nobody manages their own
+    role** — a member creating a member would be minting their own peer, the
+    same objection as a contributor creating their own approver.
+    - The user found this twice, both times by looking at a screen: first a
+      "New member" button on their own Members tab, then the Members list
+      itself. The first fix only stopped *contributors* creating members,
+      which was half the rule; the second exposed that `GET /admin/users`
+      still returned everybody, because it was written when only an admin
+      could open that screen.
+    - **Seeing and acting are deliberately the same set**, which is why this is
+      a map rather than a numeric ladder. A rank comparison would have let a
+      contributor *see* viewers while being unable to create one — a list you
+      cannot touch invites exactly the question "why am I shown this?".
+    - So a member has no Members tab, a contributor sees only Students and
+      Teachers, and the account list comes back already filtered. The screen
+      mirrors the map so the tab does not exist; the API is what enforces it.
   - `assert_batch_access` now lets contributors and members reach every batch:
     both are organisation-wide roles, and only a teacher is batch-scoped.
 
