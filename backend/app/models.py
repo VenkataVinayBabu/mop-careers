@@ -55,6 +55,25 @@ ROLES = (
 # contributor is deliberately absent — that is the entire point of the role.
 ROLES_PUBLISH_DIRECTLY = (ROLE_ADMIN, ROLE_MEMBER)
 
+# The staff ladder: Bala, then member, then contributor. Nobody may create or
+# alter an account at their own level or above — a member creating a member
+# would be minting their own peer, the same objection as a contributor
+# creating their own approver. Learners and teachers sit outside the ladder
+# because neither administers anybody.
+ROLE_RANK = {
+    ROLE_STUDENT: 0,
+    ROLE_TEACHER: 0,
+    ROLE_VIEWER: 1,
+    ROLE_CONTRIBUTOR: 2,
+    ROLE_MEMBER: 3,
+    ROLE_ADMIN: 4,
+}
+
+
+def outranks(actor_role: str, target_role: str) -> bool:
+    """Whether `actor_role` may create or administer `target_role`."""
+    return ROLE_RANK.get(actor_role, -1) > ROLE_RANK.get(target_role, -1)
+
 # --- website change requests ---------------------------------------------
 CHANGE_PENDING = "pending"
 CHANGE_APPROVED = "approved"

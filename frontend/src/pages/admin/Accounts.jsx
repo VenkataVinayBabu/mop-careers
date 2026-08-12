@@ -2,6 +2,7 @@ import { useCallback, useEffect, useMemo, useState } from 'react';
 
 import { api, errorMessage } from '../../api/client';
 import { useToast } from '../../components/Toast';
+import { useAuth } from '../../context/AuthContext';
 import {
   EmptyState,
   ErrorState,
@@ -11,6 +12,19 @@ import {
   Spinner,
 } from '../../components/ui';
 import { MILESTONE_STEPS } from '../../constants';
+
+/* The staff ladder: Bala, then member, then contributor. Nobody may create or
+   administer an account at their own level or above — a member creating a
+   member would be minting their own peer. Mirrored from ROLE_RANK on the
+   server; the server is what actually enforces it. */
+const ROLE_RANK = {
+  student: 0,
+  teacher: 0,
+  viewer: 1,
+  contributor: 2,
+  member: 3,
+  admin: 4,
+};
 
 /* Learners and teachers first — there are dozens of them against one or two of
    everything else. The staff roles follow in the order of the ladder. */
@@ -330,6 +344,7 @@ function CreateUserModal({ role, batches, onClose, onSaved }) {
 
 export default function AdminAccounts() {
   const toast = useToast();
+  const { user } = useAuth();
   const [tab, setTab] = useState('student');
   const [users, setUsers] = useState([]);
   const [batches, setBatches] = useState([]);
@@ -363,6 +378,11 @@ export default function AdminAccounts() {
     [batches],
   );
 
+  /* The staff ladder, mirrored from the API so the screen offers only what the
+     signed-in user can actually do. The API is what enforces it — this is so a
+     member is not shown a "New member" button that would 403. */
+  const canManage = (role) => (ROLE_RANK[user?.role] ?? -1) > (ROLE_RANK[role] ?? -1);
+
   const visible = useMemo(() => {
     const q = query.trim().toLowerCase();
     return users
@@ -394,9 +414,19 @@ export default function AdminAccounts() {
         title="Accounts"
         subtitle="There is no self-registration — every login is created here"
         action={
-          <button type="button" onClick={() => setCreating(true)} className="btn-cta">
-            New {ROLE_COPY[tab].noun}
-          </button>
+          /* Only offered for roles the signed-in user actually outranks. A
+             member looking at the Members tab gets no button, because a member
+             creating a member is minting their own peer. The API refuses it
+             either way; this is so nobody is invited to try. */
+          canManage(tab) ? (
+            <button type="button" onClick={() => setCreating(true)} className="btn-cta">
+              New {ROLE_COPY[tab].noun}
+            </button>
+          ) : (
+            <span className="text-sm text-navy-400">
+              Only an administrator can add {ROLE_COPY[tab].noun}s
+            </span>
+          )
         }
       />
 
@@ -485,14 +515,18 @@ export default function AdminAccounts() {
                             Roadmap
                           </button>
                         )}
-                        <button
-                          type="button"
-                          onClick={() => toggleBlock(u)}
-                          disabled={busyId === u.id}
-                          className={`btn-ghost btn-sm ${u.is_blocked ? '' : 'text-orange'}`}
-                        >
-                          {busyId === u.id ? '…' : u.is_blocked ? 'Unblock' : 'Block'}
-                        </button>
+                        {/* Not shown for your own account — blocking yourself
+                            is refused — nor for anyone you do not outrank. */}
+                        {u.id !== user?.id && canManage(u.role) && (
+                          <button
+                            type="button"
+                            onClick={() => toggleBlock(u)}
+                            disabled={busyId === u.id}
+                            className={`btn-ghost btn-sm ${u.is_blocked ? '' : 'text-orange'}`}
+                          >
+                            {busyId === u.id ? '…' : u.is_blocked ? 'Unblock' : 'Block'}
+                          </button>
+                        )}
                       </div>
                     </td>
                   </tr>

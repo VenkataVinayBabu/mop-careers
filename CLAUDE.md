@@ -1124,8 +1124,15 @@ Python 3.13.2 · Node v22.17.0 (npm 10.9.2) · Git 2.50.1 · PostgreSQL 17.9
     else and they would save, see no change, and reasonably conclude it failed.
     Reordering is deliberately *not* applied locally either, or they would be
     looking at an arrangement no visitor has.
-  - **A contributor cannot create a member** — they would be minting their own
-    approver, which is the one account that must not be self-service.
+  - **Nobody creates or administers an account at their own level or above.**
+    `ROLE_RANK` in `models.py` is the ladder (student/teacher 0, viewer 1,
+    contributor 2, member 3, admin 4) and `outranks()` is the rule, applied to
+    creating, editing and blocking. A contributor cannot create their own
+    approver; **a member cannot create another member**, block one, or edit
+    one. The user spotted the member case from a "New member" button on their
+    own Members tab — the first version only stopped contributors, which was
+    half the rule. The Accounts screen mirrors `ROLE_RANK` so the button is not
+    offered in the first place, and the API refuses it regardless.
   - `assert_batch_access` now lets contributors and members reach every batch:
     both are organisation-wide roles, and only a teacher is batch-scoped.
 

@@ -24,6 +24,7 @@ from app.models import (
     Program,
     TeacherBatch,
     User,
+    outranks,
 )
 from app.schemas import (
     AssignTeacherRequest,
@@ -237,13 +238,20 @@ def create_user(
     db: Session = Depends(get_db),
     actor: User = Depends(require_back_office),
 ) -> UserOut:
-    # A contributor onboards learners and teachers. Letting them create a
-    # member would let them create their own approver, which is the one account
-    # that must not be self-service.
+    # A contributor onboards learners and teachers, and nothing else.
     if actor.role == ROLE_CONTRIBUTOR and payload.role not in (ROLE_STUDENT, ROLE_TEACHER):
         raise HTTPException(
             status.HTTP_403_FORBIDDEN,
             "You can onboard students and teachers. Ask an admin for anything else.",
+        )
+
+    # Nobody creates an account at their own level or above. A member creating
+    # a member would be minting their own peer — the same objection as a
+    # contributor creating their own approver, one rung up the ladder.
+    if not outranks(actor.role, payload.role):
+        raise HTTPException(
+            status.HTTP_403_FORBIDDEN,
+            f"Only an administrator can create a {payload.role} account.",
         )
 
     email = payload.email.lower()
@@ -300,10 +308,18 @@ def create_user(
 
 @router.patch("/users/{user_id}", response_model=UserOut)
 def update_user(user_id: int, payload: UserUpdate, db: Session = Depends(get_db),
-                _: User = Depends(require_member)) -> UserOut:
+                actor: User = Depends(require_member)) -> UserOut:
     user = db.get(User, user_id)
     if user is None:
         raise HTTPException(status.HTTP_404_NOT_FOUND, "User not found")
+
+    # Same ladder as creation: a member does not get to edit another member's
+    # account, or an admin's.
+    if user.id != actor.id and not outranks(actor.role, user.role):
+        raise HTTPException(
+            status.HTTP_403_FORBIDDEN,
+            f"Only an administrator can change a {user.role} account.",
+        )
 
     updates = payload.model_dump(exclude_unset=True)
 
@@ -340,6 +356,13 @@ def toggle_block(
         raise HTTPException(status.HTTP_404_NOT_FOUND, "User not found")
     if user.id == admin.id:
         raise HTTPException(status.HTTP_400_BAD_REQUEST, "You cannot block your own account")
+    # Blocking is the sharpest thing on this screen — it cuts somebody off
+    # mid-session. A member does not get to do it to a peer or to Bala.
+    if not outranks(admin.role, user.role):
+        raise HTTPException(
+            status.HTTP_403_FORBIDDEN,
+            f"Only an administrator can block a {user.role} account.",
+        )
 
     user.is_blocked = payload.is_blocked
     db.commit()
