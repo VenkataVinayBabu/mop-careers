@@ -343,6 +343,169 @@ function CreateUserModal({ role, batches, onClose, onSaved }) {
   );
 }
 
+/** Correcting an existing account. Separate from CreateUserModal because the
+ *  two differ in almost every field that matters: no password here, no role,
+ *  and email is editable rather than fixed at creation.
+ *
+ *  Email is on this form because it is the login identifier. Without it a
+ *  mistyped address meant that person could never sign in and could never be
+ *  sent a reset link, and the only remedy was deleting the account and
+ *  rebuilding whatever hung off it. */
+function EditUserModal({ user, batches, onClose, onSaved }) {
+  const toast = useToast();
+  const [form, setForm] = useState({
+    name: user.name || '',
+    email: user.email || '',
+    phone: user.phone || '',
+    yoe_it: user.yoe_it ?? '',
+    batch_id: user.batch_id ?? '',
+  });
+  const [saving, setSaving] = useState(false);
+
+  const isStudent = user.role === 'student';
+  const emailChanged = form.email.trim().toLowerCase() !== (user.email || '').toLowerCase();
+
+  const save = async () => {
+    if (form.name.trim().length < 2) {
+      toast.error('Name must be at least 2 characters.');
+      return;
+    }
+    if (!form.email.trim()) {
+      toast.error('Email cannot be blank — it is how this person signs in.');
+      return;
+    }
+    if (isStudent && !form.batch_id) {
+      toast.error('Students must be assigned to a batch.');
+      return;
+    }
+    setSaving(true);
+    try {
+      const body = {
+        name: form.name.trim(),
+        email: form.email.trim(),
+        phone: form.phone.trim() || null,
+      };
+      if (isStudent) {
+        body.batch_id = Number(form.batch_id);
+        body.yoe_it = form.yoe_it === '' ? null : Number(form.yoe_it);
+      }
+      await api.patch(`/admin/users/${user.id}`, body);
+      toast.success(`${form.name.trim()}'s details updated.`);
+      onSaved();
+      onClose();
+    } catch (err) {
+      toast.error(errorMessage(err));
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  return (
+    <Modal
+      open
+      title={`Edit ${ROLE_COPY[user.role]?.noun || 'account'}`}
+      onClose={onClose}
+      footer={
+        <>
+          <button type="button" onClick={onClose} className="btn-ghost">
+            Cancel
+          </button>
+          <button type="button" onClick={save} disabled={saving} className="btn-cta">
+            {saving && <Spinner className="h-4 w-4" />}
+            {saving ? 'Saving…' : 'Save changes'}
+          </button>
+        </>
+      }
+    >
+      <div className="space-y-4">
+        <div>
+          <label className="label" htmlFor="e-name">
+            Full name
+          </label>
+          <input
+            id="e-name"
+            className="input"
+            value={form.name}
+            onChange={(e) => setForm({ ...form, name: e.target.value })}
+          />
+        </div>
+        <div className="grid gap-4 sm:grid-cols-2">
+          <div>
+            <label className="label" htmlFor="e-email">
+              Email
+            </label>
+            <input
+              id="e-email"
+              type="email"
+              className="input"
+              value={form.email}
+              onChange={(e) => setForm({ ...form, email: e.target.value })}
+            />
+          </div>
+          <div>
+            <label className="label" htmlFor="e-phone">
+              Phone
+            </label>
+            <input
+              id="e-phone"
+              className="input"
+              value={form.phone}
+              onChange={(e) => setForm({ ...form, phone: e.target.value })}
+            />
+          </div>
+        </div>
+
+        {/* Only when it actually changes, so the warning stays meaningful. */}
+        {emailChanged && (
+          <p className="rounded-lg bg-orange-50 p-3.5 text-xs text-orange-700">
+            {user.name} will sign in with <strong>{form.email.trim()}</strong> from now on, and
+            password reset links will go there. Their password does not change.
+          </p>
+        )}
+
+        {isStudent && (
+          <div className="grid gap-4 sm:grid-cols-2">
+            <div>
+              <label className="label" htmlFor="e-batch">
+                Batch
+              </label>
+              <select
+                id="e-batch"
+                className="input"
+                value={form.batch_id}
+                onChange={(e) => setForm({ ...form, batch_id: e.target.value })}
+              >
+                <option value="">Select a batch…</option>
+                {batches.map((b) => (
+                  <option key={b.id} value={b.id}>
+                    {b.name}
+                  </option>
+                ))}
+              </select>
+            </div>
+            <div>
+              <label className="label" htmlFor="e-yoe">
+                Years of IT experience
+              </label>
+              <input
+                id="e-yoe"
+                type="number"
+                min="0"
+                max="50"
+                step="0.5"
+                className="input"
+                placeholder="0"
+                value={form.yoe_it}
+                onChange={(e) => setForm({ ...form, yoe_it: e.target.value })}
+              />
+            </div>
+          </div>
+        )}
+      </div>
+    </Modal>
+  );
+}
+
 export default function AdminAccounts() {
   const toast = useToast();
   const { user } = useAuth();
@@ -350,6 +513,7 @@ export default function AdminAccounts() {
   const [users, setUsers] = useState([]);
   const [batches, setBatches] = useState([]);
   const [creating, setCreating] = useState(false);
+  const [editing, setEditing] = useState(null);
   const [milestonesFor, setMilestonesFor] = useState(null);
   const [query, setQuery] = useState('');
   const [error, setError] = useState('');
@@ -380,6 +544,12 @@ export default function AdminAccounts() {
   );
 
   const canManage = (role) => (ROLE_MANAGES[user?.role] || []).includes(role);
+
+  /* Editing an account sits behind require_member on the server, so a
+     contributor gets no Edit button rather than a 403 on saving. That they
+     cannot fix a typo in an account they created themselves is a known gap,
+     not something this screen decides. */
+  const canEditAccounts = user?.role === 'admin' || user?.role === 'member';
 
   const visibleTabs = useMemo(() => TABS.filter((t) => canManage(t.key)), [user?.role]);
 
@@ -504,6 +674,15 @@ export default function AdminAccounts() {
                     </td>
                     <td className="td">
                       <div className="flex justify-end gap-2">
+                        {canEditAccounts && canManage(u.role) && (
+                          <button
+                            type="button"
+                            onClick={() => setEditing(u)}
+                            className="btn-ghost btn-sm"
+                          >
+                            Edit
+                          </button>
+                        )}
                         {u.role === 'student' && (
                           <button
                             type="button"
@@ -540,6 +719,14 @@ export default function AdminAccounts() {
           role={tab}
           batches={batches}
           onClose={() => setCreating(false)}
+          onSaved={load}
+        />
+      )}
+      {editing && (
+        <EditUserModal
+          user={editing}
+          batches={batches}
+          onClose={() => setEditing(null)}
           onSaved={load}
         />
       )}

@@ -34,13 +34,11 @@ from app.schemas import (
     CurriculumDayOut,
     InterviewRoundOut,
     MilestoneOut,
-    ProfileUpdate,
     ProgressDayRow,
     ProgressReport,
     StudentApplicationOut,
     StudentDashboard,
     StudentDayView,
-    UserOut,
 )
 
 router = APIRouter(prefix="/student", tags=["student"])
@@ -143,8 +141,6 @@ def dashboard(
         classes_held=classes_held,
         classes_attended=attended,
         attendance_percent=round(attended / classes_held * 100, 1) if classes_held else 0.0,
-        mocks_taken=0,               # Phase 4
-        latest_resume_score=None,    # Phase 3
         next_class=CurriculumDayOut.model_validate(next_class) if next_class else None,
         missed_count=missed,
         milestones=MilestoneOut.model_validate(milestone) if milestone else MilestoneOut(),
@@ -317,23 +313,8 @@ def download_certificate(
     )
 
 
-@router.patch("/profile", response_model=UserOut)
-def update_my_profile(
-    payload: ProfileUpdate,
-    db: Session = Depends(get_db),
-    student: User = Depends(require_student),
-) -> UserOut:
-    """A student updating their own details.
-
-    Only name, phone and years of experience — email, role, batch and blocked
-    status stay under admin control, so this cannot be used to escalate.
-    """
-    student.name = payload.name.strip()
-    student.phone = (payload.phone or "").strip() or None
-    student.yoe_it = payload.yoe_it
-    db.commit()
-    db.refresh(student)
-    return UserOut.model_validate(student)
+# Editing your own details lives at PATCH /auth/me, which every role reaches —
+# a student's version of it used to live here and did the same thing.
 
 
 @router.get("/milestones", response_model=MilestoneOut)

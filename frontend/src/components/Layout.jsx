@@ -25,6 +25,7 @@ import {
 } from 'lucide-react';
 
 import { useAuth } from '../context/AuthContext';
+import { ROLE_LABEL } from '../constants';
 import Logo from './Logo';
 
 const COLLAPSE_KEY = 'mop_sidebar_collapsed';
@@ -84,15 +85,6 @@ const NAV = {
     { to: '/app/doubts', label: 'Doubt Support', icon: MessageSquare },
     { to: '/app/progress', label: 'Progress Report', icon: TrendingUp },
   ],
-};
-
-const ROLE_LABEL = {
-  admin: 'Administrator',
-  teacher: 'Teacher',
-  student: 'Student',
-  viewer: 'Viewer',
-  member: 'Member',
-  contributor: 'Contributor',
 };
 
 function initials(name = '') {
@@ -172,7 +164,7 @@ function StudentProfileMenu({ user, collapsed, onNavigate, onLogout }) {
           <div className="mt-3 border-t border-navy-100">
             <button
               type="button"
-              onClick={() => go('/app/profile')}
+              onClick={() => go('/profile')}
               className="flex w-full items-center gap-3 px-4 py-2.5 text-sm font-medium text-navy-700 transition hover:bg-navy-50"
             >
               <Settings className="h-4 w-4 text-navy-400" aria-hidden="true" />
@@ -339,6 +331,19 @@ export default function Layout() {
                 </div>
               )}
             </div>
+            {/* Staff had no way to correct their own name or phone — the
+                number a viewer rings when a recording is missing. */}
+            <button
+              type="button"
+              onClick={() => navigate('/profile')}
+              title={railMode ? 'Profile settings' : undefined}
+              className={`mb-2 flex w-full items-center justify-center gap-2 rounded-lg border border-navy-400 py-2 text-xs font-semibold text-navy-100 transition hover:bg-navy-600 hover:text-white ${
+                railMode ? 'px-0' : 'px-3'
+              }`}
+            >
+              <Settings className="h-4 w-4 shrink-0" aria-hidden="true" />
+              {!railMode && 'Profile settings'}
+            </button>
             <button
               type="button"
               onClick={handleLogout}

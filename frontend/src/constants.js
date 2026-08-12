@@ -12,6 +12,17 @@ export const MILESTONE_STEPS = [
 
 export const TOTAL_DAYS = 55;
 
+/** What each role is called on screen. Lives here rather than in the sidebar
+ *  because the profile page names the role too, and two copies drift. */
+export const ROLE_LABEL = {
+  admin: 'Administrator',
+  teacher: 'Teacher',
+  student: 'Student',
+  viewer: 'Viewer',
+  member: 'Member',
+  contributor: 'Contributor',
+};
+
 export function formatDate(value) {
   if (!value) return null;
   const d = new Date(`${value}T00:00:00`);

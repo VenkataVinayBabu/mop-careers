@@ -99,14 +99,6 @@ export default function AdminDashboard() {
           <p className="mt-3 text-sm font-semibold text-teal">Open inbox &rarr;</p>
         </Link>
       </div>
-
-      <div className="mt-6 card p-5">
-        <h3 className="font-semibold text-navy">Coming in later phases</h3>
-        <ul className="mt-2 space-y-1 text-sm text-navy-400">
-          <li>Phase 3 — ATS resume builder and scoring</li>
-          <li>Phase 4 — AI interviewer</li>
-        </ul>
-      </div>
     </div>
   );
 }

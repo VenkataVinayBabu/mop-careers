@@ -12,14 +12,15 @@ from sqlalchemy.orm import Session
 
 from app.config import settings
 from app.database import get_db
-from app.deps import BLOCKED_MESSAGE, get_current_user
+from app.deps import BLOCKED_MESSAGE, get_active_user, get_current_user
 from app.mail import send_password_reset
-from app.models import PasswordResetToken, User
+from app.models import ROLE_STUDENT, PasswordResetToken, User
 from app.schemas import (
     ChangePasswordRequest,
     ForgotPasswordRequest,
     LoginRequest,
     MessageResponse,
+    ProfileUpdate,
     ResetPasswordRequest,
     TokenResponse,
     UserOut,
@@ -58,6 +59,32 @@ def login(payload: LoginRequest, db: Session = Depends(get_db)) -> TokenResponse
 
 @router.get("/me", response_model=UserOut)
 def me(user: User = Depends(get_current_user)) -> UserOut:
+    return UserOut.model_validate(user)
+
+
+@router.patch("/me", response_model=UserOut)
+def update_me(
+    payload: ProfileUpdate,
+    db: Session = Depends(get_db),
+    user: User = Depends(get_active_user),
+) -> UserOut:
+    """Anyone signed in correcting their own details.
+
+    Every role reaches this, not just students: a teacher whose phone number
+    changed had no way to say so, and that number is what a viewer rings when a
+    recording is missing.
+
+    Name and phone only — years of experience is a student field and is ignored
+    for everyone else. Email, role, batch and blocked status stay with the
+    administration, so this cannot be used to escalate a role or to point
+    somebody else's login at an address you control.
+    """
+    user.name = payload.name.strip()
+    user.phone = (payload.phone or "").strip() or None
+    if user.role == ROLE_STUDENT:
+        user.yoe_it = payload.yoe_it
+    db.commit()
+    db.refresh(user)
     return UserOut.model_validate(user)
 
 

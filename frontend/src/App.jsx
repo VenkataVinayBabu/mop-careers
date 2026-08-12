@@ -40,7 +40,7 @@ import StudentCurriculum from './pages/student/Curriculum';
 import StudentDoubts from './pages/student/Doubts';
 import StudentHome from './pages/student/Home';
 import StudentMissed from './pages/student/Missed';
-import ProfileSettings from './pages/student/ProfileSettings';
+import ProfileSettings from './pages/ProfileSettings';
 import StudentProgress from './pages/student/Progress';
 import StudentSchedule from './pages/student/Schedule';
 
@@ -217,8 +217,23 @@ export default function App() {
         <Route path="/app/applications" element={<StudentApplications />} />
         <Route path="/app/doubts" element={<StudentDoubts />} />
         <Route path="/app/progress" element={<StudentProgress />} />
-        {/* Reached from the sidebar profile menu, not the main nav. */}
-        <Route path="/app/profile" element={<ProfileSettings />} />
+        {/* Where a student's profile used to live, kept so an old bookmark or
+            a link in an email still lands somewhere. */}
+        <Route path="/app/profile" element={<Navigate to="/profile" replace />} />
+      </Route>
+
+      {/* Editing your own details — every signed-in role, no role list. A
+          teacher whose phone number changed had no screen at all before this,
+          and a viewer rings that number when a recording is missing.
+          Reached from the sidebar footer, not the main nav. */}
+      <Route
+        element={
+          <ProtectedRoute>
+            <Layout />
+          </ProtectedRoute>
+        }
+      >
+        <Route path="/profile" element={<ProfileSettings />} />
       </Route>
 
         <Route path="*" element={<NotFound />} />

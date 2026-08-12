@@ -228,7 +228,10 @@ its programme's own curriculum template and day count, so a Java batch is not 55
 days of Python. All six roles exist (admin, member, contributor, viewer, teacher,
 student); a contributor edits the website but publishes nothing, and a member
 approves or sends it back with feedback. A viewer watches every batch read-only
-and logs the calls they make chasing missing recordings. 22 tables, 10 migrations.
+and logs the calls they make chasing missing recordings. Accounts are editable
+— an admin or member can correct anyone they administer, including the login
+email, and anyone signed in can fix their own name and phone at `/profile`.
+22 tables, 10 migrations.
 
 **Verification convention:** every piece of work above was checked with an API
 assertion suite plus a browser walkthrough of the write paths, and the suites are
@@ -437,9 +440,12 @@ Two things worth knowing before touching it:
 
 ### 7. Phases 3 and 4 — no longer being built
 
-The ATS resume builder and AI interviewer are **being bought in externally** and will
-be connected rather than built. The student dashboard still shows "Mock interviews"
-and "Resume score" placeholder cards pointing at those phases.
+The ATS resume builder and AI interviewer are **being bought in externally as a
+separate product** and will be connected rather than built. Every trace of them
+has been removed from the app: the student dashboard's "Mock interviews" and
+"Resume score" cards, the admin dashboard's "Coming in later phases" card, and
+the `mocks_taken` / `latest_resume_score` fields on `StudentDashboard`, which
+only ever returned `0` and `None`. Nothing in the platform advertises them now.
 
 `ANTHROPIC_API_KEY` remains empty and is no longer on the critical path.
 
@@ -469,4 +475,8 @@ Small, known, and none of them blocking. Listed because they exist nowhere else.
   a deliberate decision rather than leaving as an accident: a contributor can
   *edit* a batch and assign teachers to it but cannot create or delete one; and a
   contributor cannot edit or block the student and teacher accounts they created
-  themselves, so they cannot fix their own typo.
+  themselves, so they cannot fix their own typo. **Still true now that Accounts
+  has an Edit button** — editing sits behind `require_member`, so a contributor
+  sees no button rather than a 403. Admins and members can edit anyone they
+  administer, including their email; anyone signed in can fix their own name and
+  phone at `/profile`.

@@ -129,7 +129,7 @@ export default function StudentHome() {
 
       <RoadmapBanner milestones={data.milestones} />
 
-      <div className="mb-6 grid grid-cols-2 gap-4 lg:grid-cols-4">
+      <div className="mb-6 grid grid-cols-2 gap-4">
         <StatCard
           label="Classes attended"
           value={data.classes_attended}
@@ -142,13 +142,6 @@ export default function StudentHome() {
           suffix="%"
           tone={data.attendance_percent >= 75 ? 'teal' : 'orange'}
           hint={data.attendance_percent >= 75 ? 'On track' : 'Needs attention'}
-        />
-        <StatCard label="Mock interviews" value={data.mocks_taken} hint="Available in Phase 4" />
-        <StatCard
-          label="Resume score"
-          value={data.latest_resume_score ?? '—'}
-          tone="teal"
-          hint="Available in Phase 3"
         />
       </div>
 

@@ -989,4 +989,57 @@ need to know *why* something is the way it is.
   badge → sent back with a note → contributor sees "Sent back" and the feedback
   on their own screen. Clean console in a fresh tab.
 
+- **Accounts became editable, and the Phase 3/4 placeholders came out.**
+  Both found by the user looking at screens rather than at code.
+  - **`PATCH /admin/users/{id}` had existed since Phase 1 and nothing ever
+    called it.** The Accounts screen only ever hit `/block`, so a phone number
+    or a misspelt name could not be corrected anywhere in the product. The
+    capability was built and unreachable; adding the Edit button was mostly
+    wiring, which is the argument for checking the screen against the router
+    now and then rather than trusting that an endpoint implies a way in.
+  - **Email is now editable, deliberately, because it is the login
+    identifier.** It was excluded from both `UserUpdate` and `ProfileUpdate`
+    on the reasoning that it "stays with the admin" — except the admin was
+    never given a way either, so a typo'd address meant that person could
+    never sign in, could never be sent a reset link, and the only remedy was
+    deleting the account and rebuilding what hung off it. Guarded three ways:
+    lowercased on the way in to match `login()`, checked against the unique
+    index so a collision is a 409 with a sentence rather than a 500, and
+    refused when blank. The modal warns *only when the address actually
+    changes* — a warning shown on every open is a warning nobody reads.
+  - **Editing stays behind `require_member`.** So a contributor gets no Edit
+    button rather than a 403 on save. They still cannot fix a typo in an
+    account they created themselves; that gap is real and unchanged.
+  - **`PATCH /student/profile` became `PATCH /auth/me`**, reachable by every
+    role. Teachers, viewers, contributors and members had no self-service
+    screen at all — their sidebar footer held their name and Sign out. A
+    teacher's phone number is what a viewer rings when a recording is missing,
+    and nobody could change it. `yoe_it` is applied only to students, and the
+    payload cannot carry role, email or blocked status, so self-service cannot
+    escalate.
+  - The student-only `pages/student/ProfileSettings.jsx` moved to
+    `pages/ProfileSettings.jsx` on a roleless `ProtectedRoute`; `/app/profile`
+    redirects to `/profile` so old links still land. `ROLE_LABEL` moved from
+    inside `Layout.jsx` to `constants.js` now that two screens name the role.
+  - **Phases 3 and 4 are bought in as a separate product**, so their
+    placeholders were removed: the student dashboard's "Mock interviews" and
+    "Resume score" cards, the admin dashboard's "Coming in later phases" card,
+    and the `mocks_taken` / `latest_resume_score` fields that only ever
+    returned `0` and `None`.
+  - **A stale browser cache made this look like broken code twice.** Both
+    reports came with a screenshot of a build nobody was serving — the second
+    showed a "Coordinators" tab that had been renamed to "Viewers" commits
+    earlier and appears in neither the source nor the deployed bundle. Worth
+    checking `git log -S` for the string and curling the live bundle before
+    believing a screenshot; a hard refresh resolved both.
+
+  Verification: **21 API assertions**, restoring every row they touch — phone
+  and email edits applying, the new address logging in and the old one being
+  refused, a duplicate email 409ing, a blank one refused, a teacher editing
+  their own phone through `/auth/me`, a self-edit carrying `role: admin` and an
+  email leaving both untouched, and the retired `/student/profile` returning
+  404. `vite build` clean. The browser pane died partway through, so the
+  screens themselves were not walked through — the API is proven, the UI is
+  not.
+
 ---

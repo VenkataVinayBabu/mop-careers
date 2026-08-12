@@ -2,16 +2,20 @@ import { useState } from 'react';
 import { Link } from 'react-router-dom';
 import { KeyRound } from 'lucide-react';
 
-import { api, errorMessage } from '../../api/client';
-import { useToast } from '../../components/Toast';
-import { PageHeader, Spinner } from '../../components/ui';
-import { useAuth } from '../../context/AuthContext';
+import { api, errorMessage } from '../api/client';
+import { useToast } from '../components/Toast';
+import { PageHeader, Spinner } from '../components/ui';
+import { ROLE_LABEL } from '../constants';
+import { useAuth } from '../context/AuthContext';
 
-/** A student editing their own details. Email, batch and role are shown but
- *  locked — those stay with the administration. */
+/** Anyone signed in editing their own details — student, teacher, viewer,
+ *  contributor or member. Email, role and batch are shown but locked: those
+ *  stay with the administration, because email is the login identity and the
+ *  other two are what the person is allowed to see. */
 export default function ProfileSettings() {
   const { user, refreshUser } = useAuth();
   const toast = useToast();
+  const isStudent = user?.role === 'student';
 
   const [form, setForm] = useState({
     name: user?.name || '',
@@ -28,10 +32,12 @@ export default function ProfileSettings() {
     }
     setSaving(true);
     try {
-      await api.patch('/student/profile', {
+      await api.patch('/auth/me', {
         name: form.name.trim(),
         phone: form.phone.trim() || null,
-        yoe_it: form.yoe_it === '' ? null : Number(form.yoe_it),
+        // Years of experience is a student field; the API ignores it for
+        // everyone else, and the input is not shown to them either.
+        yoe_it: isStudent && form.yoe_it !== '' ? Number(form.yoe_it) : null,
       });
       await refreshUser();
       toast.success('Profile updated.');
@@ -70,20 +76,22 @@ export default function ProfileSettings() {
                   onChange={(e) => setForm({ ...form, phone: e.target.value })}
                 />
               </div>
-              <div>
-                <label className="label" htmlFor="p-yoe">Years of IT experience</label>
-                <input
-                  id="p-yoe"
-                  type="number"
-                  min="0"
-                  max="50"
-                  step="0.5"
-                  className="input"
-                  placeholder="0"
-                  value={form.yoe_it}
-                  onChange={(e) => setForm({ ...form, yoe_it: e.target.value })}
-                />
-              </div>
+              {isStudent && (
+                <div>
+                  <label className="label" htmlFor="p-yoe">Years of IT experience</label>
+                  <input
+                    id="p-yoe"
+                    type="number"
+                    min="0"
+                    max="50"
+                    step="0.5"
+                    className="input"
+                    placeholder="0"
+                    value={form.yoe_it}
+                    onChange={(e) => setForm({ ...form, yoe_it: e.target.value })}
+                  />
+                </div>
+              )}
             </div>
           </div>
 
@@ -104,12 +112,19 @@ export default function ProfileSettings() {
                 <dd className="font-medium text-navy">{user?.email}</dd>
               </div>
               <div>
-                <dt className="text-navy-400">Batch</dt>
-                <dd className="font-medium text-navy">{user?.batch_name || '—'}</dd>
+                <dt className="text-navy-400">Role</dt>
+                <dd className="font-medium text-navy">{ROLE_LABEL[user?.role] || '—'}</dd>
               </div>
+              {isStudent && (
+                <div>
+                  <dt className="text-navy-400">Batch</dt>
+                  <dd className="font-medium text-navy">{user?.batch_name || '—'}</dd>
+                </div>
+              )}
             </dl>
             <p className="mt-4 text-xs text-navy-400">
-              Contact MOP administration if either of these needs changing.
+              Your email is how you sign in. Ask MOP administration if any of these needs
+              changing.
             </p>
           </div>
 

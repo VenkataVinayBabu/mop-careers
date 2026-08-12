@@ -338,6 +338,20 @@ def update_user(user_id: int, payload: UserUpdate, db: Session = Depends(get_db)
 
     updates = payload.model_dump(exclude_unset=True)
 
+    # Changing the email changes who can sign in, so it is done deliberately or
+    # not at all — a blank one would lock the account out of its own login, and
+    # a duplicate would collide with the unique index as a 500 instead of a
+    # message the person editing can act on.
+    if "email" in updates:
+        if not updates["email"]:
+            raise HTTPException(status.HTTP_400_BAD_REQUEST, "Email cannot be blank")
+        email = updates["email"].lower()
+        if email != user.email and db.scalar(select(User).where(User.email == email)):
+            raise HTTPException(
+                status.HTTP_409_CONFLICT, "An account with that email already exists"
+            )
+        updates["email"] = email
+
     if "batch_id" in updates:
         if user.role != ROLE_STUDENT:
             raise HTTPException(status.HTTP_400_BAD_REQUEST, "Only students belong to a batch")

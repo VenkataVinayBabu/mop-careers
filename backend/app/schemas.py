@@ -92,6 +92,10 @@ class UserCreate(BaseModel):
 
 class UserUpdate(BaseModel):
     name: str | None = Field(default=None, min_length=2, max_length=120)
+    # Editable, unlike on ProfileUpdate, because it is the login identifier: a
+    # typo'd address otherwise means the account can never be signed into and
+    # the only remedy is deleting the person and starting again.
+    email: EmailStr | None = None
     phone: str | None = Field(default=None, max_length=20)
     yoe_it: float | None = Field(default=None, ge=0, le=50)
     batch_id: int | None = None
@@ -233,8 +237,6 @@ class StudentDashboard(BaseModel):
     classes_held: int
     classes_attended: int
     attendance_percent: float
-    mocks_taken: int = 0          # wired up in Phase 4
-    latest_resume_score: int | None = None   # wired up in Phase 3
     next_class: CurriculumDayOut | None = None
     missed_count: int = 0
     milestones: MilestoneOut
