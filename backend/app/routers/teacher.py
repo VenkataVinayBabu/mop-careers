@@ -103,7 +103,7 @@ def update_day(
     day = _get_day(db, day_id, user)
     updates = payload.model_dump(exclude_unset=True)
 
-    # What the coordinator's trail needs: when each thing actually arrived.
+    # What the viewer's trail needs: when each thing actually arrived.
     # Compared before and after rather than on the presence of the key, so
     # re-saving a day that already has a recording does not restamp it and
     # make an old upload look like today's work.
@@ -173,7 +173,7 @@ async def upload_notes(
 
     day.notes_file = stored
     # A replacement is a real delivery too — a new file genuinely arrived, and
-    # the coordinator chasing a corrected PDF wants today's date, not the
+    # the viewer chasing a corrected PDF wants today's date, not the
     # date of the one that was wrong.
     day.notes_uploaded_at = datetime.now(timezone.utc)
     db.commit()

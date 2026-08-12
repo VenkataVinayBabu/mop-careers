@@ -43,7 +43,7 @@ logger = logging.getLogger("mop.website.changes")
 
 router = APIRouter(prefix="/admin/website/changes", tags=["website-changes"])
 
-# Who may see and use the queue at all. Teachers, students and coordinators
+# Who may see and use the queue at all. Teachers, students and viewers
 # have no business here.
 QUEUE_ROLES = (ROLE_ADMIN, ROLE_MEMBER, ROLE_CONTRIBUTOR)
 

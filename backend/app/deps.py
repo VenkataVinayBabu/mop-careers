@@ -88,7 +88,7 @@ def require_staff(user: User = Depends(get_active_user)) -> User:
     reason this guard is worth reading twice. It sits on the teacher router,
     which marks days complete, uploads notes and takes attendance; adding a
     read-only role here would hand it every one of those writes in one line.
-    Viewers get their own router instead.
+    viewers get their own router instead.
     """
     if user.role not in (ROLE_ADMIN, ROLE_TEACHER, ROLE_CONTRIBUTOR, ROLE_MEMBER):
         raise HTTPException(status.HTTP_403_FORBIDDEN, "Staff access required")
@@ -96,7 +96,7 @@ def require_staff(user: User = Depends(get_active_user)) -> User:
 
 
 def require_viewer(user: User = Depends(get_active_user)) -> User:
-    """The read-only coordinator view. Admins and members are allowed through:
+    """The read-only viewer workspace. Admins and members are allowed through:
     admins can do everything, and a member's remit includes watching which
     classes are missing recordings."""
     if user.role not in (ROLE_ADMIN, ROLE_VIEWER, ROLE_MEMBER):
@@ -118,7 +118,7 @@ def require_back_office(user: User = Depends(get_active_user)) -> User:
     The floor for the shared back-office screens. It is not permission to do
     everything on them — fees stay behind `require_member` and account changes
     behind stricter guards — but it is what separates staff who administer the
-    business from teachers, students and coordinators.
+    business from teachers, students and viewers.
     """
     if user.role not in (ROLE_ADMIN, ROLE_MEMBER, ROLE_CONTRIBUTOR):
         raise HTTPException(status.HTTP_403_FORBIDDEN, "Not available for your role")

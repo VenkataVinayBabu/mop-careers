@@ -10,7 +10,7 @@ import { formatDate } from '../../constants';
  * difference between this and the teacher's "My batches".
  *
  * The outstanding counts are on the row rather than only on the follow-ups
- * screen, so a coordinator asked "how is the Java batch doing?" can answer
+ * screen, so a viewer asked "how is the Java batch doing?" can answer
  * without cross-referencing two pages.
  */
 

@@ -48,7 +48,7 @@ const NAV = {
     { to: '/teacher/doubts', label: 'Doubts', icon: MessageSquare },
   ],
   // Everything a contributor does, minus fees and enquiries, plus the queue
-  // they approve from and the coordinator's follow-up list.
+  // they approve from and the viewer's follow-up list.
   member: [
     { to: '/admin', label: 'Dashboard', icon: LayoutDashboard, end: true },
     { to: '/admin/website/approvals', label: 'Approvals', icon: Globe },
@@ -69,7 +69,7 @@ const NAV = {
     { to: '/admin/placements', label: 'Placements', icon: Briefcase },
     { to: '/admin/doubts', label: 'Doubts', icon: MessageSquare },
   ],
-  // A read-only coordinator. Follow-ups first, because that is the job — the
+  // Read-only across every batch. Follow-ups first, because that is the job — the
   // batch list is where they go to answer a question, not where they start.
   viewer: [
     { to: '/watch', label: 'Follow-ups', icon: HelpCircle, end: true },
@@ -90,7 +90,7 @@ const ROLE_LABEL = {
   admin: 'Administrator',
   teacher: 'Teacher',
   student: 'Student',
-  viewer: 'Coordinator',
+  viewer: 'Viewer',
   member: 'Member',
   contributor: 'Contributor',
 };

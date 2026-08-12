@@ -1165,7 +1165,7 @@ class ProgramUpdate(BaseModel):
 
 
 # ==========================================================================
-#  Viewer — the read-only coordinator view
+#  viewer - the read-only workspace
 # ==========================================================================
 # A viewer watches every batch and chases whoever has fallen behind: a class
 # that should have been taught and has not been marked, or one that was taught

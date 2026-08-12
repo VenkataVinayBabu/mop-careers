@@ -1,4 +1,4 @@
-﻿import { useCallback, useEffect, useMemo, useState } from 'react';
+import { useCallback, useEffect, useMemo, useState } from 'react';
 
 import Avatar from '../../components/Avatar';
 import { EmptyState, ErrorState, Loading, Modal, PageHeader } from '../../components/ui';

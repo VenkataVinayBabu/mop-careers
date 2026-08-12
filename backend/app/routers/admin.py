@@ -1,4 +1,4 @@
-﻿"""Admin-only endpoints: batches, teacher assignment, accounts, milestones."""
+"""Admin-only endpoints: batches, teacher assignment, accounts, milestones."""
 import secrets
 from datetime import date
 
@@ -42,7 +42,7 @@ from app.schemas import (
 )
 from app.security import hash_password
 
-# The floor is the back office â€” admin, member, contributor. It is NOT the
+# The floor is the back office — admin, member, contributor. It is NOT the
 # whole permission story: almost everything below carries its own tighter
 # guard, and the two that do not (reading batches, reading accounts) are the
 # lookups a contributor needs to do their job.
@@ -159,7 +159,7 @@ def delete_batch(batch_id: int, db: Session = Depends(get_db),
     if enrolled:
         raise HTTPException(
             status.HTTP_409_CONFLICT,
-            f"Cannot delete â€” {enrolled} student(s) are still assigned to this batch",
+            f"Cannot delete — {enrolled} student(s) are still assigned to this batch",
         )
 
     db.delete(batch)

@@ -186,7 +186,7 @@ export default function App() {
         <Route path="/teacher/doubts" element={<DoubtsInbox />} />
       </Route>
 
-      {/* Viewer — the read-only coordinator. Admins may open it too, both
+      {/* viewer - read-only across every batch. Admins may open it too, both
           because they can do everything and because it is the only way to see
           what a viewer sees without a second account. Every screen under here
           is read-only; the API enforces that independently. */}

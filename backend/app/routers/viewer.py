@@ -1,6 +1,6 @@
 """The viewer workspace — read-only, every batch, nothing to click that writes.
 
-A viewer is a non-technical coordinator. Their job is to know, across all
+A viewer is a non-technical member of MOP staff. Their job is to know, across all
 batches, which classes have actually been taught and whether the teacher
 uploaded the recording and the notes, and to ring the teacher who has not. So
 this router answers three questions and no others:
@@ -11,10 +11,10 @@ this router answers three questions and no others:
 
 RBAC is at router level, the same way fees is, and for the mirror-image
 reason: fees locks a router nobody outside admin may read, this one locks a
-router whose only write is the coordinator's own notebook.
+router whose only write is the viewer's own notebook.
 
 THAT ONE WRITE, because the rule used to be "no writes at all" and it is worth
-saying why it changed. Logging "I rang Ravi on the 5th" is the coordinator's
+saying why it changed. Logging "I rang Ravi on the 5th" is the viewer's
 own record of their own phone call. It touches no class record, no student, no
 teacher, and it cannot resolve or hide a follow-up — the list is still
 computed from whether the file is actually there. Everything else here is a

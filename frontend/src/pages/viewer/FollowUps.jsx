@@ -17,7 +17,7 @@ import { formatDate } from '../../constants';
 /*
  * The viewer's home screen, and the reason the role exists.
  *
- * A coordinator is not here to browse — they are here to find out who has not
+ * A viewer is not here to browse â€” they are here to find out who has not
  * uploaded a recording and ring them. So this is a worklist, not a dashboard:
  * every outstanding item, oldest first, each one already carrying the phone
  * number of the person to call.
@@ -26,7 +26,7 @@ import { formatDate } from '../../constants';
  * deliberately not a "mark as done": the item stays until the file actually
  * turns up, and simply gains "chased twice, still nothing". A button that made
  * the row disappear would let this screen say "all clear" while a student
- * still had no recording — the list is a mirror of the class records, and its
+ * still had no recording â€” the list is a mirror of the class records, and its
  * whole value is that it cannot be wrong.
  *
  * Closing happens by itself, and the trail lives under Closed.
@@ -39,7 +39,7 @@ const KINDS = [
   { id: 'no_notes', label: 'No notes' },
 ];
 
-/* Written out rather than interpolated — Tailwind scans source text, so a
+/* Written out rather than interpolated â€” Tailwind scans source text, so a
    class built from a variable is never generated. Same trap as the missing
    navy-500 ramp and `text-${tone}` on the programme editor. */
 const KIND_BADGE = {
@@ -54,7 +54,7 @@ const KIND_LABEL = {
   no_notes: 'No notes',
 };
 
-/** "18 Aug, 2:40 pm" — a chase needs the time of day, unlike a class date:
+/** "18 Aug, 2:40 pm" â€” a chase needs the time of day, unlike a class date:
  *  two calls on the same day are a different story from one. */
 function whenChased(iso) {
   const d = new Date(iso);
@@ -75,15 +75,15 @@ function ChaseTrail({ chases }) {
   return (
     <div className="mt-1.5 border-l-2 border-navy-100 pl-2.5">
       <p className="text-xs font-medium text-navy-600">
-        Chased {chases.length === 1 ? 'once' : `${chases.length} times`} · last{' '}
-        {since === 0 ? 'today' : since === 1 ? 'yesterday' : `${since} days ago`} — still
+        Chased {chases.length === 1 ? 'once' : `${chases.length} times`} Â· last{' '}
+        {since === 0 ? 'today' : since === 1 ? 'yesterday' : `${since} days ago`} â€” still
         not uploaded
       </p>
       <ul className="mt-0.5 space-y-0.5">
         {chases.map((c) => (
           <li key={c.id} className="text-xs text-navy-400">
-            {whenChased(c.chased_at)} · {c.chased_by_name || 'someone'}
-            {c.note && <span className="text-navy-500"> — “{c.note}”</span>}
+            {whenChased(c.chased_at)} Â· {c.chased_by_name || 'someone'}
+            {c.note && <span className="text-navy-500"> â€” â€œ{c.note}â€</span>}
           </li>
         ))}
       </ul>
@@ -96,7 +96,7 @@ function TeacherCall({ teachers }) {
   if (!teachers || teachers.length === 0) {
     return (
       <span className="text-xs font-medium text-orange-ink">
-        No teacher assigned — tell an administrator
+        No teacher assigned â€” tell an administrator
       </span>
     );
   }
@@ -123,7 +123,7 @@ function TeacherCall({ teachers }) {
 }
 
 /** A delivery date, or an honest admission that we do not have one.
- *  Everything uploaded before the timestamps existed reads "not recorded" —
+ *  Everything uploaded before the timestamps existed reads "not recorded" â€”
  *  inventing a date from the row's creation would look like data and be
  *  fiction. */
 function Delivered({ at, label }) {
@@ -136,7 +136,7 @@ function Delivered({ at, label }) {
 }
 
 /**
- * Closed — the point of the whole exercise: rang on these dates, arrived on
+ * Closed â€” the point of the whole exercise: rang on these dates, arrived on
  * that one.
  *
  * Only classes somebody actually chased appear. A class that was uploaded on
@@ -162,13 +162,13 @@ function ClosedTrail({ items }) {
           <div className="flex flex-wrap items-start justify-between gap-3">
             <div className="min-w-0">
               <p className="font-semibold text-navy">
-                Day {c.day_number} · {c.topic}
+                Day {c.day_number} Â· {c.topic}
               </p>
               <p className="text-xs text-navy-400">
                 <Link to={`/watch/batches/${c.batch_id}`} className="text-teal-ink hover:underline">
                   {c.batch_name}
                 </Link>
-                {c.scheduled_date && ` · scheduled ${formatDate(c.scheduled_date)}`}
+                {c.scheduled_date && ` Â· scheduled ${formatDate(c.scheduled_date)}`}
               </p>
             </div>
             <span className="shrink-0 rounded-full bg-teal-50 px-3 py-1 text-xs font-semibold text-teal-ink">
@@ -185,9 +185,9 @@ function ClosedTrail({ items }) {
                 {c.chases.map((ch) => (
                   <li key={ch.id} className="text-xs text-navy-500">
                     <span className="font-medium text-navy-700">{whenChased(ch.chased_at)}</span>
-                    {' · '}
+                    {' Â· '}
                     {ch.chased_by_name || 'someone'}
-                    {ch.note && <span> — “{ch.note}”</span>}
+                    {ch.note && <span> â€” â€œ{ch.note}â€</span>}
                   </li>
                 ))}
               </ul>
@@ -209,7 +209,7 @@ function ClosedTrail({ items }) {
   );
 }
 
-/** Logging a call. The note is optional — "no answer" and "says tonight" are
+/** Logging a call. The note is optional â€” "no answer" and "says tonight" are
  *  worth keeping, but requiring one would just get it filled with a full
  *  stop. */
 function ChaseModal({ item, onClose, onLogged }) {
@@ -243,14 +243,14 @@ function ChaseModal({ item, onClose, onLogged }) {
           </button>
           <button type="button" onClick={save} disabled={saving} className="btn-cta">
             {saving && <Spinner className="h-4 w-4" />}
-            {saving ? 'Saving…' : 'Log the call'}
+            {saving ? 'Savingâ€¦' : 'Log the call'}
           </button>
         </>
       }
     >
       <div className="space-y-4">
         <p className="rounded-lg bg-navy-50 p-3.5 text-xs text-navy-600">
-          This records that you followed up — it does <strong>not</strong> tick the class off.
+          This records that you followed up â€” it does <strong>not</strong> tick the class off.
           Day {item.day_number} of {item.batch_name} stays on this list until{' '}
           {item.teachers[0]?.name || 'the teacher'} actually uploads, and then closes itself.
         </p>
@@ -262,7 +262,7 @@ function ChaseModal({ item, onClose, onLogged }) {
             id="chase-note"
             className="input"
             maxLength={300}
-            placeholder="No answer · Says he'll upload tonight"
+            placeholder="No answer Â· Says he'll upload tonight"
             value={note}
             onChange={(e) => setNote(e.target.value)}
           />
@@ -306,14 +306,14 @@ export default function ViewerFollowUps() {
   }, [load]);
 
   /* Filtering happens here rather than by re-fetching: the whole list is
-     already loaded, and a coordinator flicking between "no recording" and
+     already loaded, and a viewer flicking between "no recording" and
      "everything" should not wait on a sleeping backend each time. */
   const shown = useMemo(
     () => (kind ? items.filter((i) => i.kind === kind) : items),
     [items, kind],
   );
 
-  if (loading) return <Loading label="Checking every batch…" />;
+  if (loading) return <Loading label="Checking every batchâ€¦" />;
   if (error) return <ErrorState message={error} onRetry={load} />;
 
   return (

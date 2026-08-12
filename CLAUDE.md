@@ -23,7 +23,7 @@ marketing site (no auth) and an authenticated platform (admin / teacher / studen
 > 55 days of Python topics. Nothing in the platform assumes 55 any more.
 >
 > **Thread 4 is closed: all six roles are built.** Admin, teacher, student,
-> Coordinator (viewer), Contributor and Member. A contributor edits the public
+> Viewer, Contributor and Member. A contributor edits the public
 > website but publishes nothing — every save queues for a member to approve or
 > send back with feedback.
 >
@@ -102,9 +102,9 @@ emails a reset link. Forced password change on first login.
   placement records — those apply immediately. **Never sees fees or enquiries**, cannot
   block an account or create any role above a teacher.
 - **member** — everything a contributor can, plus approving their changes, fees,
-  enquiries, milestones, batch creation, account blocking, and the coordinator's
+  enquiries, milestones, batch creation, account blocking, and the viewer's
   follow-up screens. Sits between Bala and the contributor.
-- **viewer** (shown as **Coordinator**) — read-only across *every* batch: who teaches it,
+- **viewer** — read-only across *every* batch: who teaches it,
   who is enrolled, which classes have been taught, whether the recording and notes were
   uploaded, and how many attended. Exists to chase whoever has fallen behind, so teachers'
   phone numbers are in its payloads. Never sees fees, placements, enquiries, doubts,
@@ -972,7 +972,7 @@ Python 3.13.2 · Node v22.17.0 (npm 10.9.2) · Git 2.50.1 · PostgreSQL 17.9
   programme page and its localStorage cache carrying neither field.
 
 - **The viewer role ✅ — the first of the three extra roles is built.** A
-  non-technical coordinator who watches every batch and rings whoever has not
+  non-technical viewer who watches every batch and rings whoever has not
   uploaded. **No migration**: `users.role` is a `String(20)` rather than a
   native enum, exactly so a new role costs nothing — that decision, made in
   Phase 1, paid off here.
@@ -994,8 +994,8 @@ Python 3.13.2 · Node v22.17.0 (npm 10.9.2) · Git 2.50.1 · PostgreSQL 17.9
     uses, for the mirror-image reason: fees locks a router nobody may read,
     this one locks a router that must never gain a write.
   - **Admins can open `/watch` too**, so there is no need for a second account
-    to see what a coordinator sees.
-  - **Teachers' contact details are in; students' are not.** A coordinator
+    to see what a viewer sees.
+  - **Teachers' contact details are in; students' are not.** A viewer
     chases teachers, so that is the data the job needs. Students appear as a
     name and an attendance figure, which is what "how many are there and who
     are they" asks for. Being internal staff makes names fine; it does not make
@@ -1003,8 +1003,11 @@ Python 3.13.2 · Node v22.17.0 (npm 10.9.2) · Git 2.50.1 · PostgreSQL 17.9
   - **A viewer cannot be put in a batch** — the API refuses it (400) rather
     than ignoring it, because an admin who picked a batch expected it to mean
     something.
-  - The sidebar calls the role **Coordinator**. "Viewer" is what the spec and
-    the database say; it is not what anybody at MOP would call a person.
+  - **The role is called Viewer everywhere** — sidebar, Accounts tab, account
+    creation copy, database and docs. It was briefly relabelled "Coordinator"
+    on the grounds that it read better as a job title; the user asked for it
+    back, because Viewer is the name in the spec and the name they use. **The
+    user's vocabulary wins over a nicer-sounding one.**
 
   Verification: **63/63 API assertions**, and 24 of them are denials — a
   read-only role that can read everything is one forgotten guard from being an
@@ -1016,24 +1019,24 @@ Python 3.13.2 · Node v22.17.0 (npm 10.9.2) · Git 2.50.1 · PostgreSQL 17.9
   detection of all three kinds against real data, the filter, the overview
   totals agreeing with the list, a 404 for a missing batch, and a blocked
   viewer being turned away on an already-issued token. Re-run green alongside
-  the 68 curriculum assertions. In the browser: signing in as a coordinator
+  the 68 curriculum assertions. In the browser: signing in as a viewer
   landing on the worklist with the right four items and Ravi Kumar's number on
   every row, the filter narrowing to 2, the class-day table showing
   Missing/Missing for a class with nothing uploaded and an Open link where the
   recording exists, dashes rather than false alarms on an untaught day, the
   roster with attendance and no email addresses anywhere on the page, a
-  coordinator typing `/admin/fees` being bounced to `/watch`, and the admin's
-  Coordinators tab with its plain-language explanation of the role. Clean
+  viewer typing `/admin/fees` being bounced to `/watch`, and the admin's
+  Viewers tab with its plain-language explanation of the role. Clean
   console on a fresh load.
 
 - **The chase log ✅ — the follow-up trail closes itself.** The user asked
-  whether a coordinator can mark an item done once the teacher uploads. The
+  whether a viewer can mark an item done once the teacher uploads. The
   answer was "the item already removes itself", demonstrated end to end; what
   they actually wanted was the **record**: which dates they followed up, which
   date the teacher delivered, closing automatically on delivery. 1 new table
   (`class_chases`), 3 new columns, 21 tables total, 10 migrations.
   - **"Mark as done" was refused, deliberately, and this is the decision to
-    keep.** A manual tick would let a coordinator clear an item while the
+    keep.** A manual tick would let a viewer clear an item while the
     recording was still missing, so the screen would say "all clear" while a
     student had nothing to watch. The list is computed from whether the file is
     actually there; its entire value is that it cannot be wrong. Chasing
@@ -1042,7 +1045,7 @@ Python 3.13.2 · Node v22.17.0 (npm 10.9.2) · Git 2.50.1 · PostgreSQL 17.9
     tick or silence.
   - **The viewer is no longer strictly read-only, and that was a conscious
     reversal.** It was built and verified as GET-only. Logging "I rang Ravi on
-    the 5th" is the coordinator's own note about their own call: it touches no
+    the 5th" is the viewer's own note about their own call: it touches no
     class record, no student, no teacher, and cannot hide a follow-up. The
     structural assertion was **changed rather than dropped** — the suites now
     assert the only non-GET under `/viewer` is `POST /days/{id}/chase`, so a
@@ -1062,7 +1065,7 @@ Python 3.13.2 · Node v22.17.0 (npm 10.9.2) · Git 2.50.1 · PostgreSQL 17.9
   - Chases are **appended, never edited** — "we have asked three times" is the
     useful fact.
   - `chased_by_name` is stored alongside the user FK, which is `SET NULL`:
-    deleting the coordinator must not delete the record that the call happened,
+    deleting the viewer must not delete the record that the call happened,
     and an audit line naming nobody is not much of an audit line.
 
   **A bug the suite caught.** `closed_at` originally required all three
@@ -1141,7 +1144,7 @@ Python 3.13.2 · Node v22.17.0 (npm 10.9.2) · Git 2.50.1 · PostgreSQL 17.9
   widening that dependency never reached it: a member had a Doubts entry in
   their sidebar and a 403 behind it. Worse, the inline check was
   `elif user.role != ROLE_ADMIN` on the read and "anyone who is not a student"
-  on the write — which meant the *coordinator* could mark a doubt answered, a
+  on the write — which meant the *viewer* could mark a doubt answered, a
   role documented and verified as writing nothing anywhere. Correct while only
   admin and teacher existed; silently wrong the moment a fourth role did. Both
   are now an explicit `INBOX_ROLES` allowlist. **The lesson: a widened
@@ -1274,7 +1277,7 @@ Auto-deploy is confirmed **On Commit** for both `mop-careers` and `mop-careers-a
 
 ### 4. Six roles — ✅ ALL BUILT
 
-All six exist: admin, teacher, student, viewer (Coordinator), contributor and
+All six exist: admin, teacher, student, viewer, contributor and
 member. The two decisions that used to block this are answered — approval
 **blocks** the change, and a contributor **does** edit public website copy —
 and both are built to those answers. What remains is the record of what each
@@ -1283,7 +1286,7 @@ down:
 
 - ~~**Viewer**~~ — **built.** The earlier note here described it as "read-only;
   student count, tech stack, experience… described as HR", which turned out to
-  be wrong about the job. The user's actual brief: a non-technical coordinator
+  be wrong about the job. The user's actual brief: a non-technical viewer
   who watches every batch, checks whether the class was taught and the
   recording and notes went up, and phones the teacher when they have not. Built
   to that. The privacy question that was open — MOP staff or external company
@@ -1295,7 +1298,7 @@ down:
   teachers, runs the class schedule and curriculum, keeps placement records —
   those apply immediately. Never sees fees or enquiries.
 - ~~**Member**~~ — **built.** Approves or sends back with feedback, plus fees,
-  enquiries, milestones, batch creation, account blocking and the coordinator
+  enquiries, milestones, batch creation, account blocking and the viewer
   screens.
 
 Confirmed and honoured: all sit under admin; one role per person (only admin acts

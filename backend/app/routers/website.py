@@ -1,6 +1,6 @@
-﻿"""Admin content management for the public website.
+"""Admin content management for the public website.
 
-Site settings, mentors, learner stories, hiring partners and programmes â€”
+Site settings, mentors, learner stories, hiring partners and programmes —
 every piece of the marketing site an admin can now change without a deploy.
 
 The admin guard is declared on the router rather than on each endpoint, the
@@ -8,7 +8,7 @@ same way the fees router does it, so an endpoint added to this file later
 cannot be exposed by forgetting a dependency. Everything here edits what the
 whole internet sees, which is exactly the wrong place for that mistake.
 
-The four list entities share their ordering, publishing and reorder rules â€”
+The four list entities share their ordering, publishing and reorder rules —
 that logic lives in `app.website_content` rather than four times over.
 """
 import logging
@@ -80,7 +80,7 @@ def update_settings(
 #  Mentors, stories, hiring partners and programmes
 # ==========================================================================
 #  All four follow the same five endpoints. They are written out rather than
-#  generated, because a reader wants to see what each one does â€” but every
+#  generated, because a reader wants to see what each one does — but every
 #  behaviour they share (ordering, 404s, appending, reordering) comes from
 #  `app.website_content`, so it is fixed in one place.
 #
@@ -303,7 +303,7 @@ def update_program(
     if "slug" in changes:
         _assert_slug_free(db, changes["slug"], ignore_id=program.id)
     # The detail block is one document: replaced wholesale, never merged. The
-    # curriculum template is the same â€” half a syllabus merged into another is
+    # curriculum template is the same — half a syllabus merged into another is
     # not something anyone means to do.
     if "detail" in changes and payload.detail is not None:
         changes["detail"] = payload.detail.model_dump()

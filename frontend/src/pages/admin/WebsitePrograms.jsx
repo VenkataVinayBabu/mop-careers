@@ -1,4 +1,4 @@
-﻿import { useCallback } from 'react';
+import { useCallback } from 'react';
 import { Link } from 'react-router-dom';
 
 import { EmptyState, ErrorState, Loading, PageHeader } from '../../components/ui';

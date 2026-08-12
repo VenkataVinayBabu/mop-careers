@@ -1,7 +1,7 @@
-﻿"""Placements: companies, applications and interview rounds.
+"""Placements: companies, applications and interview rounds.
 
 Admin-only, enforced at router level. Students reach their own applications
-read-only through /student/applications (see routers/student.py) â€” teachers get
+read-only through /student/applications (see routers/student.py) — teachers get
 nothing here, per the spec.
 """
 from decimal import Decimal
@@ -123,7 +123,7 @@ def delete_company(company_id: int, db: Session = Depends(get_db)) -> MessageRes
     if count:
         raise HTTPException(
             status.HTTP_409_CONFLICT,
-            f"Cannot delete â€” {count} application(s) reference this company",
+            f"Cannot delete — {count} application(s) reference this company",
         )
 
     db.delete(company)

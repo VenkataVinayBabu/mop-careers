@@ -29,7 +29,7 @@ from app.database import Base
 ROLE_ADMIN = "admin"
 ROLE_TEACHER = "teacher"
 ROLE_STUDENT = "student"
-# Read-only coordinator. Sees every batch — who teaches it, who is in it, which
+# Read-only viewer. Sees every batch — who teaches it, who is in it, which
 # classes have been taught and whether the recording and notes were uploaded —
 # so they can chase the teacher who has not. Writes nothing, anywhere.
 ROLE_VIEWER = "viewer"
@@ -40,7 +40,7 @@ ROLE_VIEWER = "viewer"
 ROLE_CONTRIBUTOR = "contributor"
 # Approves or rejects what a contributor submitted, with feedback the
 # contributor can read. Everything a contributor can do, plus fees, enquiries
-# and the coordinator's follow-up screens.
+# and the viewer's follow-up screens.
 ROLE_MEMBER = "member"
 ROLES = (
     ROLE_ADMIN,
@@ -243,7 +243,7 @@ class CurriculumDay(Base):
     recording_url: Mapped[str | None] = mapped_column(String(500))
     notes_file: Mapped[str | None] = mapped_column(String(300))
 
-    # When each of the three things a coordinator chases actually arrived.
+    # When each of the three things a viewer chases actually arrived.
     # Stamped on the transition, not on every save: re-uploading a notes PDF
     # updates the date because a new file really did arrive, but editing the
     # topic of a day that already has one does not.
@@ -270,7 +270,7 @@ class ClassChase(Base):
     """One "I rang the teacher about this class" entry.
 
     Attached to the class day rather than to a particular missing item: a
-    coordinator makes one phone call about day 9, not one call about the
+    viewer makes one phone call about day 9, not one call about the
     recording and another about the notes.
 
     A chase never hides anything. The follow-up list is computed from whether
@@ -285,7 +285,7 @@ class ClassChase(Base):
     curriculum_day_id: Mapped[int] = mapped_column(
         ForeignKey("curriculum_days.id", ondelete="CASCADE"), nullable=False, index=True
     )
-    # SET NULL rather than CASCADE: deleting the coordinator who made the call
+    # SET NULL rather than CASCADE: deleting the viewer who made the call
     # must not delete the record that the call happened.
     chased_by_id: Mapped[int | None] = mapped_column(
         ForeignKey("users.id", ondelete="SET NULL"), index=True

@@ -12,23 +12,37 @@ import {
 } from '../../components/ui';
 import { MILESTONE_STEPS } from '../../constants';
 
+/* Learners and teachers first — there are dozens of them against one or two of
+   everything else. The staff roles follow in the order of the ladder. */
 const TABS = [
   { key: 'student', label: 'Students' },
   { key: 'teacher', label: 'Teachers' },
-  // Read-only coordinators. Last, because there will be one or two of them
-  // against dozens of the others.
-  { key: 'viewer', label: 'Coordinators' },
+  { key: 'member', label: 'Members' },
+  { key: 'contributor', label: 'Contributors' },
+  { key: 'viewer', label: 'Viewers' },
 ];
 
 /** What the New button and the modal call each role, and the one line of
- *  explanation the admin creating the account needs. */
+ *  explanation the admin creating the account needs. The three staff roles get
+ *  a sentence, because "member" and "contributor" say nothing on their own
+ *  about what the person will be able to see. */
 const ROLE_COPY = {
   student: { noun: 'student', title: 'New student' },
   teacher: { noun: 'teacher', title: 'New teacher' },
+  member: {
+    noun: 'member',
+    title: 'New member',
+    hint: 'A member approves what contributors submit for the public website, and sees fees, enquiries, placements, batches and the follow-up list — everything a contributor can do, plus the things a contributor deliberately cannot.',
+  },
+  contributor: {
+    noun: 'contributor',
+    title: 'New contributor',
+    hint: 'A contributor edits every word of the public website, but nothing they save goes live until a member approves it. They also onboard students and teachers, run the class schedule and keep placement records. They never see fees or enquiries.',
+  },
   viewer: {
-    noun: 'coordinator',
-    title: 'New coordinator',
-    hint: 'A coordinator sees every batch read-only — who is teaching, who is enrolled, which classes have been taught and whether the recording and notes were uploaded. They cannot change anything, and never see fees or placements.',
+    noun: 'viewer',
+    title: 'New viewer',
+    hint: 'A viewer sees every batch read-only — who is teaching, who is enrolled, which classes have been taught and whether the recording and notes were uploaded. They cannot change anything, and never see fees or placements.',
   },
 };
 

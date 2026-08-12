@@ -192,8 +192,8 @@ def set_status(
 
     Checked against an allowlist rather than "anyone who is not a student".
     That used to mean the same thing, back when the only other roles were admin
-    and teacher — but it silently started letting a coordinator write the
-    moment a fourth role existed, and a coordinator is meant to write nothing.
+    and teacher — but it silently started letting a viewer write the
+    moment a fourth role existed, and a viewer is meant to write nothing.
     """
     if user.role == ROLE_STUDENT:
         raise HTTPException(status.HTTP_403_FORBIDDEN, "Students cannot change a doubt's status")

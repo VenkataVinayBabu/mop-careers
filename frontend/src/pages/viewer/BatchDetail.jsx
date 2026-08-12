@@ -8,7 +8,7 @@ import { formatDate } from '../../constants';
 /*
  * One batch, read-only: its class days and who is in it.
  *
- * The class-day list answers the two questions a coordinator gets asked —
+ * The class-day list answers the two questions a viewer gets asked —
  * "has that class happened?" and "did the recording go up?" — so the upload
  * state is a visible tick or cross per day rather than something to infer
  * from an empty cell.

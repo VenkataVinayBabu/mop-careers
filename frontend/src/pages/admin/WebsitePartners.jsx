@@ -1,4 +1,4 @@
-﻿import { useCallback, useState } from 'react';
+import { useCallback, useState } from 'react';
 
 import { EmptyState, ErrorState, Loading, Modal, PageHeader } from '../../components/ui';
 import { applyPartners } from '../../data/siteSettings';
@@ -12,11 +12,11 @@ import { useContentList } from './websiteContent';
  * One list feeds two places on the public site: every published company sits
  * in the hiring-network grid, and the ones carrying a package also scroll past
  * in the placements ticker under the hero. They used to be two hardcoded lists
- * that overlapped in ten of twelve entries â€” two lists to keep in agreement
+ * that overlapped in ten of twelve entries — two lists to keep in agreement
  * for no gain.
  *
- * The package figure is the strongest claim anywhere on the site: "Cred Â·
- * â‚¹28 LPA" says a named company paid a MOP learner that. The screen says so.
+ * The package figure is the strongest claim anywhere on the site: "Cred ·
+ * ₹28 LPA" says a named company paid a MOP learner that. The screen says so.
  */
 
 const BLANK = { name: '', logo_url: '', package_lpa: '', published: true };
@@ -45,7 +45,7 @@ export default function AdminWebsitePartners() {
   const set = (key) => (e) => setDraft((d) => ({ ...d, [key]: e.target.value }));
   const err = list.errors;
 
-  if (list.loading) return <Loading label="Loading hiring partnersâ€¦" />;
+  if (list.loading) return <Loading label="Loading hiring partners…" />;
   if (list.loadError) return <ErrorState message={list.loadError} onRetry={list.load} />;
 
   const live = list.rows.filter((p) => p.published).length;
@@ -56,13 +56,13 @@ export default function AdminWebsitePartners() {
       <WebsiteTabs />
       <PageHeader
         title="Hiring partners"
-        subtitle={`${live} in the hiring grid Â· ${inTicker} also in the placements ticker`}
+        subtitle={`${live} in the hiring grid · ${inTicker} also in the placements ticker`}
         action={<button type="button" className="btn-cta" onClick={openNew}>Add a company</button>}
       />
 
       <div className="mb-5 rounded-xl border border-navy-100 bg-navy-50 p-4 text-sm text-navy-600">
         Adding a <strong className="font-semibold">package</strong> puts a company in the scrolling
-        ticker under the hero as well â€” &ldquo;Cred Â· â‚¹28 LPA&rdquo;. That reads as a named company
+        ticker under the hero as well — &ldquo;Cred · ₹28 LPA&rdquo;. That reads as a named company
         having paid a MOP learner that salary, so only add one you can evidence. Leave it blank and
         the company still appears in the hiring grid.
       </div>
@@ -83,7 +83,7 @@ export default function AdminWebsitePartners() {
                 <div className="flex flex-wrap items-center gap-2">
                   <h3 className="font-semibold text-navy">{p.name}</h3>
                   {p.package_lpa && (
-                    <span className="badge bg-teal-100 text-teal-700">{p.package_lpa} Â· in ticker</span>
+                    <span className="badge bg-teal-100 text-teal-700">{p.package_lpa} · in ticker</span>
                   )}
                   {!p.published && <span className="badge bg-navy-100 text-navy-600">Hidden</span>}
                 </div>
@@ -122,7 +122,7 @@ export default function AdminWebsitePartners() {
           <>
             <button type="button" className="btn-ghost" onClick={() => setEditing(null)}>Cancel</button>
             <button type="submit" form="partner-form" className="btn-cta" disabled={list.saving}>
-              {list.saving ? 'Savingâ€¦' : 'Save'}
+              {list.saving ? 'Saving…' : 'Save'}
             </button>
           </>
         }
@@ -139,18 +139,18 @@ export default function AdminWebsitePartners() {
           <div>
             <label className="label" htmlFor="partner-package_lpa">Package</label>
             <input id="partner-package_lpa" type="text" value={draft.package_lpa}
-                   onChange={set('package_lpa')} placeholder="â‚¹20 LPA"
+                   onChange={set('package_lpa')} placeholder="₹20 LPA"
                    aria-invalid={Boolean(err.package_lpa)}
                    className={`input ${err.package_lpa ? 'border-orange focus:border-orange focus:ring-orange' : ''}`} />
             <p className={`mt-1.5 text-xs ${err.package_lpa ? 'font-medium text-orange-ink' : 'text-navy-400'}`}>
-              {err.package_lpa || 'Optional. Fill this in and the company joins the placements ticker â€” only if you can evidence the offer.'}
+              {err.package_lpa || 'Optional. Fill this in and the company joins the placements ticker — only if you can evidence the offer.'}
             </p>
           </div>
 
           <div>
             <label className="label" htmlFor="partner-logo_url">Logo link</label>
             <input id="partner-logo_url" type="text" value={draft.logo_url} onChange={set('logo_url')}
-                   placeholder="https://â€¦" aria-invalid={Boolean(err.logo_url)}
+                   placeholder="https://…" aria-invalid={Boolean(err.logo_url)}
                    className={`input ${err.logo_url ? 'border-orange focus:border-orange focus:ring-orange' : ''}`} />
             <p className={`mt-1.5 text-xs ${err.logo_url ? 'font-medium text-orange-ink' : 'text-navy-400'}`}>
               {err.logo_url || 'Optional. The grid shows the company name as text today; a logo link is stored for when image hosting is set up.'}

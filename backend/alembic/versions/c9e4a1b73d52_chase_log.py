@@ -1,10 +1,10 @@
-"""coordinator chase log and delivery timestamps
+"""viewer chase log and delivery timestamps
 
 Revision ID: c9e4a1b73d52
 Revises: b3f8c92a41d6
 Create Date: 2026-08-11 15:41:52.118904
 
-The coordinator's follow-up list already closed itself when a teacher
+The viewer's follow-up list already closed itself when a teacher
 uploaded, but it kept no record of any of it: not when the file arrived, and
 not that anybody had rung about it. This adds both halves of the trail.
 
