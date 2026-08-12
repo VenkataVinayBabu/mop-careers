@@ -442,3 +442,31 @@ be connected rather than built. The student dashboard still shows "Mock intervie
 and "Resume score" placeholder cards pointing at those phases.
 
 `ANTHROPIC_API_KEY` remains empty and is no longer on the critical path.
+
+### 8. Loose ends from the roles work
+
+Small, known, and none of them blocking. Listed because they exist nowhere else.
+
+- **Two members approving the same change at the same instant can apply it
+  twice.** `approve()` checks `status == pending` and then applies, with no lock
+  between the two, so a simultaneous double-click on an "add a mentor" proposal
+  would create two mentors. Unlikely with three reviewers, but three people
+  watching one queue is exactly where it happens eventually. Fix: claim the row
+  with a single `UPDATE … WHERE status='pending'` that only one request can win,
+  before applying anything. **This is a defect, not a feature.**
+- **Two pending changes to the same item are not flagged.** With several
+  contributors, two of them will eventually have edits queued against the same
+  mentor or the same fee figure; approving both applies both, and the second
+  silently overwrites the first. A line in the queue saying "another pending
+  change also edits this" would stop a member approving contradictory edits
+  without noticing.
+- **The production migration was never directly confirmed.** The
+  `website_changes` deploy was verified by the code being live and the app
+  starting — migrations run in the start command, so a healthy backend implies
+  the migration ran. Not proven, though: open **Website > Approvals** on the live
+  site as admin, and if the page loads the table exists.
+- **Two contributor permissions that fell out of where the guards landed**, worth
+  a deliberate decision rather than leaving as an accident: a contributor can
+  *edit* a batch and assign teachers to it but cannot create or delete one; and a
+  contributor cannot edit or block the student and teacher accounts they created
+  themselves, so they cannot fix their own typo.
