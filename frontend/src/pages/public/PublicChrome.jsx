@@ -26,11 +26,6 @@ import {
 const NAV = [
   { id: 'top', label: 'Home' },
   { id: 'programs', label: 'Programs', menu: true },
-  { id: 'process', label: 'How it works' },
-  { id: 'outcomes', label: 'Outcomes' },
-  { id: 'mentors', label: 'Mentors' },
-  { id: 'stories', label: 'Stories' },
-  { id: 'faq', label: 'FAQ' },
 ];
 
 /* 'Most popular' is too long for a dropdown pill; the card keeps the full
@@ -329,7 +324,7 @@ export function PublicFooter() {
 
           <div>
             <h4 className="mb-4 text-[0.7rem] font-semibold uppercase tracking-[0.13em] text-white">
-              Programs
+              Placement Courses
             </h4>
             {/* Driven from the catalogue rather than hand-listed, so adding or
                 unpublishing a program updates the footer on its own. Every entry
@@ -356,10 +351,9 @@ export function PublicFooter() {
               Company
             </h4>
             <ul className="grid gap-2.5">
-              <li><a href="/#about" className="transition hover:text-teal-300">About us</a></li>
-              <li><a href="/#mentors" className="transition hover:text-teal-300">Our mentors</a></li>
-              <li><a href="/#stories" className="transition hover:text-teal-300">Learner stories</a></li>
-              <li><Link to="/login" className="transition hover:text-teal-300">Login</Link></li>
+              <li><a href="/#about" className="transition hover:text-teal-300">About Us</a></li>
+              <li><a href="/#enquire" className="transition hover:text-teal-300">Contact Us</a></li>
+              <li><Link to="/careers" className="transition hover:text-teal-300">Careers</Link></li>
             </ul>
           </div>
 
@@ -429,8 +423,16 @@ export function PublicFooter() {
           </div>
         </div>
 
-        <div className="mt-11 flex flex-wrap justify-between gap-4 border-t border-navy-700 pt-6 text-[0.79rem]">
-          <p>&copy; {new Date().getFullYear()} MOP Careers. All rights reserved.</p>
+        {/* The legal pages are stubs until MOP supplies the text — the links go
+            in now because a footer without them looks unfinished, and they point
+            at real routes rather than 404s. */}
+        <div className="mt-11 flex flex-wrap items-center justify-between gap-4 border-t border-navy-700 pt-6 text-[0.79rem]">
+          <p>&copy; 2020 - {new Date().getFullYear()} MOP CAREERS SOFTWARE SERVICES PVT LTD. All rights reserved.</p>
+          <ul className="flex flex-wrap gap-x-6 gap-y-2">
+            <li><Link to="/privacy-policy" className="transition hover:text-teal-300">Privacy Policy</Link></li>
+            <li><Link to="/terms-of-service" className="transition hover:text-teal-300">Terms of Service</Link></li>
+            <li><Link to="/refund-policy" className="transition hover:text-teal-300">Refund Policy</Link></li>
+          </ul>
         </div>
       </div>
     </footer>

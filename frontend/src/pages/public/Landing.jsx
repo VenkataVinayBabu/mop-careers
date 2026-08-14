@@ -211,7 +211,7 @@ export default function Landing() {
           <div className="mt-8 flex flex-wrap justify-center gap-3">
             <a href="#enquire" className="pbtn-primary">Book a free 1:1 call &rarr;</a>
             <button type="button" onClick={openPrograms} className="pbtn-outline">
-              Explore all {programs.length} programs
+              Explore Placement Programs
             </button>
           </div>
 

@@ -480,3 +480,75 @@ Small, known, and none of them blocking. Listed because they exist nowhere else.
   sees no button rather than a 403. Admins and members can edit anyone they
   administer, including their email; anyone signed in can fix their own name and
   phone at `/profile`.
+
+### 9. Bala's changes to the public site (2026-08-13) — ✅ BUILT
+
+**All three are built and pushed**, plus the Careers page he asked for on the
+14th, copied from `mopcareers.in/careers.php`. What is left here is content, not
+code: the three legal pages are stubs at `/privacy-policy`,
+`/terms-of-service` and `/refund-policy` waiting on MOP's wording (the user has
+it); the five social URLs are still unsupplied, so the footer icon row stays
+hidden; the careers openings are hardcoded in `Careers.jsx` rather than
+admin-editable, which is the right follow-up if Bala wants to post roles
+himself; and `contacts@mopcareers.in` has not been set — it is one field at
+Admin > Website > Settings, and until it is, job applications go to whatever
+address is configured there. **More changes were promised and have not arrived
+yet.**
+
+The original brief follows.
+
+From the call on 13 Aug 2026, given as three screenshots. **More are coming —
+the user said "will tell later", so treat this list as open, not complete.**
+
+**Answered by the user, 13 Aug — the four open questions are now closed:**
+the five nav entries come out of the nav bar **only** and every section stays
+on the page; the footer's placement column lists **all eight** programmes, not
+his six; the contact email is **`contacts@mopcareers.in`** (and is a site
+setting, so Bala can correct it himself later without a developer); and the
+three legal links go in **now** as links, with the pages written separately —
+the user has the content for all three. **Still missing: the five social media
+URLs.**
+
+1. **Cut the top navigation down to two items.** Keep **Home** and the
+   **Programs** dropdown. Remove *How it works*, *Outcomes*, *Mentors*,
+   *Stories* and *FAQ*. Note those five are links to sections that still exist
+   on the page — decide whether the sections stay and only the nav entries go
+   (most likely), or whether the sections come out too. **Ask before deleting
+   any section.**
+
+2. **The hero button reads "Explore Placement Programs"**, not "Explore all 8
+   programs". Note this drops the count, which is worth keeping dropped — the
+   number was hardcoded into copy and would go stale the moment a programme is
+   added or hidden.
+
+3. **Rebuild the footer** to the four-column layout he showed:
+   - **Certification courses** — *skip for now.* We do not have this category,
+     and he agreed to ignore it. His version listed Full Stack Web Dev with AI,
+     Python with AI, Digital Marketing with AI, Machine Learning with AI,
+     Advanced Excel with AI, Data Science with AI, Generative AI, UI/UX Design
+     with AI.
+   - **Placement courses** — Full Stack Web Development with AI, Data Science
+     with AI, Data Analytics with AI, Generative AI / AI Agents & Agentic AI,
+     Cybersecurity & Ethical Hacking, Cloud Computing & DevOps. **That is six,
+     and the site currently publishes eight programmes** — reconcile before
+     building, do not silently drop two.
+   - **Company** — About Us, Contact Us, Careers.
+   - **Contact** — `contacts@mopcareers.in`, `+91 98908 13235`, "Ground Floor,
+     No. 10, 14th Main, 5th Sector, HSR Layout, Bangalore South, Bangalore,
+     Karnataka, India – 560102".
+   - Social icons: LinkedIn, Twitter/X, Instagram, YouTube, Facebook. **URLs
+     were not supplied — ask.**
+   - Bottom bar: "© 2020 - 2026 MOP CAREERS SOFTWARE SERVICES PVT LTD. All
+     rights reserved." plus Privacy Policy, Terms of Service, Refund Policy.
+     **Those three pages do not exist** — they need writing, or the links need
+     to point somewhere real rather than 404.
+
+**The contact email in his footer is `contacts@mopcareers.in`.** The live site
+publishes `hello@mopcareers.com`. This is the conflict already recorded in
+thread 2, and his screenshot is the closest thing to an answer we have — but it
+is a third spelling, not a confirmation. **Confirm with him before changing it**,
+and note the domain differs from the site's own (`.in` vs `.com`, see thread 3).
+
+Everything here is public-site content and layout, so most of it is editable at
+Admin > Website once built; the nav, the button copy and the footer structure
+are code.

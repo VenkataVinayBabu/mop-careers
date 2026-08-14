@@ -41,6 +41,8 @@ import StudentDoubts from './pages/student/Doubts';
 import StudentHome from './pages/student/Home';
 import StudentMissed from './pages/student/Missed';
 import ProfileSettings from './pages/ProfileSettings';
+import Careers from './pages/public/Careers';
+import StaticPage from './pages/public/StaticPage';
 import StudentProgress from './pages/student/Progress';
 import StudentSchedule from './pages/student/Schedule';
 
@@ -124,6 +126,11 @@ export default function App() {
       <Route path="/programs" element={<Navigate to={{ pathname: '/', hash: '#programs' }} replace />} />
       {/* Each program's own page. An unknown slug redirects to the list. */}
       <Route path="/programs/:slug" element={<ProgramDetail />} />
+      {/* Footer links. Stubs until MOP supplies the copy — see StaticPage. */}
+      <Route path="/privacy-policy" element={<StaticPage slug="privacy-policy" />} />
+      <Route path="/terms-of-service" element={<StaticPage slug="terms-of-service" />} />
+      <Route path="/refund-policy" element={<StaticPage slug="refund-policy" />} />
+      <Route path="/careers" element={<Careers />} />
       <Route path="/courses" element={<Navigate to={{ pathname: '/', hash: '#programs' }} replace />} />
       <Route path="/login" element={<Login />} />
       <Route path="/forgot-password" element={<ForgotPassword />} />
