@@ -14,9 +14,15 @@ from sqlalchemy.orm import Session
 from app import site_settings
 from app.database import get_db
 from app.mail import send_email
-from app.models import Enquiry, HiringPartner, Mentor, Program, Statistic, Story
+from app.models import (
+    Enquiry, HiringPartner, JobApplication, JobOpening, Leader, Mentor, Program, Statistic,
+    Story,
+)
 from app.schemas import (
     EnquiryCreate,
+    JobApplicationCreate,
+    JobOpeningOut,
+    LeaderOut,
     HiringPartnerOut,
     MentorOut,
     MessageResponse,
@@ -114,6 +120,20 @@ def read_statistics(db: Session = Depends(get_db)) -> list[Statistic]:
     return ordered(db, Statistic, published_only=True)
 
 
+@router.get("/leaders", response_model=list[LeaderOut])
+def read_leaders(db: Session = Depends(get_db)) -> list[Leader]:
+    """The About page's leadership section."""
+    return ordered(db, Leader, published_only=True)
+
+
+@router.get("/openings", response_model=list[JobOpeningOut])
+def read_openings(db: Session = Depends(get_db)) -> list[JobOpening]:
+    """The careers page's open roles. Unpublished ones are how a filled
+    position comes off the site without being deleted, so they are excluded
+    here and stay editable in the admin list."""
+    return ordered(db, JobOpening, published_only=True)
+
+
 @router.post("/enquiries", response_model=MessageResponse, status_code=status.HTTP_201_CREATED)
 def submit_enquiry(
     payload: EnquiryCreate, request: Request, db: Session = Depends(get_db)
@@ -158,4 +178,62 @@ Enquiry #{enquiry.id}
     logger.info("Enquiry #%s received from %s", enquiry.id, enquiry.email)
     return MessageResponse(
         message="Thanks for getting in touch. The MOP Careers team will contact you shortly."
+    )
+
+
+@router.post(
+    "/job-applications", response_model=MessageResponse, status_code=status.HTTP_201_CREATED
+)
+def submit_job_application(
+    payload: JobApplicationCreate, request: Request, db: Session = Depends(get_db)
+) -> MessageResponse:
+    """The careers page's Apply form. Shares the enquiry form's throttle, being
+    the other write path anyone on the internet can reach."""
+    _rate_limit(request)
+
+    application = JobApplication(
+        position=payload.position.strip(),
+        name=payload.name.strip(),
+        email=payload.email.lower(),
+        phone=payload.phone.strip(),
+        years_experience=payload.years_experience.strip(),
+        resume_url=payload.resume_url,
+        portfolio_url=payload.portfolio_url,
+        cover_letter=(payload.cover_letter or "").strip() or None,
+    )
+    db.add(application)
+    db.commit()
+    db.refresh(application)
+
+    body = f"""New job application from the MOP Careers website.
+
+Position:   {application.position}
+Name:       {application.name}
+Email:      {application.email}
+Phone:      {application.phone}
+Experience: {application.years_experience}
+Resume:     {application.resume_url}
+Portfolio:  {application.portfolio_url or 'Not provided'}
+
+Cover letter:
+{application.cover_letter or 'Not provided'}
+
+--
+Application #{application.id}
+"""
+    # Saved before the mail goes out, so a mail failure never loses a candidate
+    # — which matters more here than for enquiries, because SMTP is still
+    # unconfigured and these currently only exist in the database.
+    send_email(
+        site_settings.enquiry_email(db),
+        f"[MOP Careers] Application — {application.position} — {application.name}",
+        body,
+    )
+
+    logger.info(
+        "Job application #%s for %r from %s",
+        application.id, application.position, application.email,
+    )
+    return MessageResponse(
+        message="Thanks for applying. The MOP Careers team will be in touch if there is a fit."
     )

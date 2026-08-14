@@ -4,6 +4,7 @@ import {
   BookOpen,
   Briefcase,
   CalendarDays,
+  FileText,
   ChevronsUpDown,
   Globe,
   GraduationCap,
@@ -38,6 +39,7 @@ const NAV = {
     { to: '/admin/fees', label: 'Fees', icon: IndianRupee },
     { to: '/admin/placements', label: 'Placements', icon: Briefcase },
     { to: '/admin/enquiries', label: 'Enquiries', icon: Inbox },
+    { to: '/admin/job-applications', label: 'Applications', icon: FileText },
     { to: '/admin/doubts', label: 'Doubts', icon: MessageSquare },
     // Content management for the public site. Last, because it is the only
     // entry that edits what the outside world sees rather than the platform.
@@ -58,6 +60,7 @@ const NAV = {
     { to: '/admin/fees', label: 'Fees', icon: IndianRupee },
     { to: '/admin/placements', label: 'Placements', icon: Briefcase },
     { to: '/admin/enquiries', label: 'Enquiries', icon: Inbox },
+    { to: '/admin/job-applications', label: 'Applications', icon: FileText },
     { to: '/watch', label: 'Follow-ups', icon: HelpCircle },
     { to: '/admin/doubts', label: 'Doubts', icon: MessageSquare },
   ],
@@ -68,6 +71,8 @@ const NAV = {
     { to: '/admin/batches', label: 'Batches', icon: GraduationCap },
     { to: '/admin/accounts', label: 'Accounts', icon: UserCog },
     { to: '/admin/placements', label: 'Placements', icon: Briefcase },
+    // Hiring, unlike enquiries — the user asked for contributors to see these.
+    { to: '/admin/job-applications', label: 'Applications', icon: FileText },
     { to: '/admin/doubts', label: 'Doubts', icon: MessageSquare },
   ],
   // Read-only across every batch. Follow-ups first, because that is the job — the

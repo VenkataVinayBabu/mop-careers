@@ -351,7 +351,7 @@ export function PublicFooter() {
               Company
             </h4>
             <ul className="grid gap-2.5">
-              <li><a href="/#about" className="transition hover:text-teal-300">About Us</a></li>
+              <li><Link to="/about" className="transition hover:text-teal-300">About Us</Link></li>
               <li><a href="/#enquire" className="transition hover:text-teal-300">Contact Us</a></li>
               <li><Link to="/careers" className="transition hover:text-teal-300">Careers</Link></li>
             </ul>

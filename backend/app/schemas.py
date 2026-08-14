@@ -434,6 +434,58 @@ DoubtType = Literal["class_doubt", "technical", "other"]
 DoubtStatus = Literal["open", "answered"]
 
 
+class JobApplicationCreate(BaseModel):
+    """Public, unauthenticated — the careers page's Apply form."""
+
+    position: str = Field(min_length=2, max_length=120)
+    name: str = Field(min_length=2, max_length=120)
+    email: EmailStr
+    phone: str = Field(min_length=6, max_length=20)
+    years_experience: str = Field(min_length=1, max_length=40)
+    # Required: a job application without a resume is not one.
+    resume_url: str = Field(min_length=8, max_length=500)
+    portfolio_url: str | None = Field(default=None, max_length=300)
+    cover_letter: str | None = Field(default=None, max_length=4000)
+
+    @field_validator("resume_url", "portfolio_url")
+    @classmethod
+    def _full_url(cls, v: str | None) -> str | None:
+        """Any host is fine — Drive, Dropbox, OneDrive, a personal site. What
+        is refused is a bare "my-cv.pdf" or a domain with no scheme, which does
+        not open when somebody clicks it in the inbox."""
+        if v is None:
+            return None
+        v = v.strip()
+        if not v:
+            return None
+        if not v.startswith(("http://", "https://")):
+            raise ValueError("Enter a full link starting with http:// or https://")
+        return v
+    # The form's tick-box. Enforced here as well as in the browser, because a
+    # consent checkbox that only exists in the frontend has not been given.
+    agreed_to_terms: bool
+
+    @field_validator("agreed_to_terms")
+    @classmethod
+    def _must_agree(cls, v: bool) -> bool:
+        if not v:
+            raise ValueError("Please accept the terms and privacy policy to apply")
+        return v
+
+
+class JobApplicationOut(ORMModel):
+    id: int
+    position: str
+    name: str
+    email: EmailStr
+    phone: str
+    years_experience: str
+    resume_url: str
+    portfolio_url: str | None = None
+    cover_letter: str | None = None
+    created_at: datetime
+
+
 class EnquiryCreate(BaseModel):
     """Public, unauthenticated. Validated tightly because anyone can post here."""
 
@@ -615,6 +667,30 @@ def _optional_url(v: str | None) -> str | None:
     return v
 
 
+def _optional_image_url(v: str | None) -> str | None:
+    """Like `_optional_url`, but also accepts a path on this site.
+
+    Object storage still does not exist, so the realistic ways to get a photo
+    onto the site are an external host or a file committed to
+    `frontend/public/`. The second is free, never expires and cannot have its
+    sharing revoked — but it is served from "/team/name.jpg", which the
+    absolute-URL rule rejected. A leading slash is unambiguous (a bare
+    "photo.jpg" is not) so it is allowed and nothing else changes.
+    """
+    if v is None:
+        return None
+    v = v.strip()
+    if not v:
+        return ""
+    if v.startswith("/"):
+        return v
+    if not v.startswith(("http://", "https://")):
+        raise ValueError(
+            "Enter a full link starting with https://, or a path on this site starting with /"
+        )
+    return v
+
+
 class SiteSettingsUpdate(BaseModel):
     """Every field optional — the admin form sends only what changed, and a
     field left out keeps its current value rather than being blanked."""
@@ -686,6 +762,147 @@ class MentorOut(ORMModel):
     sort_order: int = 0
 
 
+LeaderSection = Literal["leadership", "team"]
+
+
+class LeaderOut(ORMModel):
+    id: int
+    section: LeaderSection = "leadership"
+    name: str
+    role: str = ""
+    tags: list[str] = []
+    meta: str = ""
+    bio: str = ""
+    photo_url: str = ""
+    published: bool = True
+    sort_order: int = 0
+
+
+class LeaderCreate(BaseModel):
+    section: LeaderSection = "leadership"
+    name: str = Field(min_length=2, max_length=120)
+    role: str = Field(default="", max_length=120)
+    tags: list[str] = Field(default_factory=list, max_length=10)
+    meta: str = Field(default="", max_length=120)
+    bio: str = Field(default="", max_length=4000)
+    photo_url: str = Field(default="", max_length=500)
+    published: bool = True
+
+    @field_validator("name", "role", "meta", "bio")
+    @classmethod
+    def _trim_text(cls, v: str) -> str:
+        return v.strip()
+
+    @field_validator("photo_url")
+    @classmethod
+    def _check_photo(cls, v: str) -> str:
+        return _optional_image_url(v) or ""
+
+    @field_validator("tags")
+    @classmethod
+    def _clean(cls, v: list[str]) -> list[str]:
+        return _clean_tags(v) or []
+
+
+class LeaderUpdate(BaseModel):
+    """Every field optional — the form sends only what changed."""
+
+    section: LeaderSection | None = None
+    name: str | None = Field(default=None, min_length=2, max_length=120)
+    role: str | None = Field(default=None, max_length=120)
+    tags: list[str] | None = Field(default=None, max_length=10)
+    meta: str | None = Field(default=None, max_length=120)
+    bio: str | None = Field(default=None, max_length=4000)
+    photo_url: str | None = Field(default=None, max_length=500)
+    published: bool | None = None
+
+    @field_validator("name", "role", "meta", "bio")
+    @classmethod
+    def _trim_text(cls, v: str | None) -> str | None:
+        return v.strip() if v is not None else None
+
+    @field_validator("photo_url")
+    @classmethod
+    def _check_photo(cls, v: str | None) -> str | None:
+        return _optional_image_url(v)
+
+    @field_validator("tags")
+    @classmethod
+    def _clean(cls, v: list[str] | None) -> list[str] | None:
+        return _clean_tags(v)
+
+
+class JobOpeningOut(ORMModel):
+    id: int
+    name: str
+    department: str = ""
+    location: str = ""
+    description: str = ""
+    experience: str = ""
+    salary: str = ""
+    skills: list[str] = []
+    published: bool = True
+    sort_order: int = 0
+
+
+def _clean_tags(v: list[str] | None) -> list[str] | None:
+    """Skill tags, deduplicated and order-preserving. Case is kept as typed —
+    "React" and "AWS" are how people write them, and lowercasing would render
+    them wrong on the card."""
+    if v is None:
+        return None
+    out: list[str] = []
+    for raw in v:
+        tag = str(raw).strip()
+        if tag and tag not in out:
+            out.append(tag)
+    return out
+
+
+class JobOpeningCreate(BaseModel):
+    name: str = Field(min_length=2, max_length=120)
+    department: str = Field(default="", max_length=80)
+    location: str = Field(default="", max_length=80)
+    description: str = Field(default="", max_length=2000)
+    experience: str = Field(default="", max_length=120)
+    salary: str = Field(default="", max_length=80)
+    skills: list[str] = Field(default_factory=list, max_length=20)
+    published: bool = True
+
+    @field_validator("name", "department", "location", "description", "experience", "salary")
+    @classmethod
+    def _trim_text(cls, v: str) -> str:
+        return v.strip()
+
+    @field_validator("skills")
+    @classmethod
+    def _clean_skills(cls, v: list[str]) -> list[str]:
+        return _clean_tags(v) or []
+
+
+class JobOpeningUpdate(BaseModel):
+    """Every field optional — the form sends only what changed."""
+
+    name: str | None = Field(default=None, min_length=2, max_length=120)
+    department: str | None = Field(default=None, max_length=80)
+    location: str | None = Field(default=None, max_length=80)
+    description: str | None = Field(default=None, max_length=2000)
+    experience: str | None = Field(default=None, max_length=120)
+    salary: str | None = Field(default=None, max_length=80)
+    skills: list[str] | None = Field(default=None, max_length=20)
+    published: bool | None = None
+
+    @field_validator("name", "department", "location", "description", "experience", "salary")
+    @classmethod
+    def _trim_text(cls, v: str | None) -> str | None:
+        return v.strip() if v is not None else None
+
+    @field_validator("skills")
+    @classmethod
+    def _clean_skills(cls, v: list[str] | None) -> list[str] | None:
+        return _clean_tags(v)
+
+
 def _clean_slugs(v: list[str] | None) -> list[str] | None:
     """Programme slugs are free text — the catalogue is still frontend data.
     Deduplicated and order-preserving, so the form cannot send one twice."""
@@ -716,7 +933,7 @@ class MentorCreate(BaseModel):
     @field_validator("photo_url")
     @classmethod
     def _check_photo(cls, v: str) -> str:
-        return _optional_url(v) or ""
+        return _optional_image_url(v) or ""
 
     @field_validator("programs")
     @classmethod
@@ -744,7 +961,7 @@ class MentorUpdate(BaseModel):
     @field_validator("photo_url")
     @classmethod
     def _check_photo(cls, v: str | None) -> str | None:
-        return _optional_url(v)
+        return _optional_image_url(v)
 
     @field_validator("programs")
     @classmethod
@@ -795,7 +1012,7 @@ class StoryCreate(BaseModel):
     @field_validator("photo_url")
     @classmethod
     def _check_photo(cls, v: str) -> str:
-        return _optional_url(v) or ""
+        return _optional_image_url(v) or ""
 
 
 class StoryUpdate(BaseModel):
@@ -813,7 +1030,7 @@ class StoryUpdate(BaseModel):
     @field_validator("photo_url")
     @classmethod
     def _check_photo(cls, v: str | None) -> str | None:
-        return _optional_url(v)
+        return _optional_image_url(v)
 
 
 class HiringPartnerOut(ORMModel):
@@ -841,7 +1058,7 @@ class HiringPartnerCreate(BaseModel):
     @field_validator("logo_url")
     @classmethod
     def _check_logo(cls, v: str) -> str:
-        return _optional_url(v) or ""
+        return _optional_image_url(v) or ""
 
 
 class HiringPartnerUpdate(BaseModel):
@@ -858,7 +1075,7 @@ class HiringPartnerUpdate(BaseModel):
     @field_validator("logo_url")
     @classmethod
     def _check_logo(cls, v: str | None) -> str | None:
-        return _optional_url(v)
+        return _optional_image_url(v)
 
 
 # --- headline statistics --------------------------------------------------
@@ -1313,7 +1530,12 @@ class ViewerOverview(BaseModel):
 # ==========================================================================
 #  Website change requests — the contributor / member approval flow
 # ==========================================================================
-ChangeEntity = Literal["settings", "program", "mentor", "story", "partner", "statistic"]
+# Must stay in step with ENTITIES in website_apply — a key missing here is a
+# 422 at submit rather than the "Unknown content type" the router would give,
+# so the two lists disagreeing is silent until someone tries to propose one.
+ChangeEntity = Literal[
+    "settings", "program", "mentor", "story", "partner", "statistic", "opening", "leader"
+]
 ChangeAction = Literal["create", "update", "delete", "reorder"]
 ChangeStatus = Literal["pending", "approved", "rejected", "withdrawn"]
 

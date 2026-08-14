@@ -20,11 +20,19 @@ from sqlalchemy.orm import Session
 from app import site_settings
 from app.database import get_db
 from app.deps import require_publisher, require_website_editor
-from app.models import HiringPartner, Mentor, Program, Statistic, Story, User
+from app.models import (
+    HiringPartner, JobOpening, Leader, Mentor, Program, Statistic, Story, User,
+)
 from app.schemas import (
     HiringPartnerCreate,
     HiringPartnerOut,
     HiringPartnerUpdate,
+    JobOpeningCreate,
+    JobOpeningOut,
+    JobOpeningUpdate,
+    LeaderCreate,
+    LeaderOut,
+    LeaderUpdate,
     MentorCreate,
     MentorOut,
     MentorUpdate,
@@ -151,6 +159,95 @@ def reorder_mentors(
 ) -> list[Mentor]:
     logger.info("Mentors reordered by %s", publisher.email)
     return apply_reorder(db, Mentor, payload.ids)
+
+
+# --- leadership (About page) ----------------------------------------------
+@router.get("/leaders", response_model=list[LeaderOut])
+def list_leaders(db: Session = Depends(get_db)) -> list[Leader]:
+    return ordered(db, Leader)
+
+
+@router.post("/leaders", response_model=LeaderOut, status_code=status.HTTP_201_CREATED)
+def create_leader(
+    payload: LeaderCreate, db: Session = Depends(get_db), publisher: User = Depends(require_publisher)
+) -> Leader:
+    return _save_new(
+        db, Leader(**payload.model_dump(), sort_order=next_sort_order(db, Leader)), publisher, "Leader"
+    )
+
+
+@router.put("/leaders/{leader_id}", response_model=LeaderOut)
+def update_leader(
+    leader_id: int,
+    payload: LeaderUpdate,
+    db: Session = Depends(get_db),
+    publisher: User = Depends(require_publisher),
+) -> Leader:
+    return _apply_changes(db, get_or_404(db, Leader, leader_id, "Leader"), payload, publisher, "Leader")
+
+
+@router.delete("/leaders/{leader_id}", response_model=MessageResponse)
+def delete_leader(
+    leader_id: int, db: Session = Depends(get_db), publisher: User = Depends(require_publisher)
+) -> MessageResponse:
+    return _remove(db, get_or_404(db, Leader, leader_id, "Leader"), publisher, "Leader")
+
+
+@router.post("/leaders/reorder", response_model=list[LeaderOut])
+def reorder_leaders(
+    payload: ReorderRequest, db: Session = Depends(get_db), publisher: User = Depends(require_publisher)
+) -> list[Leader]:
+    logger.info("Leaders reordered by %s", publisher.email)
+    return apply_reorder(db, Leader, payload.ids)
+
+
+# --- job openings ---------------------------------------------------------
+@router.get("/openings", response_model=list[JobOpeningOut])
+def list_openings(db: Session = Depends(get_db)) -> list[JobOpening]:
+    return ordered(db, JobOpening)
+
+
+@router.post("/openings", response_model=JobOpeningOut, status_code=status.HTTP_201_CREATED)
+def create_opening(
+    payload: JobOpeningCreate,
+    db: Session = Depends(get_db),
+    publisher: User = Depends(require_publisher),
+) -> JobOpening:
+    return _save_new(
+        db,
+        JobOpening(**payload.model_dump(), sort_order=next_sort_order(db, JobOpening)),
+        publisher,
+        "Job opening",
+    )
+
+
+@router.put("/openings/{opening_id}", response_model=JobOpeningOut)
+def update_opening(
+    opening_id: int,
+    payload: JobOpeningUpdate,
+    db: Session = Depends(get_db),
+    publisher: User = Depends(require_publisher),
+) -> JobOpening:
+    return _apply_changes(
+        db, get_or_404(db, JobOpening, opening_id, "Job opening"), payload, publisher, "Job opening"
+    )
+
+
+@router.delete("/openings/{opening_id}", response_model=MessageResponse)
+def delete_opening(
+    opening_id: int, db: Session = Depends(get_db), publisher: User = Depends(require_publisher)
+) -> MessageResponse:
+    return _remove(
+        db, get_or_404(db, JobOpening, opening_id, "Job opening"), publisher, "Job opening"
+    )
+
+
+@router.post("/openings/reorder", response_model=list[JobOpeningOut])
+def reorder_openings(
+    payload: ReorderRequest, db: Session = Depends(get_db), publisher: User = Depends(require_publisher)
+) -> list[JobOpening]:
+    logger.info("Job openings reordered by %s", publisher.email)
+    return apply_reorder(db, JobOpening, payload.ids)
 
 
 # --- learner stories ------------------------------------------------------

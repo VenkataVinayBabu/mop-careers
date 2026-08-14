@@ -22,6 +22,7 @@ from app.models import (
     Batch,
     CurriculumDay,
     Enquiry,
+    JobApplication,
     Milestone,
     Program,
     TeacherBatch,
@@ -36,6 +37,7 @@ from app.schemas import (
     BlockToggleRequest,
     EnquiryOut,
     EnquiryStatusUpdate,
+    JobApplicationOut,
     MessageResponse,
     MilestoneOut,
     MilestoneUpdate,
@@ -460,6 +462,40 @@ def delete_enquiry(enquiry_id: int, db: Session = Depends(get_db),
     db.delete(enquiry)
     db.commit()
     return MessageResponse(message="Enquiry deleted")
+
+
+# --- job applications (careers page) --------------------------------------
+# The whole back office, contributors included — which is a deliberate
+# departure from the line above, where an enquiry is member-and-above.
+#
+# The distinction: an enquiry is a sales lead, sitting beside the fees a
+# contributor must never see. An application is hiring, and the user asked for
+# all three roles to read them. Both still hold somebody's phone number, so if
+# that judgement is ever revisited, this is the guard to change.
+@router.get("/job-applications", response_model=list[JobApplicationOut])
+def list_job_applications(
+    db: Session = Depends(get_db), _: User = Depends(require_back_office)
+) -> list[JobApplicationOut]:
+    rows = db.scalars(
+        select(JobApplication).order_by(JobApplication.created_at.desc())
+    ).all()
+    return [JobApplicationOut.model_validate(a) for a in rows]
+
+
+# Deleting is member-and-above even though reading is not: the form is open to
+# the whole internet, so spam will arrive and needs clearing — but throwing away
+# a real person's application is not something to hand to every role that can
+# read one.
+@router.delete("/job-applications/{application_id}", response_model=MessageResponse)
+def delete_job_application(
+    application_id: int, db: Session = Depends(get_db), _: User = Depends(require_member)
+) -> MessageResponse:
+    application = db.get(JobApplication, application_id)
+    if application is None:
+        raise HTTPException(status.HTTP_404_NOT_FOUND, "Application not found")
+    db.delete(application)
+    db.commit()
+    return MessageResponse(message="Application deleted")
 
 
 # --- overview -------------------------------------------------------------

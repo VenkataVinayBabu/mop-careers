@@ -15,9 +15,12 @@ import AdminBatches from './pages/admin/Batches';
 import AdminDashboard from './pages/admin/Dashboard';
 import AdminEnquiries from './pages/admin/Enquiries';
 import AdminFees from './pages/admin/Fees';
+import AdminJobApplications from './pages/admin/JobApplications';
 import AdminPlacements from './pages/admin/Placements';
 import AdminWebsite from './pages/admin/Website';
 import AdminWebsiteChanges from './pages/admin/WebsiteChanges';
+import AdminWebsiteLeaders from './pages/admin/WebsiteLeaders';
+import AdminWebsiteOpenings from './pages/admin/WebsiteOpenings';
 import AdminWebsiteMentors from './pages/admin/WebsiteMentors';
 import AdminWebsiteProgramEditor from './pages/admin/WebsiteProgramEditor';
 import AdminWebsitePrograms from './pages/admin/WebsitePrograms';
@@ -41,6 +44,7 @@ import StudentDoubts from './pages/student/Doubts';
 import StudentHome from './pages/student/Home';
 import StudentMissed from './pages/student/Missed';
 import ProfileSettings from './pages/ProfileSettings';
+import About from './pages/public/About';
 import Careers from './pages/public/Careers';
 import StaticPage from './pages/public/StaticPage';
 import StudentProgress from './pages/student/Progress';
@@ -130,6 +134,7 @@ export default function App() {
       <Route path="/privacy-policy" element={<StaticPage slug="privacy-policy" />} />
       <Route path="/terms-of-service" element={<StaticPage slug="terms-of-service" />} />
       <Route path="/refund-policy" element={<StaticPage slug="refund-policy" />} />
+      <Route path="/about" element={<About />} />
       <Route path="/careers" element={<Careers />} />
       <Route path="/courses" element={<Navigate to={{ pathname: '/', hash: '#programs' }} replace />} />
       <Route path="/login" element={<Login />} />
@@ -166,11 +171,16 @@ export default function App() {
         <Route path="/admin/batches" element={<AdminBatches />} />
         <Route path="/admin/accounts" element={<AdminAccounts />} />
         <Route path="/admin/placements" element={<AdminPlacements />} />
+        {/* Hiring, not admissions — which is why this sits here and enquiries
+            do not. Deleting one is still member-and-above, in the API. */}
+        <Route path="/admin/job-applications" element={<AdminJobApplications />} />
         <Route path="/admin/doubts" element={<DoubtsInbox />} />
         <Route path="/admin/website/approvals" element={<AdminWebsiteChanges />} />
         <Route path="/admin/website/my-changes" element={<AdminWebsiteChanges mine />} />
         {/* Content management for the public site. */}
         <Route path="/admin/website" element={<AdminWebsite />} />
+        <Route path="/admin/website/leaders" element={<AdminWebsiteLeaders />} />
+        <Route path="/admin/website/openings" element={<AdminWebsiteOpenings />} />
         <Route path="/admin/website/programs" element={<AdminWebsitePrograms />} />
         {/* One programme is a page, not a modal — it carries a whole syllabus. */}
         <Route path="/admin/website/programs/:programId" element={<AdminWebsiteProgramEditor />} />

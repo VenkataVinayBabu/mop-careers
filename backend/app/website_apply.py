@@ -28,6 +28,8 @@ from app.models import (
     CHANGE_REORDER,
     CHANGE_UPDATE,
     HiringPartner,
+    JobOpening,
+    Leader,
     Mentor,
     Program,
     Statistic,
@@ -37,6 +39,10 @@ from app.models import (
 from app.schemas import (
     HiringPartnerCreate,
     HiringPartnerUpdate,
+    JobOpeningCreate,
+    JobOpeningUpdate,
+    LeaderCreate,
+    LeaderUpdate,
     MentorCreate,
     MentorUpdate,
     ProgramCreate,
@@ -73,9 +79,40 @@ ENTITIES: dict[str, EntitySpec] = {
         "statistic", Statistic, "Statistic", StatisticCreate, StatisticUpdate
     ),
     "program": EntitySpec("program", Program, "Program", ProgramCreate, ProgramUpdate),
+    # A job opening is a public claim that MOP is hiring at a stated salary, so
+    # it goes through the queue like every other piece of website copy rather
+    # than being an exception a contributor could publish directly.
+    "opening": EntitySpec(
+        "opening", JobOpening, "Job opening", JobOpeningCreate, JobOpeningUpdate
+    ),
+    "leader": EntitySpec("leader", Leader, "Leader", LeaderCreate, LeaderUpdate),
 }
 SETTINGS_ENTITY = "settings"
 ENTITY_KEYS = tuple(ENTITIES) + (SETTINGS_ENTITY,)
+
+# `ChangeEntity` in schemas.py lists the same keys, because Pydantic needs them
+# as a Literal and importing this module there would be circular. Two lists
+# that must agree is exactly the drift this file exists to prevent everywhere
+# else, so they are checked at import: a key added to one and not the other
+# fails the app on startup instead of surfacing as a 422 the first time
+# somebody proposes that content type.
+def _assert_schema_in_step() -> None:
+    from typing import get_args
+
+    from app.schemas import ChangeEntity
+
+    declared = set(get_args(ChangeEntity))
+    if declared != set(ENTITY_KEYS):
+        missing = set(ENTITY_KEYS) - declared
+        extra = declared - set(ENTITY_KEYS)
+        raise RuntimeError(
+            "ChangeEntity and ENTITIES disagree — "
+            f"missing from schemas: {sorted(missing) or 'none'}; "
+            f"unknown to the registry: {sorted(extra) or 'none'}"
+        )
+
+
+_assert_schema_in_step()
 
 
 def _row_label(entity: str, obj) -> str:

@@ -497,6 +497,39 @@ class Enquiry(Base):
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
 
 
+class JobApplication(Base):
+    """Somebody applying for a role on the careers page. No authentication.
+
+    Kept apart from Enquiry rather than folded into it: an application and a
+    course lead go to different people and carry different fields, and merging
+    them would drop CVs into the admissions inbox.
+    """
+
+    __tablename__ = "job_applications"
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True)
+    # The role, as free text. The openings are defined in the frontend rather
+    # than a table, so there is nothing here to point a foreign key at — and a
+    # stored title still reads correctly after that opening is taken down.
+    position: Mapped[str] = mapped_column(String(120), nullable=False)
+    name: Mapped[str] = mapped_column(String(120), nullable=False)
+    email: Mapped[str] = mapped_column(String(255), nullable=False, index=True)
+    phone: Mapped[str] = mapped_column(String(20), nullable=False)
+    # Text, not a number: people write "5+" or "3.5" and refusing that on a
+    # careers form loses the candidate, not the malformed input.
+    years_experience: Mapped[str] = mapped_column(String(40), nullable=False)
+    # A link rather than an uploaded file, because there is nowhere durable to
+    # put a file yet: Render's free tier wipes local disk on every deploy, so
+    # an upload built today would lose every resume at the next one. Any host
+    # is accepted, not just Drive. When object storage lands (thread 1), add an
+    # upload *alongside* this rather than replacing it — plenty of people would
+    # still rather paste a link.
+    resume_url: Mapped[str] = mapped_column(String(500), nullable=False)
+    portfolio_url: Mapped[str | None] = mapped_column(String(300))
+    cover_letter: Mapped[str | None] = mapped_column(Text)
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
+
+
 class Doubt(Base):
     __tablename__ = "doubts"
 
@@ -577,6 +610,91 @@ class Mentor(Base):
     # Fabricated stand-ins carried over from the seed. The public card renders
     # them visibly marked, and it is the flag the admin list sorts to the top.
     is_placeholder: Mapped[bool] = mapped_column(Boolean, default=False, nullable=False)
+    published: Mapped[bool] = mapped_column(Boolean, default=True, nullable=False)
+    sort_order: Mapped[int] = mapped_column(Integer, default=0, nullable=False, index=True)
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
+    updated_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), server_default=func.now(), onupdate=func.now()
+    )
+
+
+class Leader(Base):
+    """Someone on the About page's leadership section.
+
+    Separate from `Mentor` on purpose: a mentor teaches a programme and is
+    rendered as such, with programme tick-boxes and a place on the programme
+    pages. A COO or a lead developer belongs to neither, and folding them
+    together would put the CEO on the mentors carousel.
+
+    Seeded with the two who were hardcoded on the About page, so an empty table
+    means the section is deliberately empty rather than not yet set up.
+    """
+
+    __tablename__ = "leaders"
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True)
+    # Which block on the About page: "leadership" or "team". One table told
+    # apart by a column, the same way Statistic separates the hero strip from
+    # the outcomes grid — two tables with identical columns would be two
+    # screens and two sets of endpoints for one concept.
+    section: Mapped[str] = mapped_column(
+        String(20), default="leadership", nullable=False, index=True
+    )
+    name: Mapped[str] = mapped_column(String(120), nullable=False)
+    # "CEO — MOP Careers", "Lead Developer". Free text, so a new title needs no
+    # migration and no developer.
+    role: Mapped[str] = mapped_column(String(120), default="", nullable=False)
+    # ["Ex-Capgemini", "Ex-Wipro"] — the small pills beside the name.
+    tags: Mapped[list] = mapped_column(JSON, default=list, nullable=False)
+    # "15+ Years · Data Science" — the one highlighted pill.
+    meta: Mapped[str] = mapped_column(String(120), default="", nullable=False)
+    # Paragraphs separated by blank lines, rendered as separate <p>s. Plain
+    # text rather than a list of strings: it is written in a textarea, and
+    # asking someone to think in JSON to add a sentence is how the field stops
+    # being used.
+    bio: Mapped[str] = mapped_column(Text, default="", nullable=False)
+    # A link, like mentors — uploads still wait on object storage. Note the
+    # photos on mopcareers.in/about.php are Unsplash stock of unrelated people;
+    # blank renders initials, which is the honest option until MOP supplies
+    # real portraits.
+    photo_url: Mapped[str] = mapped_column(String(500), default="", nullable=False)
+    published: Mapped[bool] = mapped_column(Boolean, default=True, nullable=False)
+    sort_order: Mapped[int] = mapped_column(Integer, default=0, nullable=False, index=True)
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
+    updated_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), server_default=func.now(), onupdate=func.now()
+    )
+
+
+class JobOpening(Base):
+    """A role on the public careers page.
+
+    Seeded with the four openings that were hardcoded in `Careers.jsx`, for the
+    same reason mentors are: an empty table has to mean "nothing is open right
+    now" rather than "nobody has set this up yet", and taking the last role
+    down must not bring the hardcoded list back.
+
+    The title is `name` rather than `title` so the approval queue labels a
+    proposal without needing a special case — see `_row_label` in
+    `website_apply`. Roles are closed by unpublishing, not deleting: a filled
+    position comes back next quarter and retyping it is how details drift.
+    """
+
+    __tablename__ = "job_openings"
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True)
+    name: Mapped[str] = mapped_column(String(120), nullable=False)
+    department: Mapped[str] = mapped_column(String(80), default="", nullable=False)
+    # "Remote", "Bangalore", "Hybrid" — free text, because the answer is
+    # sometimes a city and sometimes an arrangement.
+    location: Mapped[str] = mapped_column(String(80), default="", nullable=False)
+    description: Mapped[str] = mapped_column(Text, default="", nullable=False)
+    experience: Mapped[str] = mapped_column(String(120), default="", nullable=False)
+    # Also free text: "₹20-30 LPA", "Competitive", or empty when MOP would
+    # rather not publish a band. A number would force a decision the business
+    # has not made.
+    salary: Mapped[str] = mapped_column(String(80), default="", nullable=False)
+    skills: Mapped[list] = mapped_column(JSON, default=list, nullable=False)
     published: Mapped[bool] = mapped_column(Boolean, default=True, nullable=False)
     sort_order: Mapped[int] = mapped_column(Integer, default=0, nullable=False, index=True)
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())

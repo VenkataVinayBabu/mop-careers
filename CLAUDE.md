@@ -483,17 +483,46 @@ Small, known, and none of them blocking. Listed because they exist nowhere else.
 
 ### 9. Bala's changes to the public site (2026-08-13) — ✅ BUILT
 
-**All three are built and pushed**, plus the Careers page he asked for on the
-14th, copied from `mopcareers.in/careers.php`. What is left here is content, not
-code: the three legal pages are stubs at `/privacy-policy`,
-`/terms-of-service` and `/refund-policy` waiting on MOP's wording (the user has
-it); the five social URLs are still unsupplied, so the footer icon row stays
-hidden; the careers openings are hardcoded in `Careers.jsx` rather than
-admin-editable, which is the right follow-up if Bala wants to post roles
-himself; and `contacts@mopcareers.in` has not been set — it is one field at
-Admin > Website > Settings, and until it is, job applications go to whatever
-address is configured there. **More changes were promised and have not arrived
-yet.**
+**All three are built and pushed**, plus the Careers and About pages, the
+application form behind Apply Now, and admin screens for both new content
+types. What is left here is content, not code:
+
+- The three legal pages are stubs at `/privacy-policy`, `/terms-of-service`
+  and `/refund-policy` waiting on MOP's wording (the user has it).
+- The five social URLs are still unsupplied, so the footer icon row stays
+  hidden.
+- `contacts@mopcareers.in` has not been set — one field at Admin > Website >
+  Settings, and until it is, application notifications go wherever
+  `enquiry_email` points.
+- **About Us is still half hardcoded.** Mission, vision, the six core values,
+  the six programme summaries and the four statistics are in `About.jsx`. Only
+  the people are editable. Note the four statistics there are *about.php's*
+  (1,050+ / 500+ / 47.6 LPA / 87%) and deliberately differ from the
+  `statistics` table the landing page uses — MOP publishes two different sets
+  and nobody has reconciled them.
+- The careers **benefits** list is still hardcoded; only the openings moved.
+
+**Now editable at Admin > Website**, both through the approval queue like
+every other content type:
+
+- **Openings** — the roles on `/careers`. Closing a role unpublishes it rather
+  than deleting, so it can be reopened without retyping.
+- **Leadership & team** — the About page's people, split by a `section`
+  column into "Our Leadership" and "Our Team". Separate from `mentors` on
+  purpose: a mentor teaches a programme and appears on programme pages.
+
+Applications submitted through Apply Now land in `job_applications` and are
+read at **Admin > Applications** by admin, member *and* contributor — a
+deliberate departure from the rule that contributors never see enquiries, on
+the grounds that hiring is not admissions. Deleting one stays member-and-above.
+Resumes are **links, not uploads** (object storage still does not exist), so
+they can rot; the screen says so.
+
+Photos may now be a path on this site (`/team/vinay.jpg`, committed under
+`frontend/public/`) as well as an absolute URL — the only free, non-expiring
+option until object storage lands.
+
+**More changes were promised and have not arrived yet.**
 
 The original brief follows.
 

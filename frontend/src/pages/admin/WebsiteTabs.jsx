@@ -20,8 +20,10 @@ const TABS = [
   { to: '/admin/website/programs', label: 'Programs' },
   { to: '/admin/website/statistics', label: 'Statistics' },
   { to: '/admin/website/mentors', label: 'Mentors' },
+  { to: '/admin/website/leaders', label: 'Leadership' },
   { to: '/admin/website/stories', label: 'Stories' },
   { to: '/admin/website/partners', label: 'Hiring partners' },
+  { to: '/admin/website/openings', label: 'Openings' },
 ];
 
 const REVIEW_TAB = { to: '/admin/website/approvals', label: 'Approvals' };
