@@ -308,6 +308,11 @@ of how much it would matter if wrong:
   longer needs a developer. They are rows in the `mentors` table now, flagged
   as stand-ins, and **Bala can delete or replace each one at Admin > Website >
   Mentors in about a minute.** The screen counts them and says so at the top.
+- **Human Resource Management (HRM) is deliberately NOT published here.** MOP
+  lists ten placement programmes on mopcareers.in; this site publishes nine.
+  The user was asked and said not to add it (15 Aug 2026). Its content exists
+  at `mopcareers.in/hrm-hub.php` if that is ever reversed — do not add it back
+  on the grounds that the counts disagree.
 - **Cloud Computing and Cyber Security** appear only in the Emergent prototype. They
   are **not** on mopcareers.in and MOP has not confirmed it runs them. Both carry
   the `confirmed` flag unticked, which puts a banner on Admin > Website >
