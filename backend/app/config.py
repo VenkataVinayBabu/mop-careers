@@ -1,11 +1,25 @@
 """Application configuration, loaded from .env. No secret is ever hardcoded."""
+import os
 from functools import lru_cache
 from pathlib import Path
 
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
 BACKEND_DIR = Path(__file__).resolve().parent.parent
-UPLOAD_DIR = BACKEND_DIR / "uploads"
+
+# Where uploaded notes PDFs live.
+#
+# Overridable because the right answer depends on the host, and getting it
+# wrong is silent: on Render's free tier this directory sits inside the
+# deployment and every upload is wiped on the next deploy, which is exactly
+# what has been happening. Azure App Service mounts `/home` on persistent
+# storage, so setting UPLOAD_DIR=/home/data there makes the files survive
+# without needing object storage at all.
+#
+# Read straight from the environment rather than through Settings below: the
+# module-level mkdir at the bottom of this file runs at import, before the
+# settings object exists.
+UPLOAD_DIR = Path(os.getenv("UPLOAD_DIR") or (BACKEND_DIR / "uploads"))
 NOTES_DIR = UPLOAD_DIR / "notes"
 
 

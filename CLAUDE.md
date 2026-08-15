@@ -343,6 +343,28 @@ of how much it would matter if wrong:
   conflicting email, phone and address above — none of those needs a developer
   any more.
 
+### 3a. Hosting moves to Azure — decided, not yet done
+
+**Bala's decision, 15 Aug 2026: Azure only.** Render goes away entirely.
+
+[DEPLOY_AZURE.md](DEPLOY_AZURE.md) is the step-by-step, mirroring DEPLOY.md.
+The mapping is Postgres Flexible Server, App Service (Linux, Python) and
+Static Web Apps. Nothing has been provisioned yet.
+
+Three things worth knowing before starting:
+
+- **It costs money.** Roughly $25–30/month once trial credits end — the
+  Postgres free tier is 12 months on a *new* account, and App Service's F1 tier
+  (60 CPU-minutes a day, no always-on) is not usable for this API. Upgrading
+  Render's database instead is ~$7/month and fixes only the deadline.
+- **Do the database first.** Restoring the dump into Azure Postgres defuses the
+  3 September deletion on its own, and can be proven by pointing the *existing*
+  Render backend at it before any hosting moves.
+- **`UPLOAD_DIR` is now configurable** (`backend/app/config.py`). App Service
+  mounts `/home` on persistent storage, so `UPLOAD_DIR=/home/data` there makes
+  teachers' notes PDFs survive a deploy — open since Phase 1, fixed by one
+  setting. It does not replace object storage for photos.
+
 ### 3. Domain
 
 MOP owns **mopcareers.com**, bought through GoDaddy — confirmed again by the
