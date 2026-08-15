@@ -394,16 +394,20 @@ site cannot be un-read), the class schedule, curriculum and placement records.
 
 ### 5. Before real students use the live site
 
-- **The free PostgreSQL database expires.** This is the only item here with an actual
-  deadline, and when it lapses the database is *deleted* — students, batches,
-  attendance, fees, placements, enquiries, and the six tables the public site now
-  reads from. Find the expiry date in the Render dashboard under `mop-careers-db`
-  and upgrade. Treat this as the most urgent thing on the whole list.
-  **`backup.ps1` at the repo root now exists and is tested** — it dumps any
-  database to a gitignored `backups/` folder and prints the matching
-  `pg_restore` command. Verified against the local database: 21 tables
-  captured. It does not remove the deadline, it makes lapsing survivable.
-  Backups are manual; schedule the command if the data starts to matter.
+- **The free PostgreSQL database expires on 3 SEPTEMBER 2026.** Confirmed in the
+  Render dashboard on 15 Aug 2026. When it lapses the database is *deleted* —
+  students, batches, attendance, fees, placements, enquiries, applications and
+  the tables the public site reads from. **Upgrading `mop-careers-db` is the
+  only thing that removes the deadline.** Treat this as the most urgent thing
+  on the whole list.
+  **A verified backup of production was taken on 15 Aug 2026** —
+  `backups/mop-careers_remote_2026-08-15_084952.dump`, 98.6 KB, all 26 tables,
+  table set identical to local. It is a snapshot, not a system: anything
+  entered after that date is not in it.
+  `backup.ps1` takes another in one command. Note it needs a `pg_dump` **at
+  least as new as the server**, which is PostgreSQL 18.4 on Render — the script
+  now picks the newest client installed rather than whatever is on PATH, which
+  is what made it fail the first time.
 - **Change `Teacher@123` and `Student@123`.** They are guessable and the site is on
   the public internet. Remove the demo accounts entirely before enrolment.
 - **SMTP is unconfigured**, so password resets and notifications only reach the Render

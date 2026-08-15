@@ -47,11 +47,24 @@ $ErrorActionPreference = 'Stop'
 # Not usually on PATH on Windows, so look where the installer puts it before
 # giving up. A version mismatch matters: pg_dump must be at least as new as
 # the server it is dumping, or it refuses.
-$pgDump = (Get-Command pg_dump -ErrorAction SilentlyContinue).Source
-if (-not $pgDump) {
-    $candidates = Get-ChildItem 'C:\Program Files\PostgreSQL\*\bin\pg_dump.exe' -ErrorAction SilentlyContinue |
-                  Sort-Object FullName -Descending
-    if ($candidates) { $pgDump = $candidates[0].FullName }
+# The NEWEST installed client wins, and PATH does not get the first word.
+#
+# It used to take whatever `pg_dump` resolved to on PATH and only scan if that
+# found nothing. That is wrong on exactly the machine this matters on: install
+# PostgreSQL 18 alongside 17 and PATH still points at 17, so the backup keeps
+# failing against an 18 server while a working client sits on disk unused.
+#
+# Sorted by version NUMBER, not by path text — a string sort puts "9.6" above
+# "18" and would pick the oldest client on the machine.
+$installed = Get-ChildItem 'C:\Program Files\PostgreSQL\*\bin\pg_dump.exe' -ErrorAction SilentlyContinue |
+             Sort-Object { [double]($_.Directory.Parent.Name) } -Descending
+
+if ($installed) {
+    $pgDump = $installed[0].FullName
+} else {
+    # Nothing in the standard location — fall back to PATH, which covers a
+    # client installed somewhere else entirely.
+    $pgDump = (Get-Command pg_dump -ErrorAction SilentlyContinue).Source
 }
 if (-not $pgDump) {
     Write-Error "pg_dump not found. Install the PostgreSQL client tools, or add its bin folder to PATH."
@@ -93,7 +106,26 @@ Write-Host "  -> $outFile"
 # pg_restore rather than all-or-nothing. --no-owner/--no-acl so the dump can
 # be restored into a database owned by a different role, which it will be.
 & $pgDump --format=custom --no-owner --no-acl --file=$outFile $DatabaseUrl
-if ($LASTEXITCODE -ne 0) { Write-Error "pg_dump failed with exit code $LASTEXITCODE." }
+if ($LASTEXITCODE -ne 0) {
+    # pg_dump leaves a 0-byte file behind when it aborts. Left in place it
+    # looks exactly like a backup in a directory listing, which is the worst
+    # possible thing for a file whose entire job is being there in a crisis.
+    if ((Test-Path $outFile) -and (Get-Item $outFile).Length -eq 0) {
+        Remove-Item $outFile -Force
+    }
+
+    # By far the most common cause, and the message pg_dump gives is true but
+    # not actionable. Render upgrades its Postgres, this client does not, and
+    # the fix is never obvious at 11pm.
+    Write-Host ''
+    Write-Host 'If that said "server version mismatch": the live database is newer than' -ForegroundColor Yellow
+    Write-Host 'your pg_dump. A client can dump its own version or older, never newer.' -ForegroundColor Yellow
+    Write-Host 'Install the matching PostgreSQL COMMAND LINE TOOLS (you do not need a' -ForegroundColor Yellow
+    Write-Host 'second server) and re-run — this script picks the newest one it finds:' -ForegroundColor Yellow
+    Write-Host '  https://www.enterprisedb.com/downloads/postgres-postgresql-downloads' -ForegroundColor Yellow
+    Write-Host ''
+    Write-Error "pg_dump failed with exit code $LASTEXITCODE."
+}
 
 $size = (Get-Item $outFile).Length
 if ($size -lt 1024) {
