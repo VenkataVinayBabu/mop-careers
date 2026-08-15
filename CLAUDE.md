@@ -345,9 +345,16 @@ of how much it would matter if wrong:
 
 ### 3. Domain
 
-MOP owns **mopcareers.com** — currently a GoDaddy "Launching Soon" placeholder. The
-decision between pointing that at Render, keeping mopcareers.in, or running both was
-deferred. Whenever it happens, three env vars must move with it or the site breaks
+MOP owns **mopcareers.com**, bought through GoDaddy — confirmed again by the
+user on 15 Aug 2026, along with the fact that **Bala has still not decided**.
+The choice between pointing it at Render, keeping mopcareers.in, or running
+both remains open.
+
+**As of 15 Aug 2026 mopcareers.com does not resolve at all** — no response over
+HTTPS on the apex or `www`, so even the GoDaddy placeholder has gone. Only
+`mopcareers.in` serves anything (200). That is worth knowing before the switch:
+there is nothing live on the .com to break, so pointing it at Render is a
+clean cutover rather than a migration. Whenever it happens, three env vars must move with it or the site breaks
 quietly: backend `CORS_ORIGINS` and `FRONTEND_URL` (the latter appears in password
 reset emails), and frontend `VITE_API_URL` — which is **baked in at build time**, so
 saving it in the dashboard does nothing until the frontend is redeployed.
@@ -490,11 +497,23 @@ Small, known, and none of them blocking. Listed because they exist nowhere else.
   administer, including their email; anyone signed in can fix their own name and
   phone at `/profile`.
 
-### 10. Assignments, scores and a leaderboard — NOT BUILT
+### 10. Assignments, scores and a leaderboard — ✅ BUILT
 
-Asked for on 15 Aug 2026. Nothing of this exists today: no table, no endpoint,
-no screen. The only "assignment" in the codebase is assigning a teacher to a
-batch. The brief, in the user's words:
+Asked for and built on 15 Aug 2026, pushed as `0774a4e`. Two tables
+(`assignments`, `assignment_submissions`), ten endpoints across the teacher,
+student and viewer routers, and four screens: the student's list and paper,
+the staff editor at *a batch > Assignments*, and the viewer's least-complete-
+first list. The student progress report gained an Assignments card counting
+work set on class days inside the selected range.
+
+**What is left here is not code.** Nobody has written a real assignment yet
+beyond test data, and the Placement Readiness Test the Data Analytics page
+advertises ("Assignments · Mock Interviews · 80%+ Score Required") is still
+only copy — there is no pass mark anywhere in the platform, and no link
+between an assignment score and placement readiness. If MOP wants the 80%
+gate to mean something, that is a separate piece of work.
+
+The brief, in the user's words:
 
 - a **teacher gives assignments** to students
 - a **viewer** sees, per batch, how many students have completed one
