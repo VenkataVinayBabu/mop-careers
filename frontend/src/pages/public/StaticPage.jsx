@@ -1,52 +1,161 @@
-import { Link } from 'react-router-dom';
+import { useEffect } from 'react';
 
 import { PublicFloats, PublicFooter, PublicHeader, useHashScroll } from './PublicChrome';
+import { LEGAL_DOCS } from '../../data/legal';
 
 /*
- * The footer links to Privacy Policy, Terms of Service, Refund Policy and
- * Careers. MOP has the wording for the legal three and will supply it; until
- * then these routes exist so the links are not 404s, which on a marketing site
- * reads as a broken company rather than an unfinished page.
+ * The three legal pages — privacy, terms and refund — rendered from the
+ * structured copy in `data/legal.js`.
  *
- * Replacing one is deliberately a small job: drop the real copy in as `body`
- * below and delete the placeholder paragraph. Nothing else here needs touching.
+ * One component for all three so they cannot drift apart in styling, and so a
+ * fourth policy is a data entry rather than another page. Clause numbers come
+ * from the array index rather than being typed into each heading: MOP's own
+ * pages number them, and hand-numbered headings go wrong the first time a
+ * clause is inserted in the middle.
  */
-const PAGES = {
-  'privacy-policy': {
-    title: 'Privacy Policy',
-    intro: 'How MOP Careers collects, uses and protects your personal information.',
-  },
-  'terms-of-service': {
-    title: 'Terms of Service',
-    intro: 'The terms you agree to when you use MOP Careers.',
-  },
-  'refund-policy': {
-    title: 'Refund Policy',
-    intro: 'When a fee can be refunded, and how to request it.',
-  },
-};
+
+function Block({ block }) {
+  if (typeof block === 'string') {
+    return <p className="mt-4 text-[0.95rem] leading-relaxed text-navy-500">{block}</p>;
+  }
+
+  if (block.list) {
+    return (
+      <ul className="mt-4 grid gap-2.5">
+        {block.list.map((item) => (
+          <li key={item} className="flex gap-3 text-[0.95rem] leading-relaxed text-navy-500">
+            <span aria-hidden="true" className="mt-2 h-1.5 w-1.5 shrink-0 rounded-full bg-teal" />
+            <span>{item}</span>
+          </li>
+        ))}
+      </ul>
+    );
+  }
+
+  if (block.defs) {
+    return (
+      <dl className="mt-4 grid gap-3 rounded-xl border border-navy-100 bg-navy-50/60 p-5">
+        {block.defs.map(([label, value]) => (
+          <div key={label} className="grid gap-0.5 sm:grid-cols-[13rem_1fr] sm:gap-4">
+            <dt className="text-[0.8rem] font-semibold uppercase tracking-wide text-navy-400">
+              {label}
+            </dt>
+            {/* Emails become links — on a legal page the contact address is the
+                one thing a reader actually wants to act on. */}
+            <dd className="text-[0.92rem] text-navy-600">
+              {value.includes('@') && !value.includes(' ') ? (
+                <a href={`mailto:${value}`} className="font-medium text-teal hover:underline">
+                  {value}
+                </a>
+              ) : (
+                value
+              )}
+            </dd>
+          </div>
+        ))}
+      </dl>
+    );
+  }
+
+  return (
+    <div className="mt-5">
+      <h3 className="text-[0.95rem] font-semibold text-navy">{block.sub}</h3>
+      {block.p && (
+        <p className="mt-1.5 text-[0.95rem] leading-relaxed text-navy-500">{block.p}</p>
+      )}
+    </div>
+  );
+}
 
 export default function StaticPage({ slug }) {
   useHashScroll();
-  const page = PAGES[slug];
+  const doc = LEGAL_DOCS[slug];
+
+  useEffect(() => {
+    if (doc) document.title = `${doc.title} — MOP Careers`;
+  }, [doc]);
+
+  if (!doc) return null;
 
   return (
     <div className="bg-paper">
       <PublicHeader />
-      <main className="mx-auto max-w-[820px] px-6 py-16 sm:py-20">
-        <h1 className="text-3xl font-bold text-navy sm:text-4xl">{page.title}</h1>
-        <p className="mt-3 text-navy-400">{page.intro}</p>
 
-        <div className="mt-10 rounded-2xl border border-navy-100 bg-white p-7">
-          <p className="text-navy-500">
-            We are putting this page together. If you need this information before it is
-            published, get in touch and we will send it to you directly.
-          </p>
-          <Link to="/#enquire" className="pbtn-primary mt-6 inline-flex">
-            Contact us &rarr;
-          </Link>
+      <main>
+        <section className="bg-navy-900 py-16 text-center sm:py-20">
+          <div className="mx-auto max-w-[820px] px-6">
+            <span className="text-[0.7rem] font-bold uppercase tracking-[0.16em] text-teal-300">
+              {doc.eyebrow}
+            </span>
+            <h1 className="mt-4 text-3xl font-bold text-white sm:text-4xl">{doc.title}</h1>
+            <p className="mx-auto mt-4 max-w-[640px] text-navy-200">{doc.intro}</p>
+          </div>
+        </section>
+
+        <div className="mx-auto max-w-[820px] px-6 py-12 sm:py-16">
+          {/* The header strip MOP's own pages carry: when it was last changed,
+              and who it is from. */}
+          <div className="flex flex-wrap gap-x-10 gap-y-3 rounded-xl border border-navy-100 bg-white p-5">
+            <div>
+              <p className="text-[0.72rem] font-semibold uppercase tracking-wide text-navy-400">
+                Last updated
+              </p>
+              <p className="mt-0.5 text-[0.92rem] font-medium text-navy">{doc.lastUpdated}</p>
+            </div>
+            <div>
+              <p className="text-[0.72rem] font-semibold uppercase tracking-wide text-navy-400">
+                Company
+              </p>
+              <p className="mt-0.5 text-[0.92rem] font-medium text-navy">{doc.company}</p>
+            </div>
+            {doc.contactPerson && (
+              <div>
+                <p className="text-[0.72rem] font-semibold uppercase tracking-wide text-navy-400">
+                  Contact person
+                </p>
+                <p className="mt-0.5 text-[0.92rem] font-medium text-navy">{doc.contactPerson}</p>
+              </div>
+            )}
+          </div>
+
+          {doc.preamble && (
+            <p className="mt-8 text-[0.95rem] leading-relaxed text-navy-600">{doc.preamble}</p>
+          )}
+
+          {doc.callouts && (
+            <div className="mt-8 grid gap-4 sm:grid-cols-3">
+              {doc.callouts.map((c) => (
+                <div key={c.value} className="rounded-xl border border-navy-100 bg-white p-5 text-center">
+                  <p className="font-semibold text-navy">{c.value}</p>
+                  <p className="mt-1 text-[0.8rem] text-navy-400">{c.label}</p>
+                </div>
+              ))}
+            </div>
+          )}
+
+          <div className="mt-10 grid gap-9">
+            {doc.sections.map((section, i) => (
+              <section key={section.heading} id={`clause-${i + 1}`} className="scroll-mt-24">
+                <h2 className="text-lg font-bold text-navy">
+                  <span className="mr-2 text-teal-ink">{i + 1}.</span>
+                  {section.heading}
+                </h2>
+                {section.blocks.map((block, j) => (
+                  <Block key={typeof block === 'string' ? block.slice(0, 40) : j} block={block} />
+                ))}
+              </section>
+            ))}
+          </div>
+
+          {doc.footnote && (
+            <p className="mt-10 rounded-xl border border-teal-200 bg-teal-50/60 p-5 text-[0.92rem] leading-relaxed text-navy-700">
+              <strong className="font-semibold">Note: </strong>
+              {doc.footnote}
+            </p>
+          )}
         </div>
       </main>
+
       <PublicFooter />
       <PublicFloats />
     </div>
