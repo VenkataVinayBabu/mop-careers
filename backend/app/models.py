@@ -618,6 +618,89 @@ class Mentor(Base):
     )
 
 
+class Assignment(Base):
+    """A multiple-choice assignment hung off one class day.
+
+    Attached to a `CurriculumDay` rather than to the batch, so it sits with that
+    day's recording and notes and a student's progress lines up with the
+    syllabus they are being taught.
+
+    The questions live in JSON rather than their own table. They are only ever
+    read and written as a whole set — nothing queries "all questions with four
+    options" — and a table would mean three joins to render one assignment.
+    Shape: [{"question": str, "options": [str, ...], "answer": int}] where
+    `answer` indexes into `options`.
+
+    **`answer` must never reach a student before they submit.** The student
+    endpoints strip it server-side; hiding it in the UI would leave it one
+    devtools tab away.
+    """
+
+    __tablename__ = "assignments"
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True)
+    curriculum_day_id: Mapped[int] = mapped_column(
+        ForeignKey("curriculum_days.id", ondelete="CASCADE"), nullable=False, index=True
+    )
+    title: Mapped[str] = mapped_column(String(160), nullable=False)
+    instructions: Mapped[str] = mapped_column(Text, default="", nullable=False)
+    questions: Mapped[list] = mapped_column(JSON, default=list, nullable=False)
+    # Unpublished is how a teacher writes one before the class without students
+    # seeing it. Publishing is what makes it appear on their side.
+    published: Mapped[bool] = mapped_column(Boolean, default=False, nullable=False)
+    due_on: Mapped[date | None] = mapped_column(Date)
+    # Who set it — a name rather than only an id, so the trail survives the
+    # account being deleted, the same as the chase log and the approval queue.
+    created_by_id: Mapped[int | None] = mapped_column(
+        ForeignKey("users.id", ondelete="SET NULL")
+    )
+    created_by_name: Mapped[str] = mapped_column(String(120), default="", nullable=False)
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
+    updated_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), server_default=func.now(), onupdate=func.now()
+    )
+
+    day: Mapped[CurriculumDay] = relationship()
+    submissions: Mapped[list[AssignmentSubmission]] = relationship(
+        back_populates="assignment", cascade="all, delete-orphan"
+    )
+
+
+class AssignmentSubmission(Base):
+    """One student's single attempt at an assignment.
+
+    Unique per (assignment, student): one attempt only. A leaderboard built on
+    scores that can be retaken until perfect is not a leaderboard, and the
+    constraint is what enforces that rather than a check in the handler.
+
+    Graded on submit rather than on read, so a score cannot change under a
+    student because somebody edited the answer key afterwards.
+    """
+
+    __tablename__ = "assignment_submissions"
+    __table_args__ = (
+        UniqueConstraint("assignment_id", "student_id", name="uq_submission_once"),
+    )
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True)
+    assignment_id: Mapped[int] = mapped_column(
+        ForeignKey("assignments.id", ondelete="CASCADE"), nullable=False, index=True
+    )
+    student_id: Mapped[int] = mapped_column(
+        ForeignKey("users.id", ondelete="CASCADE"), nullable=False, index=True
+    )
+    # The chosen option index per question, in question order. -1 means skipped.
+    answers: Mapped[list] = mapped_column(JSON, default=list, nullable=False)
+    score: Mapped[int] = mapped_column(Integer, default=0, nullable=False)
+    total: Mapped[int] = mapped_column(Integer, default=0, nullable=False)
+    submitted_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), server_default=func.now()
+    )
+
+    assignment: Mapped[Assignment] = relationship(back_populates="submissions")
+    student: Mapped[User] = relationship()
+
+
 class Leader(Base):
     """Someone on the About page's leadership section.
 

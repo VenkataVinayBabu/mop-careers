@@ -19,6 +19,8 @@ from app.models import (
     DAY_COMPLETED,
     ROLE_ADMIN,
     ROLE_STUDENT,
+    Assignment,
+    AssignmentSubmission,
     Attendance,
     Batch,
     CurriculumDay,
@@ -26,6 +28,10 @@ from app.models import (
     User,
 )
 from app.schemas import (
+    AssignmentCreate,
+    AssignmentOut,
+    AssignmentProgressRow,
+    AssignmentUpdate,
     AttendanceBulkUpdate,
     AttendanceRow,
     BatchOut,
@@ -348,3 +354,193 @@ def batch_students(
             )
         )
     return rows
+
+
+# --- assignments ----------------------------------------------------------
+# Set by anyone who runs a class: teachers, admins, and the back-office roles.
+# `require_staff` is already that set, and it is deliberately the same guard the
+# rest of this file uses — a contributor keeping the schedule and curriculum up
+# to date is expected to set the work that goes with it.
+def _get_assignment(db: Session, assignment_id: int, user: User) -> Assignment:
+    assignment = db.get(Assignment, assignment_id)
+    if assignment is None:
+        raise HTTPException(status.HTTP_404_NOT_FOUND, "Assignment not found")
+    # Scoped through its day's batch, so a teacher cannot reach another
+    # teacher's assignment by guessing an id.
+    assert_batch_access(db, user, assignment.day.batch_id)
+    return assignment
+
+
+def _progress(db: Session, assignment: Assignment) -> tuple[int, int, float | None]:
+    """How many have handed it in, out of how many are in the batch."""
+    student_count = db.scalar(
+        select(func.count(User.id)).where(
+            User.role == ROLE_STUDENT, User.batch_id == assignment.day.batch_id
+        )
+    ) or 0
+    rows = db.scalars(
+        select(AssignmentSubmission).where(
+            AssignmentSubmission.assignment_id == assignment.id
+        )
+    ).all()
+    average = None
+    if rows:
+        # Percentage rather than raw marks: assignments differ in length, so an
+        # average of 7 means nothing without knowing 7 out of what.
+        average = round(
+            sum((s.score / s.total * 100) if s.total else 0 for s in rows) / len(rows), 1
+        )
+    return len(rows), student_count, average
+
+
+def _assignment_out(db: Session, assignment: Assignment) -> AssignmentOut:
+    submitted, students, average = _progress(db, assignment)
+    out = AssignmentOut.model_validate(assignment)
+    out.submitted_count = submitted
+    out.student_count = students
+    out.average_score = average
+    return out
+
+
+@router.get("/days/{day_id}/assignments", response_model=list[AssignmentOut])
+def day_assignments(
+    day_id: int, db: Session = Depends(get_db), user: User = Depends(require_staff)
+) -> list[AssignmentOut]:
+    day = _get_day(db, day_id, user)
+    rows = db.scalars(
+        select(Assignment).where(Assignment.curriculum_day_id == day.id).order_by(Assignment.id)
+    ).all()
+    return [_assignment_out(db, a) for a in rows]
+
+
+@router.post(
+    "/days/{day_id}/assignments", response_model=AssignmentOut,
+    status_code=status.HTTP_201_CREATED,
+)
+def create_assignment(
+    day_id: int,
+    payload: AssignmentCreate,
+    db: Session = Depends(get_db),
+    user: User = Depends(require_staff),
+) -> AssignmentOut:
+    day = _get_day(db, day_id, user)
+    assignment = Assignment(
+        curriculum_day_id=day.id,
+        title=payload.title,
+        instructions=payload.instructions,
+        questions=[q.model_dump() for q in payload.questions],
+        published=payload.published,
+        due_on=payload.due_on,
+        created_by_id=user.id,
+        created_by_name=user.name,
+    )
+    db.add(assignment)
+    db.commit()
+    db.refresh(assignment)
+    return _assignment_out(db, assignment)
+
+
+@router.patch("/assignments/{assignment_id}", response_model=AssignmentOut)
+def update_assignment(
+    assignment_id: int,
+    payload: AssignmentUpdate,
+    db: Session = Depends(get_db),
+    user: User = Depends(require_staff),
+) -> AssignmentOut:
+    assignment = _get_assignment(db, assignment_id, user)
+    data = payload.model_dump(exclude_unset=True)
+
+    # Changing the questions after people have answered would leave their marks
+    # referring to questions that no longer exist. Refused rather than silently
+    # regraded: whoever is editing needs to know somebody has already sat it.
+    if "questions" in data and assignment.submissions:
+        raise HTTPException(
+            status.HTTP_409_CONFLICT,
+            f"{len(assignment.submissions)} student(s) have already submitted this, "
+            "so the questions can no longer be changed. Create a new assignment instead.",
+        )
+
+    if "questions" in data:
+        data["questions"] = [dict(q) for q in data["questions"]]
+    for field, value in data.items():
+        setattr(assignment, field, value)
+    db.commit()
+    db.refresh(assignment)
+    return _assignment_out(db, assignment)
+
+
+@router.delete("/assignments/{assignment_id}", response_model=MessageResponse)
+def delete_assignment(
+    assignment_id: int, db: Session = Depends(get_db), user: User = Depends(require_staff)
+) -> MessageResponse:
+    assignment = _get_assignment(db, assignment_id, user)
+    db.delete(assignment)
+    db.commit()
+    return MessageResponse(message="Assignment deleted")
+
+
+@router.get("/assignments/{assignment_id}/results", response_model=list[dict])
+def assignment_results(
+    assignment_id: int, db: Session = Depends(get_db), user: User = Depends(require_staff)
+) -> list[dict]:
+    """Every student in the batch, whether or not they have submitted.
+
+    Listing only the submissions would answer "who scored what" while hiding
+    the more useful question, which is who has not done it.
+    """
+    assignment = _get_assignment(db, assignment_id, user)
+    students = db.scalars(
+        select(User)
+        .where(User.role == ROLE_STUDENT, User.batch_id == assignment.day.batch_id)
+        .order_by(User.name)
+    ).all()
+    by_student = {
+        s.student_id: s
+        for s in db.scalars(
+            select(AssignmentSubmission).where(
+                AssignmentSubmission.assignment_id == assignment.id
+            )
+        ).all()
+    }
+    out = []
+    for s in students:
+        sub = by_student.get(s.id)
+        out.append({
+            "student_id": s.id,
+            "name": s.name,
+            "email": s.email,
+            "submitted": sub is not None,
+            "score": sub.score if sub else None,
+            "total": sub.total if sub else None,
+            "percent": round(sub.score / sub.total * 100, 1) if sub and sub.total else None,
+            "submitted_at": sub.submitted_at if sub else None,
+        })
+    return out
+
+
+@router.get("/batches/{batch_id}/assignments", response_model=list[AssignmentProgressRow])
+def batch_assignment_progress(
+    batch_id: int, db: Session = Depends(get_db), user: User = Depends(require_staff)
+) -> list[AssignmentProgressRow]:
+    """Every assignment in a batch with its completion count."""
+    assert_batch_access(db, user, batch_id)
+    rows = db.scalars(
+        select(Assignment)
+        .join(CurriculumDay, Assignment.curriculum_day_id == CurriculumDay.id)
+        .where(CurriculumDay.batch_id == batch_id)
+        .order_by(CurriculumDay.day_number)
+    ).all()
+    out = []
+    for a in rows:
+        submitted, students, average = _progress(db, a)
+        out.append(AssignmentProgressRow(
+            assignment_id=a.id,
+            day_number=a.day.day_number,
+            title=a.title,
+            published=a.published,
+            due_on=a.due_on,
+            submitted_count=submitted,
+            student_count=students,
+            average_score=average,
+        ))
+    return out

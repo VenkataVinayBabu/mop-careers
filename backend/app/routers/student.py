@@ -20,7 +20,10 @@ from sqlalchemy.orm import selectinload
 from app.models import (
     DAY_COMPLETED,
     DAY_PENDING,
+    ROLE_STUDENT,
     Application,
+    Assignment,
+    AssignmentSubmission,
     Attendance,
     Batch,
     CurriculumDay,
@@ -30,8 +33,15 @@ from app.models import (
     User,
 )
 from app.schemas import (
+    AnswerReview,
+    AssignmentPaper,
+    AssignmentStudentOut,
     CertificateStatus,
     CurriculumDayOut,
+    LeaderboardRow,
+    StudentQuestion,
+    SubmissionCreate,
+    SubmissionResult,
     InterviewRoundOut,
     MilestoneOut,
     ProgressDayRow,
@@ -213,6 +223,43 @@ def progress_report(
         for d in held
     ]
 
+    # Assignments set on the class days in this range. Scoped to days rather
+    # than to the due date so the card lines up with the class counts beside
+    # it — "in this period you had 7 classes and 2 assignments" reads as one
+    # period, which is the point of the report.
+    day_ids = [d.id for d in in_range]
+    assignments = (
+        db.scalars(
+            select(Assignment).where(
+                Assignment.curriculum_day_id.in_(day_ids),
+                Assignment.published.is_(True),
+            )
+        ).all()
+        if day_ids
+        else []
+    )
+    mine = {
+        s.assignment_id: s
+        for s in (
+            db.scalars(
+                select(AssignmentSubmission).where(
+                    AssignmentSubmission.student_id == student.id,
+                    AssignmentSubmission.assignment_id.in_([a.id for a in assignments]),
+                )
+            ).all()
+            if assignments
+            else []
+        )
+    }
+    done = [mine[a.id] for a in assignments if a.id in mine]
+    # Averaged as a percentage: assignments differ in length, so a mean of raw
+    # marks would compare a score out of 4 with one out of 20.
+    assignments_average = (
+        round(sum((s.score / s.total * 100) if s.total else 0 for s in done) / len(done), 1)
+        if done
+        else None
+    )
+
     doubts = db.scalars(
         select(Doubt).where(
             Doubt.student_id == student.id,
@@ -248,6 +295,10 @@ def progress_report(
         rounds_passed=sum(1 for r in rounds if r.result == "passed"),
         rounds_failed=sum(1 for r in rounds if r.result == "failed"),
         rounds_pending=sum(1 for r in rounds if r.result == "pending"),
+        assignments_set=len(assignments),
+        assignments_done=len(done),
+        assignments_pending=len(assignments) - len(done),
+        assignments_average=assignments_average,
         days=rows,
     )
 
@@ -323,3 +374,209 @@ def my_milestones(
 ) -> MilestoneOut:
     milestone = db.scalar(select(Milestone).where(Milestone.student_id == student.id))
     return MilestoneOut.model_validate(milestone) if milestone else MilestoneOut()
+
+
+# --- assignments ----------------------------------------------------------
+# The rule that shapes all of this: a student never receives the answer key
+# before they submit. `StudentQuestion` has no `answer` field at all rather
+# than one set to None, so a serialiser change cannot start leaking it.
+def _student_assignments(db: Session, student: User) -> list[Assignment]:
+    if student.batch_id is None:
+        return []
+    return list(db.scalars(
+        select(Assignment)
+        .join(CurriculumDay, Assignment.curriculum_day_id == CurriculumDay.id)
+        .where(CurriculumDay.batch_id == student.batch_id, Assignment.published.is_(True))
+        .order_by(CurriculumDay.day_number)
+    ).all())
+
+
+def _my_submission(db: Session, assignment_id: int, student: User) -> AssignmentSubmission | None:
+    return db.scalar(
+        select(AssignmentSubmission).where(
+            AssignmentSubmission.assignment_id == assignment_id,
+            AssignmentSubmission.student_id == student.id,
+        )
+    )
+
+
+def _brief(assignment: Assignment, submission: AssignmentSubmission | None) -> dict:
+    return {
+        "id": assignment.id,
+        "day_number": assignment.day.day_number,
+        "day_topic": assignment.day.topic,
+        "title": assignment.title,
+        "instructions": assignment.instructions,
+        "due_on": assignment.due_on,
+        "question_count": len(assignment.questions or []),
+        "submitted": submission is not None,
+        "score": submission.score if submission else None,
+        "total": submission.total if submission else None,
+    }
+
+
+@router.get("/assignments", response_model=list[AssignmentStudentOut])
+def my_assignments(
+    db: Session = Depends(get_db), student: User = Depends(require_student)
+) -> list[AssignmentStudentOut]:
+    """Published assignments for this student's batch, with their own result."""
+    return [
+        AssignmentStudentOut(**_brief(a, _my_submission(db, a.id, student)))
+        for a in _student_assignments(db, student)
+    ]
+
+
+def _get_published(db: Session, assignment_id: int, student: User) -> Assignment:
+    assignment = db.get(Assignment, assignment_id)
+    # 404 rather than 403 for an unpublished one or another batch's: the reply
+    # must not confirm that an assignment with that id exists.
+    if (
+        assignment is None
+        or not assignment.published
+        or student.batch_id is None
+        or assignment.day.batch_id != student.batch_id
+    ):
+        raise HTTPException(status.HTTP_404_NOT_FOUND, "Assignment not found")
+    return assignment
+
+
+@router.get("/assignments/{assignment_id}", response_model=AssignmentPaper)
+def open_assignment(
+    assignment_id: int, db: Session = Depends(get_db), student: User = Depends(require_student)
+) -> AssignmentPaper:
+    assignment = _get_published(db, assignment_id, student)
+    submission = _my_submission(db, assignment.id, student)
+    return AssignmentPaper(
+        **_brief(assignment, submission),
+        questions=[
+            StudentQuestion(question=q["question"], options=q["options"])
+            for q in (assignment.questions or [])
+        ],
+    )
+
+
+@router.post("/assignments/{assignment_id}/submit", response_model=SubmissionResult)
+def submit_assignment(
+    assignment_id: int,
+    payload: SubmissionCreate,
+    db: Session = Depends(get_db),
+    student: User = Depends(require_student),
+) -> SubmissionResult:
+    """Grade and store one attempt. There is only ever one."""
+    assignment = _get_published(db, assignment_id, student)
+
+    if _my_submission(db, assignment.id, student) is not None:
+        raise HTTPException(
+            status.HTTP_409_CONFLICT, "You have already submitted this assignment."
+        )
+
+    questions = assignment.questions or []
+    if len(payload.answers) != len(questions):
+        raise HTTPException(
+            status.HTTP_400_BAD_REQUEST,
+            f"This assignment has {len(questions)} questions, "
+            f"but {len(payload.answers)} answers were sent.",
+        )
+
+    # Graded now rather than on read, so a mark cannot move under a student
+    # because somebody edited the answer key afterwards.
+    score = sum(1 for i, q in enumerate(questions) if payload.answers[i] == q["answer"])
+
+    submission = AssignmentSubmission(
+        assignment_id=assignment.id,
+        student_id=student.id,
+        answers=list(payload.answers),
+        score=score,
+        total=len(questions),
+    )
+    db.add(submission)
+    db.commit()
+    db.refresh(submission)
+
+    # The answer key is fair game now — they have committed to their answers,
+    # and seeing what was right is the point of doing it.
+    return SubmissionResult(
+        score=submission.score,
+        total=submission.total,
+        submitted_at=submission.submitted_at,
+        review=[
+            AnswerReview(
+                question=q["question"],
+                options=q["options"],
+                chosen=payload.answers[i],
+                correct=q["answer"],
+            )
+            for i, q in enumerate(questions)
+        ],
+    )
+
+
+@router.get("/assignments/{assignment_id}/result", response_model=SubmissionResult)
+def my_result(
+    assignment_id: int, db: Session = Depends(get_db), student: User = Depends(require_student)
+) -> SubmissionResult:
+    assignment = _get_published(db, assignment_id, student)
+    submission = _my_submission(db, assignment.id, student)
+    if submission is None:
+        raise HTTPException(status.HTTP_404_NOT_FOUND, "You have not submitted this yet.")
+    questions = assignment.questions or []
+    return SubmissionResult(
+        score=submission.score,
+        total=submission.total,
+        submitted_at=submission.submitted_at,
+        review=[
+            AnswerReview(
+                question=q["question"],
+                options=q["options"],
+                chosen=submission.answers[i] if i < len(submission.answers) else -1,
+                correct=q["answer"],
+            )
+            for i, q in enumerate(questions)
+        ],
+    )
+
+
+@router.get("/assignments/{assignment_id}/leaderboard", response_model=list[LeaderboardRow])
+def leaderboard(
+    assignment_id: int, db: Session = Depends(get_db), student: User = Depends(require_student)
+) -> list[LeaderboardRow]:
+    """Ranked results for one assignment, within this student's batch.
+
+    **Locked until the student has submitted.** This is what reconciles a
+    leaderboard with the rule that students never see other students' data:
+    you see the ranking by earning it, and nobody can browse the class's
+    results without sitting the test themselves.
+
+    First names only — enough to recognise yourself and the person above you,
+    without publishing a full roster of who scored what.
+    """
+    assignment = _get_published(db, assignment_id, student)
+
+    if _my_submission(db, assignment.id, student) is None:
+        raise HTTPException(
+            status.HTTP_403_FORBIDDEN,
+            "Submit this assignment to see how the rest of the batch did.",
+        )
+
+    rows = db.scalars(
+        select(AssignmentSubmission)
+        .join(User, AssignmentSubmission.student_id == User.id)
+        .where(
+            AssignmentSubmission.assignment_id == assignment.id,
+            User.batch_id == student.batch_id,
+        )
+        # Ties broken by who got there first, so the order is stable between
+        # requests rather than shuffling on every load.
+        .order_by(AssignmentSubmission.score.desc(), AssignmentSubmission.submitted_at)
+    ).all()
+
+    out: list[LeaderboardRow] = []
+    for i, s in enumerate(rows, start=1):
+        out.append(LeaderboardRow(
+            rank=i,
+            name=(s.student.name or "").split(" ")[0] or "Student",
+            score=s.score,
+            total=s.total,
+            is_me=s.student_id == student.id,
+        ))
+    return out

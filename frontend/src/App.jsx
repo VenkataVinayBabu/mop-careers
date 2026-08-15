@@ -32,13 +32,17 @@ import Landing from './pages/public/Landing';
 import ProgramDetail from './pages/public/ProgramDetail';
 
 import BatchWorkspace from './pages/teacher/BatchWorkspace';
+import TeacherAssignments from './pages/teacher/Assignments';
 import TeacherBatches from './pages/teacher/Batches';
 
 import ViewerBatchDetail from './pages/viewer/BatchDetail';
+import ViewerAssignments from './pages/viewer/Assignments';
 import ViewerBatches from './pages/viewer/Batches';
 import ViewerFollowUps from './pages/viewer/FollowUps';
 
 import StudentApplications from './pages/student/Applications';
+import AssignmentPaper from './pages/student/AssignmentPaper';
+import StudentAssignments from './pages/student/Assignments';
 import StudentCurriculum from './pages/student/Curriculum';
 import StudentDoubts from './pages/student/Doubts';
 import StudentHome from './pages/student/Home';
@@ -203,6 +207,22 @@ export default function App() {
         <Route path="/teacher/doubts" element={<DoubtsInbox />} />
       </Route>
 
+      {/* Setting assignments. A wider set than the block above because
+          contributors and members run the class schedule too — it matches
+          `require_staff`, which is what the API actually enforces. */}
+      <Route
+        element={
+          <ProtectedRoute roles={['teacher', 'admin', 'contributor', 'member']}>
+            <Layout />
+          </ProtectedRoute>
+        }
+      >
+        <Route
+          path="/teacher/batches/:batchId/assignments"
+          element={<TeacherAssignments />}
+        />
+      </Route>
+
       {/* viewer - read-only across every batch. Admins may open it too, both
           because they can do everything and because it is the only way to see
           what a viewer sees without a second account. Every screen under here
@@ -215,6 +235,7 @@ export default function App() {
         }
       >
         <Route path="/watch" element={<ViewerFollowUps />} />
+        <Route path="/watch/assignments" element={<ViewerAssignments />} />
         <Route path="/watch/batches" element={<ViewerBatches />} />
         <Route path="/watch/batches/:batchId" element={<ViewerBatchDetail />} />
       </Route>
@@ -229,6 +250,8 @@ export default function App() {
       >
         <Route path="/app" element={<StudentHome />} />
         <Route path="/app/curriculum" element={<StudentCurriculum />} />
+        <Route path="/app/assignments" element={<StudentAssignments />} />
+        <Route path="/app/assignments/:assignmentId" element={<AssignmentPaper />} />
         <Route path="/app/missed" element={<StudentMissed />} />
         <Route path="/app/schedule" element={<StudentSchedule />} />
         <Route path="/app/applications" element={<StudentApplications />} />

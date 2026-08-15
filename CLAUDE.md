@@ -490,6 +490,55 @@ Small, known, and none of them blocking. Listed because they exist nowhere else.
   administer, including their email; anyone signed in can fix their own name and
   phone at `/profile`.
 
+### 10. Assignments, scores and a leaderboard — NOT BUILT
+
+Asked for on 15 Aug 2026. Nothing of this exists today: no table, no endpoint,
+no screen. The only "assignment" in the codebase is assigning a teacher to a
+batch. The brief, in the user's words:
+
+- a **teacher gives assignments** to students
+- a **viewer** sees, per batch, how many students have completed one
+- **students see their own scores**
+- a **leaderboard**
+
+Two things to know before designing it.
+
+**The site already promises this.** The Terms & Conditions published on 15 Aug
+list "complete assignments" under learner responsibilities, and the Data
+Analytics programme page lists Assignments as a step in its Placement Readiness
+Test. Both are MOP's own copy and neither is backed by anything. Presumably
+assignments happen over WhatsApp today.
+
+**A leaderboard contradicts a rule this project has held since Phase 1:**
+"Students can never access other students' data." A ranking that shows names
+and scores is exactly that. It needs a deliberate decision — anonymised
+positions, first names only, opt-in, or an explicit exception — rather than
+being built past the rule without noticing.
+
+**Decided by the user, 15 Aug — the four design questions are closed:**
+
+- **MCQs for now**, auto-graded. Coding questions come later, and those will be
+  a link the student works on and submits, the way resumes already are — which
+  is why submissions must not assume a file.
+- **Attached to a curriculum day**, alongside its recording and notes. Progress
+  then lines up with the syllabus and the teacher workspace already has the day.
+- **The leaderboard shows first names and scores, but only to students who have
+  completed that assignment.** This is what reconciles it with "students never
+  see other students' data": you see the ranking by earning it, and nobody can
+  browse the class's results without sitting the test themselves.
+- **Teachers, admin, members and contributors** can all set assignments —
+  contributors already run the class schedule and curriculum.
+
+**Decided while building, and worth knowing:**
+
+- **One attempt.** A leaderboard built on scores that can be retaken until
+  perfect is not a leaderboard. Retakes would need a teacher to reopen it.
+- **Correct answers are never sent to a student before they submit.** The
+  student-facing payload strips them server-side rather than hiding them in the
+  UI, because anything in the response is one devtools tab away.
+- **The leaderboard is per assignment, within the batch.** A student sees the
+  people they actually study beside, not every learner MOP has.
+
 ### 9. Bala's changes to the public site (2026-08-13) — ✅ BUILT
 
 **All three are built and pushed**, plus the Careers and About pages, the

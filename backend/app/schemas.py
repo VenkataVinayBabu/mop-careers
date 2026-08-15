@@ -582,6 +582,13 @@ class ProgressReport(BaseModel):
     rounds_failed: int
     rounds_pending: int
 
+    # Assignments. Matched on their class day's scheduled date, the same rule
+    # the class counts use, so the whole card covers one consistent period.
+    assignments_set: int = 0
+    assignments_done: int = 0
+    assignments_pending: int = 0
+    assignments_average: float | None = None
+
     days: list[ProgressDayRow] = []
 
 
@@ -763,6 +770,154 @@ class MentorOut(ORMModel):
 
 
 LeaderSection = Literal["leadership", "team"]
+
+
+# --- assignments ----------------------------------------------------------
+class AssignmentQuestion(BaseModel):
+    """One multiple-choice question. `answer` indexes into `options`."""
+
+    question: str = Field(min_length=1, max_length=1000)
+    options: list[str] = Field(min_length=2, max_length=6)
+    answer: int = Field(ge=0)
+
+    @field_validator("options")
+    @classmethod
+    def _clean_options(cls, v: list[str]) -> list[str]:
+        out = [str(o).strip() for o in v]
+        if any(not o for o in out):
+            raise ValueError("Every option needs some text")
+        return out
+
+    @model_validator(mode="after")
+    def _answer_in_range(self):
+        if self.answer >= len(self.options):
+            raise ValueError("The correct answer must be one of the options")
+        return self
+
+
+class AssignmentBase(BaseModel):
+    title: str = Field(min_length=2, max_length=160)
+    instructions: str = Field(default="", max_length=2000)
+    questions: list[AssignmentQuestion] = Field(min_length=1, max_length=50)
+    published: bool = False
+    due_on: date | None = None
+
+    @field_validator("title", "instructions")
+    @classmethod
+    def _trim(cls, v: str) -> str:
+        return v.strip()
+
+
+class AssignmentCreate(AssignmentBase):
+    pass
+
+
+class AssignmentUpdate(BaseModel):
+    title: str | None = Field(default=None, min_length=2, max_length=160)
+    instructions: str | None = Field(default=None, max_length=2000)
+    questions: list[AssignmentQuestion] | None = Field(default=None, min_length=1, max_length=50)
+    published: bool | None = None
+    due_on: date | None = None
+
+
+class AssignmentOut(ORMModel):
+    """The staff view — carries the answer key. Never returned to a student."""
+
+    id: int
+    curriculum_day_id: int
+    title: str
+    instructions: str = ""
+    questions: list[AssignmentQuestion] = []
+    published: bool = False
+    due_on: date | None = None
+    created_by_name: str = ""
+    # Filled in by the handler, not the ORM: how the batch is getting on.
+    submitted_count: int = 0
+    student_count: int = 0
+    average_score: float | None = None
+
+
+class StudentQuestion(BaseModel):
+    """A question as a student sees it — no `answer` field exists at all,
+    rather than being set to None, so it cannot be leaked by a serialiser
+    change later."""
+
+    question: str
+    options: list[str]
+
+
+class AssignmentStudentOut(BaseModel):
+    id: int
+    day_number: int
+    day_topic: str
+    title: str
+    instructions: str = ""
+    due_on: date | None = None
+    question_count: int
+    # Their own attempt, when they have made one.
+    submitted: bool = False
+    score: int | None = None
+    total: int | None = None
+
+
+class AssignmentPaper(AssignmentStudentOut):
+    """The questions themselves, handed over when a student opens it."""
+
+    questions: list[StudentQuestion] = []
+
+
+class SubmissionCreate(BaseModel):
+    # One chosen option index per question, in order. -1 means skipped.
+    answers: list[int] = Field(min_length=1, max_length=50)
+
+
+class AnswerReview(BaseModel):
+    question: str
+    options: list[str]
+    chosen: int
+    correct: int
+
+
+class SubmissionResult(BaseModel):
+    score: int
+    total: int
+    submitted_at: datetime
+    review: list[AnswerReview] = []
+
+
+class LeaderboardRow(BaseModel):
+    rank: int
+    name: str          # first name only
+    score: int
+    total: int
+    is_me: bool = False
+
+
+class ViewerAssignmentRow(BaseModel):
+    """A viewer's row: counts only, never an individual student's result."""
+
+    assignment_id: int
+    batch_id: int
+    batch_name: str
+    day_number: int
+    title: str
+    due_on: date | None = None
+    submitted_count: int
+    student_count: int
+    average_score: float | None = None
+
+
+class AssignmentProgressRow(BaseModel):
+    """What a viewer sees: whether a class day's work is getting done."""
+
+    assignment_id: int
+    day_number: int
+    title: str
+    published: bool
+    due_on: date | None = None
+    submitted_count: int
+    student_count: int
+    average_score: float | None = None
 
 
 class LeaderOut(ORMModel):

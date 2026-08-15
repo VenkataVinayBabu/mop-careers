@@ -4,6 +4,7 @@ import {
   CalendarCheck,
   ChevronDown,
   ChevronUp,
+  FileText,
   MessageSquareText,
   Search,
   UserCheck,
@@ -145,6 +146,28 @@ export default function StudentProgress() {
               { label: 'Classes held', value: data.classes_held },
               { label: 'Topics covered', value: data.topics_covered, tone: 'text-teal' },
               { label: 'Course length', value: `${data.total_days} days` },
+            ]}
+          />
+          {/* Placed after Curriculum rather than at the end: assignments are
+              part of the classwork, and a student reading this cares about
+              them well before interview rounds. */}
+          <StatCardBlock
+            icon={FileText}
+            title="Assignments"
+            rows={[
+              { label: 'Set', value: data.assignments_set },
+              { label: 'Completed', value: data.assignments_done, tone: 'text-teal' },
+              {
+                label: 'Not done',
+                value: data.assignments_pending,
+                tone: data.assignments_pending > 0 ? 'text-orange' : 'text-navy',
+              },
+              {
+                label: 'Average',
+                // A dash rather than 0% when nothing has been marked — zero is
+                // a score, and "you averaged 0%" is not what no data means.
+                value: data.assignments_average === null ? '—' : `${data.assignments_average}%`,
+              },
             ]}
           />
           <StatCardBlock

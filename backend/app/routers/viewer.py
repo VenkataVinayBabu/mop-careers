@@ -40,6 +40,8 @@ from app.models import (
     DAY_PENDING,
     ROLE_STUDENT,
     ROLE_TEACHER,
+    Assignment,
+    AssignmentSubmission,
     Attendance,
     Batch,
     ClassChase,
@@ -51,6 +53,7 @@ from app.schemas import (
     ChaseCreate,
     ChaseOut,
     TeacherContact,
+    ViewerAssignmentRow,
     ViewerBatchDetail,
     ViewerBatchRow,
     ViewerClosedItem,
@@ -445,4 +448,61 @@ def closed(db: Session = Depends(get_db)) -> list[ViewerClosedItem]:
         key=lambda i: (i.closed_at is not None, i.closed_at.timestamp() if i.closed_at else 0.0),
         reverse=True,
     )
+    return out
+
+
+# --- assignments ----------------------------------------------------------
+# The fourth question this router answers, added when assignments arrived: is
+# the set work actually getting done, and in which batch is it not.
+#
+# Still read-only, and still nothing that identifies a student's result — a
+# viewer sees counts and a batch average, not who scored what. Chasing a batch
+# where four of twenty have handed in is their job; knowing that Aditya got 3/10
+# is not.
+@router.get("/assignments", response_model=list[ViewerAssignmentRow])
+def assignment_progress(db: Session = Depends(get_db)) -> list[ViewerAssignmentRow]:
+    """Every published assignment across every batch, least-completed first.
+
+    Ordered by how far behind it is rather than by date, because the list
+    exists to be worked down: the batch that has barely started is the call to
+    make first.
+    """
+    rows = db.scalars(
+        select(Assignment)
+        .join(CurriculumDay, Assignment.curriculum_day_id == CurriculumDay.id)
+        .where(Assignment.published.is_(True))
+        .order_by(CurriculumDay.batch_id, CurriculumDay.day_number)
+    ).all()
+
+    out: list[ViewerAssignmentRow] = []
+    for a in rows:
+        batch = a.day.batch
+        student_count = db.scalar(
+            select(func.count(User.id)).where(
+                User.role == ROLE_STUDENT, User.batch_id == a.day.batch_id
+            )
+        ) or 0
+        subs = db.scalars(
+            select(AssignmentSubmission).where(AssignmentSubmission.assignment_id == a.id)
+        ).all()
+        average = None
+        if subs:
+            average = round(
+                sum((s.score / s.total * 100) if s.total else 0 for s in subs) / len(subs), 1
+            )
+        out.append(ViewerAssignmentRow(
+            assignment_id=a.id,
+            batch_id=a.day.batch_id,
+            batch_name=batch.name if batch else "",
+            day_number=a.day.day_number,
+            title=a.title,
+            due_on=a.due_on,
+            submitted_count=len(subs),
+            student_count=student_count,
+            average_score=average,
+        ))
+
+    # Least complete first. A batch with nobody enrolled sorts last rather than
+    # dividing by zero and jumping to the top.
+    out.sort(key=lambda r: (r.submitted_count / r.student_count) if r.student_count else 2)
     return out

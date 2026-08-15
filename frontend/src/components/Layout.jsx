@@ -80,10 +80,12 @@ const NAV = {
   viewer: [
     { to: '/watch', label: 'Follow-ups', icon: HelpCircle, end: true },
     { to: '/watch/batches', label: 'All Batches', icon: GraduationCap },
+    { to: '/watch/assignments', label: 'Assignments', icon: FileText },
   ],
   student: [
     { to: '/app', label: 'Home', icon: Home, end: true },
     { to: '/app/curriculum', label: 'Curriculum', icon: BookOpen },
+    { to: '/app/assignments', label: 'Assignments', icon: FileText },
     { to: '/app/missed', label: 'Missed Classes', icon: HelpCircle },
     { to: '/app/schedule', label: 'Schedule', icon: CalendarDays },
     { to: '/app/applications', label: 'My Applications', icon: Briefcase },

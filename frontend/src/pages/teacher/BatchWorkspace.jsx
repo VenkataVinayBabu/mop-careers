@@ -387,6 +387,13 @@ export default function BatchWorkspace() {
            guessing 55 would print a wrong number for a moment on every 45-day
            batch. An em dash until the summary lands says nothing false. */
         subtitle={`${summary?.completed_days ?? 0} of ${summary?.total_days ?? '—'} classes completed`}
+        /* Assignments are their own screen rather than a panel per day: setting
+           work is a batch-level job — "what have I set and who has done it". */
+        action={
+          <Link to={`/teacher/batches/${batchId}/assignments`} className="btn-ghost btn-sm">
+            Assignments &rarr;
+          </Link>
+        }
       />
 
       <div className="mb-6 grid grid-cols-2 gap-4 lg:grid-cols-4">
