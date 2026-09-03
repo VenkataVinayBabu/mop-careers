@@ -1,0 +1,36 @@
+# AWS App Runner build and run configuration for the FastAPI backend.
+#
+# App Runner reads this from the repository root when the service is created
+# from source, so the build and start commands do not have to be typed into the
+# console and cannot drift from what the repo actually needs.
+#
+# The equivalent on Render is the buildCommand/startCommand pair in
+# render.yaml. Keep the two in step until Render is switched off.
+#
+# Secrets are NOT here. DATABASE_URL, JWT_SECRET and the SMTP settings are set
+# in the App Runner console under Configuration > Environment variables, for the
+# same reason .env is gitignored.
+version: 1.0
+runtime: python3
+
+build:
+  commands:
+    build:
+      - pip install --upgrade pip
+      - pip install -r backend/requirements.txt
+
+run:
+  # Migrations run before the server starts, on every deploy — the same
+  # arrangement Render uses, so a schema change ships with the code that needs
+  # it rather than needing a separate step somebody can forget.
+  command: sh -c "cd backend && alembic upgrade head && uvicorn app.main:app --host 0.0.0.0 --port 8000"
+  network:
+    port: 8000
+  env:
+    - name: APP_ENV
+      value: production
+    # Uploaded notes PDFs. App Runner containers are ephemeral, so this is a
+    # scratch path and files do NOT survive a deploy — the same problem Render
+    # has. S3 is the real fix; see Stage 4 of DEPLOY_AWS.md.
+    - name: UPLOAD_DIR
+      value: /tmp/uploads

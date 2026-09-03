@@ -1,0 +1,40 @@
+# AWS Amplify Hosting build settings for the React frontend.
+#
+# Amplify reads this from the repository root, so the build does not have to be
+# configured by hand in the console.
+#
+# VITE_API_URL is NOT set here. It is the App Runner URL, it differs per
+# environment, and it is BAKED INTO THE BUNDLE AT BUILD TIME — set it in the
+# Amplify console under Environment variables, and remember that changing it
+# there does nothing until the frontend is rebuilt. That has already caught
+# this project out once; see CLAUDE.md thread 3.
+version: 1
+
+frontend:
+  phases:
+    preBuild:
+      commands:
+        - cd frontend
+        - npm ci
+    build:
+      commands:
+        - npm run build
+  artifacts:
+    # Relative to the repo root, not to the directory the build ran in.
+    baseDirectory: frontend/dist
+    files:
+      - '**/*'
+  cache:
+    paths:
+      - frontend/node_modules/**/*
+
+# SPA routing is NOT configured here — Amplify does it in the console, under
+# App settings > Rewrites and redirects. Add this rule after the first deploy,
+# or refreshing on /about or /programs/data-analytics-with-ai returns a 404:
+#
+#   Source:  </^[^.]+$|\.(?!(css|gif|ico|jpg|js|png|txt|svg|woff2|json)$)([^.]+$)/>
+#   Target:  /index.html
+#   Type:    200 (Rewrite)
+#
+# The pattern deliberately excludes real file extensions, so a missing image
+# still 404s rather than silently returning the HTML page with a 200.
