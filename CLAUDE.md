@@ -32,8 +32,11 @@ marketing site (no auth) and an authenticated platform (admin / teacher / studen
 > stops notes PDFs vanishing on redeploy. Everything else is either waiting on
 > MOP or on a decision.
 >
-> **Most urgent regardless:** the free database expiry in thread 5. `backup.ps1`
-> exists and is tested; a backup of production has not been taken.
+> **The AWS migration is under way** (thread 3a). Stage 1 is RDS, and it is
+> console work — there is no AWS account yet and no AWS CLI on this machine.
+> The repo side is ready: `DEPLOY_AWS.md` is corrected and `restore.ps1` is
+> written and tested. The database expiry that used to be the urgent item is
+> **settled** — paid plan, no expiry, and a current 28-table backup exists.
 >
 > - Live site: <https://mop-careers.onrender.com>
 > - Live API: <https://mop-careers-api.onrender.com> (`/docs` for the API browser)
@@ -231,7 +234,7 @@ approves or sends it back with feedback. A viewer watches every batch read-only
 and logs the calls they make chasing missing recordings. Accounts are editable
 — an admin or member can correct anyone they administer, including the login
 email, and anyone signed in can fix their own name and phone at `/profile`.
-22 tables, 10 migrations.
+28 tables, 20 migrations.
 
 **Verification convention:** every piece of work above was checked with an API
 assertion suite plus a browser walkthrough of the write paths, and the suites are
@@ -343,27 +346,47 @@ of how much it would matter if wrong:
   conflicting email, phone and address above — none of those needs a developer
   any more.
 
-### 3a. Hosting moves to Azure — decided, not yet done
+### 3a. Hosting moves to AWS — in progress
 
-**Bala's decision, 15 Aug 2026: Azure only.** Render goes away entirely.
+**Bala's decision, 15 Aug 2026: AWS.** Render goes away entirely. This
+supersedes the earlier Azure decision; [DEPLOY_AZURE.md](DEPLOY_AZURE.md) is
+kept only because the sequencing argument in it still applies.
 
-[DEPLOY_AZURE.md](DEPLOY_AZURE.md) is the step-by-step, mirroring DEPLOY.md.
-The mapping is Postgres Flexible Server, App Service (Linux, Python) and
-Static Web Apps. Nothing has been provisioned yet.
+[DEPLOY_AWS.md](DEPLOY_AWS.md) is the step-by-step. The mapping is RDS for
+PostgreSQL, App Runner, Amplify Hosting and S3. `apprunner.yaml` and
+`amplify.yml` are committed at the repo root, so neither console has to be
+told the build commands by hand.
 
-Three things worth knowing before starting:
+**Nothing is provisioned on AWS yet — there is no AWS account.** Stage 0
+(root MFA, a billing alarm, an IAM user) is the first thing, and it is
+console work nobody else can do.
 
-- **It costs money.** Roughly $25–30/month once trial credits end — the
-  Postgres free tier is 12 months on a *new* account, and App Service's F1 tier
-  (60 CPU-minutes a day, no always-on) is not usable for this API. Upgrading
-  Render's database instead is ~$7/month and fixes only the deadline.
-- **Do the database first.** Restoring the dump into Azure Postgres defuses the
-  3 September deletion on its own, and can be proven by pointing the *existing*
-  Render backend at it before any hosting moves.
-- **`UPLOAD_DIR` is now configurable** (`backend/app/config.py`). App Service
-  mounts `/home` on persistent storage, so `UPLOAD_DIR=/home/data` there makes
-  teachers' notes PDFs survive a deploy — open since Phase 1, fixed by one
-  setting. It does not replace object storage for photos.
+Four things worth knowing before starting:
+
+- **The deadline that drove this is gone.** The database is on Render's paid
+  $6/month plan and does not expire (thread 5). This is now an unhurried
+  migration, which is worth spending: nothing has to be rushed, and Render
+  stays up until AWS is proven.
+- **It costs money.** Roughly $25/month for the first year and $40/month
+  after, almost all of it App Runner. Against $6/month for what is running
+  today — so the case for moving has to rest on something other than the
+  database bill. Lightsail is ~$10/month instead of App Runner, at the cost of
+  managing the server, TLS and deploys by hand.
+- **Do the database first, and prove it before moving hosting.** Restoring
+  into RDS and pointing the *existing* Render backend at it tests the data on
+  AWS while everything else stays put, and reverts by changing one env var.
+- **`UPLOAD_DIR` is configurable** (`backend/app/config.py`), but there is no
+  good answer for it on App Runner — those containers are ephemeral, exactly
+  like Render's. Notes PDFs keep vanishing on deploy until S3 (Stage 4), which
+  needs a code change to `backend/app/routers/teacher.py`.
+
+**`restore.ps1` (repo root) is the restore half of `backup.ps1`**, written for
+this migration and tested against the local database. It picks the newest dump
+and newest client, refuses to restore over a non-empty database, stops on the
+first error, and afterwards checks the table count *and* that the dump's
+`alembic_version` matches the migration head the code expects. Use it rather
+than a hand-typed `pg_restore` — it also keeps the password out of shell
+history and forces `sslmode=require` on remote hosts.
 
 ### 3. Domain
 
