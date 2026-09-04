@@ -428,20 +428,30 @@ site cannot be un-read), the class schedule, curriculum and placement records.
 
 ### 5. Before real students use the live site
 
-- **The free PostgreSQL database expires on 3 SEPTEMBER 2026.** Confirmed in the
-  Render dashboard on 15 Aug 2026. When it lapses the database is *deleted* —
-  students, batches, attendance, fees, placements, enquiries, applications and
-  the tables the public site reads from. **Upgrading `mop-careers-db` is the
-  only thing that removes the deadline.** Treat this as the most urgent thing
-  on the whole list.
-  **A verified backup of production was taken on 15 Aug 2026** —
-  `backups/mop-careers_remote_2026-08-15_084952.dump`, 98.6 KB, all 26 tables,
-  table set identical to local. It is a snapshot, not a system: anything
-  entered after that date is not in it.
-  `backup.ps1` takes another in one command. Note it needs a `pg_dump` **at
-  least as new as the server**, which is PostgreSQL 18.4 on Render — the script
-  now picks the newest client installed rather than whatever is on PATH, which
-  is what made it fail the first time.
+- ~~**The free PostgreSQL database expires on 3 SEPTEMBER 2026.**~~ **SETTLED,
+  3 Sep 2026 — the database is on the paid $6/month plan and has no expiry.**
+  It did expire on the day and was **suspended for about an hour**: the data was
+  never deleted (Render gives 13 days' grace) but it was *locked* — a suspended
+  database refuses connections, so `backup.ps1` could not run either. The
+  signed-in platform was down; the public marketing site kept serving because
+  of the baked-in defaults, though it silently showed last month's eight
+  programmes instead of nine. Upgrading to `0.1c-256mb` — **identical specs to
+  the free tier, $6/month, it simply does not expire** — resumed it and every
+  row came back.
+
+  **The lesson worth keeping: a backup is useless if you wait for the deadline
+  to take it.** The plan was always "back up, then upgrade"; the expiry made
+  that order impossible, and only the 19-day-old August dump existed at the
+  moment it mattered.
+
+  **Current backup: `backups/mop-careers_remote_2026-09-04_003338.dump`**,
+  108.9 KB, **28 tables** — the August one has 26 and predates `assignments`
+  and `assignment_submissions`, so it would restore a database the code no
+  longer matches. Use the September one for the AWS migration.
+
+  `backup.ps1` needs a `pg_dump` **at least as new as the server** (PostgreSQL
+  18 on Render); it picks the newest client installed rather than whatever is
+  on PATH. Backups are still manual — worth scheduling once students enrol.
 - **Change `Teacher@123` and `Student@123`.** They are guessable and the site is on
   the public internet. Remove the demo accounts entirely before enrolment.
 - **SMTP is unconfigured**, so password resets and notifications only reach the Render
