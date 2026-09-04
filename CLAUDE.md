@@ -559,11 +559,10 @@ Small, known, and none of them blocking. Listed because they exist nowhere else.
   silently overwrites the first. A line in the queue saying "another pending
   change also edits this" would stop a member approving contradictory edits
   without noticing.
-- **The production migration was never directly confirmed.** The
-  `website_changes` deploy was verified by the code being live and the app
-  starting — migrations run in the start command, so a healthy backend implies
-  the migration ran. Not proven, though: open **Website > Approvals** on the live
-  site as admin, and if the page loads the table exists.
+- ~~**The production migration was never directly confirmed.**~~ **Confirmed,
+  4 Sep 2026.** The September production dump restored onto RDS contains
+  `website_changes`, and `GET /admin/website/changes` returns 200 against it
+  with the app running. The table exists in production and the migration ran.
 - **Two contributor permissions that fell out of where the guards landed**, worth
   a deliberate decision rather than leaving as an accident: a contributor can
   *edit* a batch and assign teachers to it but cannot create or delete one; and a
