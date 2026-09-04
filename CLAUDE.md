@@ -32,11 +32,11 @@ marketing site (no auth) and an authenticated platform (admin / teacher / studen
 > stops notes PDFs vanishing on redeploy. Everything else is either waiting on
 > MOP or on a decision.
 >
-> **The AWS migration is under way** (thread 3a). Stage 1 is RDS, and it is
-> console work — there is no AWS account yet and no AWS CLI on this machine.
-> The repo side is ready: `DEPLOY_AWS.md` is corrected and `restore.ps1` is
-> written and tested. The database expiry that used to be the urgent item is
-> **settled** — paid plan, no expiry, and a current 28-table backup exists.
+> **The AWS migration has started, and Stage 1 (RDS) is DONE** — the data is
+> restored onto AWS and verified (thread 3a). Nothing has moved off Render
+> yet: the live site still runs there, against Render's database. The next
+> step is proving AWS with the live site by repointing one env var, and it
+> reverts by changing that same var back.
 >
 > - Live site: <https://mop-careers.onrender.com>
 > - Live API: <https://mop-careers-api.onrender.com> (`/docs` for the API browser)
@@ -357,9 +357,27 @@ PostgreSQL, App Runner, Amplify Hosting and S3. `apprunner.yaml` and
 `amplify.yml` are committed at the repo root, so neither console has to be
 told the build commands by hand.
 
-**Nothing is provisioned on AWS yet — there is no AWS account.** Stage 0
-(root MFA, a billing alarm, an IAM user) is the first thing, and it is
-console work nobody else can do.
+**Stage 0 and Stage 1 are done (4 Sep 2026).** Account `MOP Careers` in
+**ap-south-1 (Mumbai)**, root MFA on, a $40/month budget set, **$120 of
+credits expiring 2 Sep 2027**.
+
+**`mop-careers-platform-db`** is live: PostgreSQL **18.6**, `db.t4g.micro`,
+20 GiB gp3, Single-AZ, database `mop_careers`, master user `mop`. The
+September dump restored into it and verified — 28 tables, schema version
+`4677a2788420` matching the code, `users=7 programs=9 batches=1`. Snapshot
+`mop-careers-platform-restored-2026-09-04` is the known-good point.
+
+**There is a second RDS instance, `mop-careers-db`, and it is NOT ours.** It
+runs PostgreSQL 16.15 and belongs to a different MOP product. **Do not delete
+it.** It is also why the bill is ~$30/month rather than ~$15, which halves
+the credit runway to roughly four months.
+
+**Nothing has moved off Render.** The live site and API still run there
+against Render's database, which is still paid and still current. Stage 1.5
+— repointing the Render API's `DATABASE_URL` at RDS — is the next step and
+is a one-variable change either way. Note Render's outbound IPs must be added
+to `mop-careers-platform-sg` first, and that once the live site writes to
+RDS the two databases fork.
 
 Four things worth knowing before starting:
 
@@ -367,6 +385,10 @@ Four things worth knowing before starting:
   $6/month plan and does not expire (thread 5). This is now an unhurried
   migration, which is worth spending: nothing has to be rushed, and Render
   stays up until AWS is proven.
+- **The free plan is credits, not the old 12-month free tier.** $120 covers
+  roughly four months at the current two-instance rate. When the credits go,
+  so does free access — the same shape as the Render expiry, so decide
+  whether MOP is paying for AWS *before* Stage 2 doubles the burn rate.
 - **It costs money.** Roughly $25/month for the first year and $40/month
   after, almost all of it App Runner. Against $6/month for what is running
   today — so the case for moving has to rest on something other than the

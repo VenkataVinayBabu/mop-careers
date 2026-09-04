@@ -117,17 +117,77 @@ if (-not $VerifyOnly) {
 }
 
 # --- is the target reachable, and is it empty? ----------------------------
-$existing = & $psql $DatabaseUrl -tAc "select count(*) from information_schema.tables where table_schema = 'public'"
-if ($LASTEXITCODE -ne 0) {
+# psql's own message says what went wrong; the job here is to turn it into the
+# fix. The first version of this printed a generic list of three causes even
+# when psql had already said "password authentication failed", which sent
+# somebody off to check a firewall that was working perfectly.
+#
+# EAP is dropped to Continue around the call because in PowerShell 5.1,
+# redirecting a native command's stderr wraps each line in an ErrorRecord and
+# would otherwise terminate before the message can be read.
+$prevEAP = $ErrorActionPreference
+$ErrorActionPreference = 'Continue'
+$connOut = & $psql $DatabaseUrl -tAc "select count(*) from information_schema.tables where table_schema = 'public'" 2>&1
+$connCode = $LASTEXITCODE
+$ErrorActionPreference = $prevEAP
+
+if ($connCode -ne 0) {
+    # Pull the text out of each ErrorRecord rather than piping to Out-String.
+    # Out-String renders an ErrorRecord as the whole console error block --
+    # "At line:1 char:12", CategoryInfo, FullyQualifiedErrorId and all -- and
+    # hard-wraps it at the console width, which both buries psql's actual
+    # sentence and splits it so the patterns below stop matching it.
+    $msg = ($connOut | ForEach-Object {
+        if ($_ -is [System.Management.Automation.ErrorRecord]) { $_.Exception.Message } else { [string]$_ }
+    }) -join ' '
+
     Write-Host ''
-    Write-Host 'Could not connect. The usual causes, in order:' -ForegroundColor Yellow
-    Write-Host '  1. The RDS security group does not allow your IP. A home IP changes,' -ForegroundColor Yellow
-    Write-Host '     so re-check the inbound rule (Source: My IP) whenever this starts failing.' -ForegroundColor Yellow
-    Write-Host '  2. Public access is set to No on the instance.' -ForegroundColor Yellow
-    Write-Host '  3. Wrong password, or the database name is missing from the URL.' -ForegroundColor Yellow
+    Write-Host $msg.Trim() -ForegroundColor Red
+    Write-Host ''
+
+    if ($msg -match 'password authentication failed') {
+        Write-Host 'The server is reachable and answered -- so the firewall, public access' -ForegroundColor Yellow
+        Write-Host 'and SSL are all fine. Only the credentials are wrong.' -ForegroundColor Yellow
+        Write-Host ''
+        Write-Host 'Two causes, and the second catches people out:' -ForegroundColor Yellow
+        Write-Host '  1. The password is simply wrong.' -ForegroundColor Yellow
+        Write-Host '  2. It contains a character the URL parser eats. @ / : # ? and %' -ForegroundColor Yellow
+        Write-Host '     are structure in a connection string, not password characters.' -ForegroundColor Yellow
+        Write-Host '     Percent-encode them (@ = %40, # = %23, / = %2F, ? = %3F, % = %25)' -ForegroundColor Yellow
+        Write-Host '     or reset the master password to letters and digits only.' -ForegroundColor Yellow
+    }
+    elseif ($msg -match 'database "[^"]+" does not exist') {
+        Write-Host 'Connected and authenticated -- the SERVER is fine, but that DATABASE is' -ForegroundColor Yellow
+        Write-Host 'not on it. On RDS this means the "Initial database name" field was left' -ForegroundColor Yellow
+        Write-Host 'blank at creation (it is collapsed under Additional configuration, and' -ForegroundColor Yellow
+        Write-Host 'there are two sections with that name).' -ForegroundColor Yellow
+        Write-Host ''
+        Write-Host 'Fix without rebuilding: connect to the default database and create it --' -ForegroundColor Yellow
+        Write-Host '  psql "...(same URL, but /postgres at the end)" -c "CREATE DATABASE mop_careers"' -ForegroundColor Yellow
+    }
+    elseif ($msg -match 'timeout expired|Operation timed out|could not connect to server') {
+        Write-Host 'No answer at all, which is a network problem rather than a login one:' -ForegroundColor Yellow
+        Write-Host '  1. The security group does not allow your IP. A home IP changes, so' -ForegroundColor Yellow
+        Write-Host '     re-check the inbound rule (Source: My IP) whenever this starts failing.' -ForegroundColor Yellow
+        Write-Host '  2. Public access is set to No on the instance.' -ForegroundColor Yellow
+        Write-Host '  3. The endpoint or port is wrong.' -ForegroundColor Yellow
+    }
+    elseif ($msg -match 'server does not support SSL') {
+        Write-Host 'That server has no SSL. Local PostgreSQL is usually built without it --' -ForegroundColor Yellow
+        Write-Host 'drop sslmode=require from the URL for a local target.' -ForegroundColor Yellow
+    }
+    elseif ($msg -match 'no pg_hba.conf entry') {
+        Write-Host 'The server refused this combination of host, user and SSL mode. On RDS' -ForegroundColor Yellow
+        Write-Host 'this usually means SSL is required and the URL does not ask for it --' -ForegroundColor Yellow
+        Write-Host 'add ?sslmode=require.' -ForegroundColor Yellow
+    }
+    else {
+        Write-Host 'Not a failure this script recognises. The message above is psql''s own.' -ForegroundColor Yellow
+    }
+
     Write-Error "Connection failed."
 }
-$existing = [int]($existing | Out-String).Trim()
+$existing = [int]($connOut | Out-String).Trim()
 
 if (-not $VerifyOnly) {
     if ($existing -gt 0 -and -not $Force) {

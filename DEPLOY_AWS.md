@@ -16,7 +16,7 @@ which is kept only because the sequencing argument in it still applies.
 
 | Piece of the app | AWS service | Why |
 |---|---|---|
-| PostgreSQL database | **RDS for PostgreSQL** | Free 12 months on a new account |
+| PostgreSQL database | **RDS for PostgreSQL** | ~$15/mo, covered by credits at first |
 | FastAPI backend | **App Runner** | You push code; it builds and runs it |
 | React frontend | **Amplify Hosting** | GitHub-linked, free SSL and custom domain |
 | Notes PDFs, photos | **S3** | Files that survive a deploy |
@@ -63,24 +63,65 @@ spending cap by default**, and a leaked root credential can run up thousands.
 > for the deadline to take it. A *suspended* database refuses connections, so
 > `backup.ps1` could not run either.
 
+### Stage 1 is DONE — done 4 September 2026
+
+What actually exists, so the rest of this stage reads as history rather than
+instructions:
+
+- **`mop-careers-platform-db`** — PostgreSQL **18.6**, `db.t4g.micro`, 20 GiB
+  gp3, Single-AZ, public access on, security group `mop-careers-platform-sg`,
+  database `mop_careers`, master user `mop`, in **ap-south-1 (Mumbai)**.
+- The September dump restored into it cleanly: **28 tables**, schema version
+  `4677a2788420` matching the code, `users=7 programs=9 batches=1`.
+- Snapshot **`mop-careers-platform-restored-2026-09-04`** is the known-good
+  point. Take manual snapshots deliberately — see the retention note below.
+
+Six things this stage taught, none of them in the original write-up:
+
+- **The console calls it *Full configuration*, not *Standard create*.** Easy
+  create hides engine version, storage autoscaling, public access *and* the
+  initial database name — every field that matters here.
+- **There are two sections named "Additional configuration".** The first, in
+  Connectivity, holds the port. The second, near the bottom, holds **Initial
+  database name** — and if it is blank, RDS creates a server with no database
+  on it. The console says so in grey text under the box.
+- **The free plan restricts RDS.** Production and Dev/Test templates are greyed
+  out, and **backup retention is locked at 1 day**. Manual snapshots are not
+  subject to that limit, which is why one is taken after every meaningful
+  change rather than relying on automated backups.
+- **Put nothing but letters and digits in the master password.** `@ / : # ? %`
+  are structure inside a connection URL, and a password containing one fails as
+  `password authentication failed` — which reads like a wrong password and
+  sends you hunting in the wrong place. `restore.ps1` now says this when it
+  sees that error.
+- **An account can already have an RDS instance.** This one did — the "Explore
+  AWS: Create an Aurora or RDS database" credit is earned by creating one, and
+  that instance belongs to a different MOP product. It runs PostgreSQL 16.15,
+  it is nothing to do with this project, and **it must not be deleted.**
+- **To park an idle RDS instance, snapshot it and delete it.** Stopping is
+  capped at seven days, after which AWS restarts it and the billing resumes
+  without anyone noticing.
+
+---
+
 ### 1.1 Create the server
 
 Search **RDS** → *Create database*.
 
 | Field | Choose |
 |---|---|
-| Method | Standard create |
+| Method | **Full configuration** (the console's name for Standard create) |
 | Engine | **PostgreSQL** |
-| Version | **18.x** — see the note below; anything older may refuse the restore |
+| Version | **18.6** — see the note below; anything older may refuse the restore |
 | Template | **Free tier** |
-| DB instance identifier | `mop-careers-db` |
+| DB instance identifier | `mop-careers-platform-db` |
 | Master username | `mop` |
-| Master password | Generate a strong one. **Store it in a password manager.** |
+| Master password | Strong, **letters and digits only** — punctuation breaks the URL. Store it in a password manager. |
 | Instance | `db.t4g.micro` (chosen by the Free tier template) |
 | Storage | 20 GB, disable storage autoscaling |
 | **Public access** | **Yes** — needed so you can restore from your laptop |
-| Initial database name | Expand *Additional configuration* → `mop_careers` |
-| Backups | 7 days |
+| Initial database name | The **second** *Additional configuration* → `mop_careers` |
+| Backups | 7 days if the plan allows; the free plan locks it to 1 |
 
 Creating takes about 10 minutes.
 
