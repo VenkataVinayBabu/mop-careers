@@ -32,9 +32,15 @@ frontend:
 # App settings > Rewrites and redirects. Add this rule after the first deploy,
 # or refreshing on /about or /programs/data-analytics-with-ai returns a 404:
 #
-#   Source:  </^[^.]+$|\.(?!(css|gif|ico|jpg|js|png|txt|svg|woff2|json)$)([^.]+$)/>
+#   Source:  </^[^.]+$|\.(?!(css|gif|ico|jpg|jpeg|js|png|txt|svg|woff|woff2|ttf|map|json|xml|webmanifest)$)([^.]+$)/>
 #   Target:  /index.html
 #   Type:    200 (Rewrite)
 #
 # The pattern deliberately excludes real file extensions, so a missing image
 # still 404s rather than silently returning the HTML page with a 200.
+#
+# EVERY extension the site actually serves must be in that list. An earlier
+# version of this comment omitted `xml`, which would have quietly rewritten
+# /sitemap.xml to index.html — Google would have fetched the sitemap, been
+# handed a web page, and indexed nothing. Same trap for the fonts and the
+# source maps. If a static file starts returning HTML, this list is why.
