@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react';
 
 import { PublicFloats, PublicFooter, PublicHeader, useHashScroll } from './PublicChrome';
 import { api, errorMessage } from '../../api/client';
+import useSeo from '../../hooks/useSeo';
 
 /*
  * The careers page, matching what MOP publishes at
@@ -225,6 +226,12 @@ function ApplyModal({ position, onClose }) {
 }
 
 export default function Careers() {
+  useSeo({
+    title: 'Careers',
+    description:
+      'Open roles at MOP Careers. Help build the platform behind our learners.',
+    path: '/careers',
+  });
   useHashScroll();
   const [applyingFor, setApplyingFor] = useState(null);
   const [openings, setOpenings] = useState(null);   // null = still loading

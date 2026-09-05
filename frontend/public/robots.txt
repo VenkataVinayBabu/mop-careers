@@ -1,0 +1,20 @@
+# MOP Careers — https://mopcareers.com
+#
+# The signed-in platform holds student records and has no business in a search
+# index. It is all behind auth, so a crawler would only ever reach a login
+# form, but saying so explicitly keeps those paths out of the crawl budget.
+
+User-agent: *
+Allow: /
+
+Disallow: /admin
+Disallow: /teacher
+Disallow: /student
+Disallow: /viewer
+Disallow: /login
+Disallow: /forgot-password
+Disallow: /reset-password
+Disallow: /change-password
+Disallow: /profile
+
+Sitemap: https://mopcareers.com/sitemap.xml

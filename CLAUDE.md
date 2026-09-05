@@ -412,16 +412,54 @@ history and forces `sslmode=require` on remote hosts.
 
 ### 3. Domain
 
-MOP owns **mopcareers.com**, bought through GoDaddy — confirmed again by the
-user on 15 Aug 2026, along with the fact that **Bala has still not decided**.
-The choice between pointing it at Render, keeping mopcareers.in, or running
-both remains open.
+MOP owns **mopcareers.com**, bought through GoDaddy. **Decided 4 Sep 2026:
+the site goes live on AWS at mopcareers.com.** That closes the question that
+sat open here since August — it is no longer a choice between Render, the .in
+and both.
 
-**As of 15 Aug 2026 mopcareers.com does not resolve at all** — no response over
-HTTPS on the apex or `www`, so even the GoDaddy placeholder has gone. Only
-`mopcareers.in` serves anything (200). That is worth knowing before the switch:
-there is nothing live on the .com to break, so pointing it at Render is a
-clean cutover rather than a migration. Whenever it happens, three env vars must move with it or the site breaks
+**There are THREE MOP domains, not two** (found 4 Sep 2026):
+
+| Domain | State | Google, searching "mop careers" |
+|---|---|---|
+| `mopcareers.co.in` | live, 200 — "MOP Careers — India's career readiness platform" | **ranks #1** |
+| `mopcareers.in` | live, 200 — "India's Best Pay After Placement Program" | ranks #2 |
+| `mopcareers.com` | GoDaddy Website Builder, serves nothing | not indexed |
+
+**This is the thing to understand before promising anyone that the .com will
+rank.** A brand-new domain does not outrank two established ones by publishing
+similar content — Google has years of signals on those two and none on the
+.com. Three sites saying the same thing compete with each other and split what
+they earn.
+
+Making the .com win needs, in order of how much each matters:
+
+1. **301-redirect `.co.in` and `.in` to the `.com`.** This is what actually
+   moves ranking; everything else is marginal beside it. **It is Bala's
+   decision, not a developer's** — those sites are live and may serve
+   different business lines (the .co.in advertises certification courses,
+   the .in advertises pay-after-placement).
+2. **The site's own SEO, which is currently close to none.** One `<title>` and
+   one description for every route, no `robots.txt`, no `sitemap.xml`, no
+   Open Graph tags — so WhatsApp and LinkedIn shares show no preview card at
+   all, and nine programme pages look to Google like one page.
+3. **Google Search Console** — verify the domain, submit the sitemap.
+
+**Still open, and it needs Bala rather than a developer:** what happens to
+**mopcareers.in**, which is live today and presumably carries whatever search
+ranking MOP has. Two sites publishing the same content compete with each
+other and split it. The .in should either 301-redirect to the .com or serve
+something deliberately different.
+
+**As of 4 Sep 2026 mopcareers.com resolves but serves nothing.** The apex and
+`www` point at `13.248.243.5` / `76.223.105.230` — GoDaddy's Website Builder,
+which shows as a "Website" product beside the domain in Bala's GoDaddy
+account — and HTTPS returns no response at all. `mopcareers.in` is live and
+serves 200 from `66.116.209.139`.
+
+Two consequences. **Nothing real is live on the .com**, so pointing it at AWS
+breaks nothing. But **those A records belong to the GoDaddy Website Builder
+product** and have to be removed rather than edited around, or they will keep
+answering for the apex. Whenever it happens, three env vars must move with it or the site breaks
 quietly: backend `CORS_ORIGINS` and `FRONTEND_URL` (the latter appears in password
 reset emails), and frontend `VITE_API_URL` — which is **baked in at build time**, so
 saving it in the dashboard does nothing until the frontend is redeployed.

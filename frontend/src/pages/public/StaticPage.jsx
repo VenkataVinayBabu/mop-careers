@@ -1,7 +1,6 @@
-import { useEffect } from 'react';
-
 import { PublicFloats, PublicFooter, PublicHeader, useHashScroll } from './PublicChrome';
 import { LEGAL_DOCS } from '../../data/legal';
+import useSeo from '../../hooks/useSeo';
 
 /*
  * The three legal pages — privacy, terms and refund — rendered from the
@@ -71,9 +70,14 @@ export default function StaticPage({ slug }) {
   useHashScroll();
   const doc = LEGAL_DOCS[slug];
 
-  useEffect(() => {
-    if (doc) document.title = `${doc.title} — MOP Careers`;
-  }, [doc]);
+  /* This used to set document.title directly. useSeo does that and the
+     description and canonical URL with it, so the three legal pages stop
+     sharing the home page's description. */
+  useSeo({
+    title: doc?.title || 'Not found',
+    description: doc?.summary || `${doc?.title || 'This page'} for MOP Careers.`,
+    path: `/${slug}`,
+  });
 
   if (!doc) return null;
 

@@ -15,6 +15,7 @@ import EnquiryForm from './EnquiryForm';
 import {
   PublicFloats, PublicFooter, PublicHeader, WhatsAppIcon, contactHref, useHashScroll,
 } from './PublicChrome';
+import useSeo from '../../hooks/useSeo';
 
 /*
  * Public marketing site — no authentication anywhere on this page. The only
@@ -132,6 +133,12 @@ function RailArrows({ railRef, label }) {
 }
 
 export default function Landing() {
+  useSeo({
+    title: 'MOP Careers — Your Future. Our Priority.',
+    description:
+      "Live, mentor-led career programmes in software, data and AI, with placement support throughout. Pay after you're placed.",
+    path: '/',
+  });
   useHashScroll();
   const mentorRail = useRef(null);
   /* Subscribed so the WhatsApp CTA below re-renders once the live settings

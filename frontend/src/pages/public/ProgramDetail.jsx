@@ -8,6 +8,7 @@ import { useFees, useMentors, usePartners, usePrograms } from '../../data/siteSe
 import EnquiryForm from './EnquiryForm';
 import ProgramCard from './ProgramCard';
 import { PublicFloats, PublicFooter, PublicHeader } from './PublicChrome';
+import useSeo from '../../hooks/useSeo';
 
 /*
  * One program's own page, at /programs/{slug}.
@@ -46,6 +47,18 @@ export default function ProgramDetail() {
      route needs is already here — no per-page fetch and no loading state. */
   const programs = usePrograms();
   const program = programs.find((p) => p.slug === slug);
+
+  /* Each programme is its own page in search results rather than nine copies
+     of one. `program` is undefined for a beat while the catalogue loads, and
+     on a slug that does not exist -- fall back rather than render "undefined"
+     into the title. */
+  useSeo({
+    title: program ? program.name : 'Programmes',
+    description:
+      program?.summary ||
+      'Live, mentor-led career programmes with placement support throughout.',
+    path: `/programs/${slug}`,
+  });
 
   /*
    * One phase open at a time. The four titles are the outline of the whole

@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react';
 
 import { PublicFloats, PublicFooter, PublicHeader, useHashScroll } from './PublicChrome';
 import { api } from '../../api/client';
+import useSeo from '../../hooks/useSeo';
 
 /*
  * About Us, carried across from mopcareers.in/about.php word for word.
@@ -128,6 +129,12 @@ function PersonCard({ person }) {
 }
 
 export default function About() {
+  useSeo({
+    title: 'About Us',
+    description:
+      'Who MOP Careers is, what we believe, and the people behind the programmes.',
+    path: '/about',
+  });
   useHashScroll();
   const [people, setPeople] = useState([]);
   const leadership = people.filter((p) => p.section === 'leadership');
