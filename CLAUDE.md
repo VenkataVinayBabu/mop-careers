@@ -339,10 +339,14 @@ of how much it would matter if wrong:
   and the four headline statistics are editable at Admin > Website >
   Statistics. **They remain the largest unverified claim on the site** — being
   editable makes them correctable, not true.
-- **Contact details conflict across MOP's own properties.** The site shows
-  `hello@mopcareers.com`, `+91 98908 13235`, HSR Layout Bengaluru. mopcareers.in
-  publishes `hello@mopcareers.in` and a Whitefield address. Both are live and
-  disagreeing.
+- ~~**Contact details conflict across MOP's own properties.**~~ **Mostly
+  resolved, 5 Sep 2026**, by reading mopcareers.in rather than trusting this
+  note. Both sites publish the **same** HSR Layout address and the same phone
+  `+91 98908 13235` — the "Whitefield address" recorded here was wrong. The
+  only real difference is the email: the .com shows `hello@mopcareers.com`,
+  the .in shows `contacts@mopcareers.in`. That second one matches the footer
+  Bala supplied in thread 9, so it is the likelier intended address — it is a
+  site setting, so Bala can correct it himself.
 - **The WhatsApp number is still unknown.** The setting is empty, so the buttons
   fall back to the enquiry form. Do **not** assume the phone number above takes
   WhatsApp — a landline or a number without it hands the visitor a dead end.
