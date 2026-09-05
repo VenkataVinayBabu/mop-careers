@@ -14,4 +14,9 @@ pydantic-settings==2.7.0
 python-multipart==0.0.20
 email-validator==2.2.0
 reportlab==4.2.5
+
+# S3 for uploaded notes PDFs. Local disk is wiped on every deploy on both
+# Render and App Runner, so teachers' uploads did not survive one. See
+# app/storage.py.
+boto3==1.35.76
 anthropic==0.120.0

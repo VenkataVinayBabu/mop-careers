@@ -10,7 +10,7 @@ from fastapi import APIRouter, Depends, File, HTTPException, UploadFile, status
 from sqlalchemy import func, select
 from sqlalchemy.orm import Session
 
-from app.config import NOTES_DIR
+from app import storage
 from app.curriculum import batch_total_days
 from app.database import get_db
 from app.deps import assert_batch_access, require_staff, teacher_batch_ids
@@ -168,14 +168,13 @@ async def upload_notes(
     if not stored.lower().endswith(".pdf"):
         stored += ".pdf"
 
-    target = NOTES_DIR / stored
-    target.write_bytes(contents)
+    # Store the new file BEFORE dropping the old one. If this raises, the day
+    # keeps the notes it already had rather than ending up with neither.
+    storage.save(stored, contents)
 
     # Drop the previous file so uploads do not pile up.
     if day.notes_file:
-        old = NOTES_DIR / day.notes_file
-        if old.is_file() and old.parent == NOTES_DIR:
-            old.unlink(missing_ok=True)
+        storage.delete(day.notes_file)
 
     day.notes_file = stored
     # A replacement is a real delivery too — a new file genuinely arrived, and
@@ -193,9 +192,7 @@ def delete_notes(
 ) -> CurriculumDayOut:
     day = _get_day(db, day_id, user)
     if day.notes_file:
-        path = NOTES_DIR / day.notes_file
-        if path.is_file() and path.parent == NOTES_DIR:
-            path.unlink(missing_ok=True)
+        storage.delete(day.notes_file)
         day.notes_file = None
         day.notes_uploaded_at = None
         db.commit()

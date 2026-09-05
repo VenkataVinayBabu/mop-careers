@@ -44,6 +44,19 @@ class Settings(BaseSettings):
     FRONTEND_URL: str = "http://localhost:5173"
     CORS_ORIGINS: str = "http://localhost:5173"
 
+    # Object storage for uploaded files.
+    #
+    # Leave S3_BUCKET empty and uploads go to local disk, exactly as they
+    # always have — a developer should not need AWS credentials to run the
+    # app. Set it and they go to S3 instead. See app/storage.py.
+    #
+    # The AWS credentials themselves are NOT here: boto3 reads
+    # AWS_ACCESS_KEY_ID / AWS_SECRET_ACCESS_KEY from the environment on its
+    # own, and picks up an IAM role automatically when running inside AWS.
+    # Naming them here would mean editing code to move from keys to a role.
+    S3_BUCKET: str = ""
+    S3_REGION: str = "ap-south-1"
+
     # Anthropic (phases 3 & 4)
     ANTHROPIC_API_KEY: str = ""
     ANTHROPIC_MODEL: str = "claude-sonnet-4-6"
