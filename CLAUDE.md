@@ -397,12 +397,25 @@ runs PostgreSQL 16.15 and belongs to a different MOP product. **Do not delete
 it.** It is also why the bill is ~$30/month rather than ~$15, which halves
 the credit runway to roughly four months.
 
-**Nothing has moved off Render.** The live site and API still run there
-against Render's database, which is still paid and still current. Stage 1.5
-— repointing the Render API's `DATABASE_URL` at RDS — is the next step and
-is a one-variable change either way. Note Render's outbound IPs must be added
-to `mop-careers-platform-sg` first, and that once the live site writes to
-RDS the two databases fork.
+**Stage 1.5 is DONE (5 Sep 2026): the live site now runs on RDS.** The
+Render API's `DATABASE_URL` points at `mop-careers-platform-db`, proved by
+writing an enquiry through the live API and finding it in RDS and not in
+Render's database. `FRONTEND_URL` was corrected to `https://mopcareers.com`
+at the same time — it still said the old Render URL, so every password-reset
+link would have pointed at the wrong site. `APP_ENV` was already `production`.
+
+**Render's database is still running and still paid, deliberately.** It is
+the rollback: put the old `DATABASE_URL` back and the site is exactly where
+it was. The two have now forked, so anything written since the cutover exists
+only on RDS. Cancel Render's database once a week or two has passed without
+trouble — and note that **backups must now target RDS**, not Render.
+
+**`mop-careers-platform-sg` allows Render's shared outbound ranges**
+`74.220.48.0/24` and `74.220.56.0/24`, described as temporary. Those are not
+unique to this account — they are shared with every other Render customer in
+the region, so the database is protected by its password and SSL rather than
+by the firewall. **Delete both rules once the API runs inside AWS**, which is
+what makes the database properly private.
 
 Four things worth knowing before starting:
 
