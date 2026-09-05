@@ -38,8 +38,12 @@ marketing site (no auth) and an authenticated platform (admin / teacher / studen
 > step is proving AWS with the live site by repointing one env var, and it
 > reverts by changing that same var back.
 >
-> - Live site: <https://mop-careers.onrender.com>
+> - **Live site: <https://mopcareers.com>** — AWS Amplify, since 5 Sep 2026.
+>   `www` serves the same site; the canonical is the apex.
+>   <https://mop-careers.onrender.com> still runs and still works.
 > - Live API: <https://mop-careers-api.onrender.com> (`/docs` for the API browser)
+>   — **still on Render.** App Runner is blocked by an AWS account issue, so the
+>   site is served from AWS and the API answers from Render.
 > - Repo: <https://github.com/VenkataVinayBabu/mop-careers> (private, branch `master`)
 > - Deployment: see `DEPLOY.md`
 
@@ -356,6 +360,23 @@ kept only because the sequencing argument in it still applies.
 PostgreSQL, App Runner, Amplify Hosting and S3. `apprunner.yaml` and
 `amplify.yml` are committed at the repo root, so neither console has to be
 told the build commands by hand.
+
+**Stage 3 (Amplify) and Stage 5 (the domain) are DONE (5 Sep 2026), out of
+order — App Runner is blocked, so the frontend went first and calls Render's
+API.** `mopcareers.com` and `www` serve from Amplify with an Amplify-managed
+certificate; DNS is Route 53 (nameservers changed at GoDaddy, the GoDaddy
+Website Builder records are gone, the `_dmarc` TXT was carried across). The
+SPA rewrite rule is set in the console — without it every deep link 404s.
+Render's `CORS_ORIGINS` now lists the Amplify URL, the apex and `www`; miss
+that and the site silently shows baked-in defaults instead of live data,
+which looks completely normal and is not.
+
+**Stage 2 (App Runner) is BLOCKED.** The console returns the free-plan
+limitations page even though the account is on the Paid plan and Active
+(confirmed via `GetAccountPlanState`). Amplify was unaffected, so it is
+specific to App Runner. Needs an AWS support case (Account and billing →
+Account → Activation). Alternatives if it stays blocked: Lightsail (~$10/mo,
+you manage the server, TLS and deploys) or EC2.
 
 **Stage 0 and Stage 1 are done (4 Sep 2026).** Account `MOP Careers` in
 **ap-south-1 (Mumbai)**, root MFA on, a $40/month budget set, **$120 of
