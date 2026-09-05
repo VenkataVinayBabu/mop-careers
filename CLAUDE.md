@@ -575,8 +575,25 @@ site cannot be un-read), the class schedule, curriculum and placement records.
   on PATH. Backups are still manual — worth scheduling once students enrol.
 - **Change `Teacher@123` and `Student@123`.** They are guessable and the site is on
   the public internet. Remove the demo accounts entirely before enrolment.
-- **SMTP is unconfigured**, so password resets and notifications only reach the Render
-  logs. Nobody can actually recover an account.
+- ~~**SMTP is unconfigured**~~ **DONE, 5 Sep 2026. Email works — password resets
+  included.** Amazon SES in ap-south-1, domain `mopcareers.com` verified with
+  Easy DKIM (SES published the CNAMEs into Route 53 itself). Verified by
+  submitting a real enquiry on the live site and receiving it in an inbox, not
+  in spam — so DKIM is aligned and the `p=quarantine` DMARC policy passes.
+
+  **`SMTP_PORT` must be 2587, not 587.** Render blocks outbound traffic to
+  ports 25, 465 and 587 on free web services to deter spam, so a connection to
+  SES times out after 20 seconds with `TimeoutError: timed out` — which reads
+  like a broken credential and is not. SES also listens on 2465 and 2587 for
+  exactly this situation. **Do not "fix" the port back to 587.** If the API
+  ever moves to a paid instance or to AWS, 587 becomes available again, but
+  2587 keeps working either way.
+
+  Two things still open here. **SES is in the sandbox**, so it only delivers to
+  verified addresses — production access was requested 5 Sep and takes about a
+  day. And **`ENQUIRY_EMAIL` / `ADMIN_DOUBTS_EMAIL` point at a personal Gmail**
+  as a stopgap; they move to `enquiries@mopcareers.com` once that mailbox
+  exists (Microsoft 365 was bought 5 Sep, pending DNS).
 - **Uploaded notes PDFs vanish on redeploy** — Render's free tier has no persistent
   disk. Needs a paid disk or object storage (S3 / Cloudflare R2).
 - **The backend sleeps when idle** (30–60s to wake). Mitigated in the frontend — 75s
