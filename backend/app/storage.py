@@ -46,8 +46,22 @@ def _client():
     # Imported lazily so a local install without AWS configured never touches
     # boto3 at all.
     import boto3
+    from botocore.config import Config
 
-    return boto3.client("s3", region_name=settings.S3_REGION)
+    # endpoint_url is pinned to the REGIONAL host on purpose, and this is not
+    # cosmetic. Left to itself boto3 signs presigned URLs for ap-south-1 but
+    # addresses them to the global s3.amazonaws.com. S3 answers that with a
+    # redirect to the regional endpoint, the signature no longer matches the
+    # host it was signed for, and the download fails with 403 Forbidden --
+    # while an ordinary get_object through the API works perfectly, so the
+    # credentials and the IAM policy both look correct. Pinning the endpoint
+    # makes the URL and the signature agree.
+    return boto3.client(
+        "s3",
+        region_name=settings.S3_REGION,
+        endpoint_url=f"https://s3.{settings.S3_REGION}.amazonaws.com",
+        config=Config(signature_version="s3v4", s3={"addressing_style": "virtual"}),
+    )
 
 
 def save(name: str, data: bytes, content_type: str = "application/pdf") -> None:
