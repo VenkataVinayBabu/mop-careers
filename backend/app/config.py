@@ -50,12 +50,20 @@ class Settings(BaseSettings):
     # always have — a developer should not need AWS credentials to run the
     # app. Set it and they go to S3 instead. See app/storage.py.
     #
-    # The AWS credentials themselves are NOT here: boto3 reads
-    # AWS_ACCESS_KEY_ID / AWS_SECRET_ACCESS_KEY from the environment on its
-    # own, and picks up an IAM role automatically when running inside AWS.
-    # Naming them here would mean editing code to move from keys to a role.
+    # The AWS credentials are declared here so that a local .env works. boto3
+    # reads AWS_ACCESS_KEY_ID / AWS_SECRET_ACCESS_KEY from the process
+    # environment, which a .env file never reaches -- so without these fields
+    # S3 fails locally with "Unable to locate credentials" while working
+    # perfectly on a host that sets real environment variables.
+    #
+    # Leaving them EMPTY is meaningful: storage.py then lets boto3 find
+    # credentials its own way, which is how an IAM role is picked up when the
+    # app runs inside AWS. Moving from keys to a role is deleting two values,
+    # not editing code.
     S3_BUCKET: str = ""
     S3_REGION: str = "ap-south-1"
+    AWS_ACCESS_KEY_ID: str = ""
+    AWS_SECRET_ACCESS_KEY: str = ""
 
     # Anthropic (phases 3 & 4)
     ANTHROPIC_API_KEY: str = ""

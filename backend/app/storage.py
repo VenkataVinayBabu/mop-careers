@@ -56,11 +56,25 @@ def _client():
     # while an ordinary get_object through the API works perfectly, so the
     # credentials and the IAM policy both look correct. Pinning the endpoint
     # makes the URL and the signature agree.
+
+    # Pass the keys explicitly only if they are configured. When they are not,
+    # boto3 falls back to its own credential chain -- environment variables, a
+    # shared profile, or the IAM role attached to whatever is running the app
+    # inside AWS. That fallback is the point: it is what will let this move to
+    # App Runner with a role and no keys at all.
+    credentials = {}
+    if settings.AWS_ACCESS_KEY_ID and settings.AWS_SECRET_ACCESS_KEY:
+        credentials = {
+            "aws_access_key_id": settings.AWS_ACCESS_KEY_ID,
+            "aws_secret_access_key": settings.AWS_SECRET_ACCESS_KEY,
+        }
+
     return boto3.client(
         "s3",
         region_name=settings.S3_REGION,
         endpoint_url=f"https://s3.{settings.S3_REGION}.amazonaws.com",
         config=Config(signature_version="s3v4", s3={"addressing_style": "virtual"}),
+        **credentials,
     )
 
 
