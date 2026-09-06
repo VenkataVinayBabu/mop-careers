@@ -125,15 +125,14 @@ Doubt #{doubt.id}
     admin_address = site_settings.doubts_email(db)
     if doubt.query_type == DOUBT_CLASS:
         teachers = _batch_teachers(db, student.batch_id)
-        # The teacher is who answers a class doubt, and they are still the
-        # first recipient. The central address is added rather than being only
-        # a fallback, because MOP asked for EVERY support message to arrive at
-        # contacts@ — otherwise class doubts would be the one kind of student
-        # request nobody in the office ever saw.
+        # A class doubt is the teacher's to answer and goes to them ALONE.
+        # Copying the office on "I didn't follow today's loop" would bury the
+        # requests that actually need MOP — the technical and other ones below,
+        # which are the ones nobody but the office can deal with.
         #
-        # Deduplicated: a teacher could legitimately be the central address on
-        # a small team, and nobody wants the same mail twice.
-        recipients = list(dict.fromkeys([t.email for t in teachers] + [admin_address]))
+        # The admin address is a fallback only, for a batch with no teacher
+        # assigned, so a doubt is never sent nowhere.
+        recipients = [t.email for t in teachers] or [admin_address]
         if not teachers:
             logger.warning(
                 "Doubt #%s is a class doubt but batch %s has no teacher; sent to admin instead",
