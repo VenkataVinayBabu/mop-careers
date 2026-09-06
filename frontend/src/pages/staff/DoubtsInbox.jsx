@@ -2,6 +2,7 @@ import { useCallback, useEffect, useMemo, useState } from 'react';
 
 import { api, errorMessage } from '../../api/client';
 import { useToast } from '../../components/Toast';
+import ExportButton from '../../components/ExportButton';
 import { EmptyState, ErrorState, Loading, PageHeader, StatCard } from '../../components/ui';
 import { DOUBT_STATUS, DOUBT_TYPES, formatDateTime } from '../../constants';
 import { useAuth } from '../../context/AuthContext';
@@ -64,6 +65,7 @@ export default function DoubtsInbox() {
             ? 'Queries from students in your batches'
             : 'Queries raised by students'
         }
+        action={<ExportButton path="/admin/doubts/export" prefix="mop-support" />}
       />
 
       <div className="mb-6 grid grid-cols-3 gap-4">

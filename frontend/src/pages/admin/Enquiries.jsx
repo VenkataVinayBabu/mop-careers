@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
 
 import { api, errorMessage } from '../../api/client';
+import ExportButton from '../../components/ExportButton';
 import { useToast } from '../../components/Toast';
 import {
   EmptyState,
@@ -80,7 +81,13 @@ export default function AdminEnquiries() {
 
   return (
     <div>
-      <PageHeader title="Enquiries" subtitle="Submitted from the public website" />
+      <PageHeader
+        title="Enquiries"
+        subtitle="Submitted from the public website"
+        action={
+          <ExportButton path="/admin/enquiries/export" prefix="mop-enquiries" />
+        }
+      />
 
       <div className="mb-6 grid grid-cols-2 gap-4 lg:grid-cols-4">
         <StatCard label="New" value={counts.New} tone={counts.New > 0 ? 'orange' : 'navy'} />

@@ -1,33 +1,42 @@
 """Admin-only endpoints: batches, teacher assignment, accounts, milestones."""
+import csv
+import io
 import secrets
 from datetime import date
 
 from fastapi import APIRouter, Depends, HTTPException, Query, status
+from fastapi.responses import Response
 from sqlalchemy import func, or_, select
 from sqlalchemy.orm import Session, selectinload
 
 from app.curriculum import batch_total_days, ensure_curriculum
 from app.database import get_db
-from app.deps import get_student_or_404, require_back_office, require_member
+from app.deps import (
+    get_student_or_404,
+    require_admin,
+    require_back_office,
+    require_member,
+)
 from app.mail import send_new_account
 from app.milestones import get_or_create_milestone as _get_or_create_milestone
 from app.models import (
-    ROLE_ADMIN,
-    ROLE_CONTRIBUTOR,
-    ROLE_STUDENT,
-    ROLE_TEACHER,
-    ROLE_VIEWER,
-    ROLE_MANAGES,
     Attendance,
     Batch,
     CurriculumDay,
+    Doubt,
     Enquiry,
     JobApplication,
+    manages,
     Milestone,
     Program,
+    ROLE_ADMIN,
+    ROLE_CONTRIBUTOR,
+    ROLE_MANAGES,
+    ROLE_STUDENT,
+    ROLE_TEACHER,
+    ROLE_VIEWER,
     TeacherBatch,
     User,
-    manages,
 )
 from app.schemas import (
     AssignTeacherRequest,
@@ -462,6 +471,67 @@ def delete_enquiry(enquiry_id: int, db: Session = Depends(get_db),
     db.delete(enquiry)
     db.commit()
     return MessageResponse(message="Enquiry deleted")
+
+
+# --- exports (admin only) -------------------------------------------------
+# Deliberately require_admin, not require_member. Everything else in this
+# router is open to the back office; a spreadsheet is different, because it
+# leaves the system. One CSV is every lead MOP has, with names, phone numbers
+# and email addresses, on somebody's laptop and out of reach of any audit or
+# access change made afterwards. That is the owner's call to make.
+def _csv(filename: str, header: list[str], rows: list[list]) -> Response:
+    """A CSV that Excel opens correctly on a Windows machine in India.
+
+    The BOM is not optional. Excel assumes the system codepage for a .csv
+    unless the file starts with one, so without it every name with an accent
+    and every rupee sign arrives as mojibake — and the person who opens it has
+    no idea the file was fine and their spreadsheet mangled it.
+    """
+    buf = io.StringIO()
+    # csv.writer already ends lines with CRLF, which is what Excel expects.
+    w = csv.writer(buf)
+    w.writerow(header)
+    w.writerows(rows)
+    return Response(
+        content=buf.getvalue().encode("utf-8-sig"),
+        media_type="text/csv; charset=utf-8",
+        headers={"Content-Disposition": f'attachment; filename="{filename}"'},
+    )
+
+
+def _stamp(dt) -> str:
+    # Excel reads this as a date; an ISO string with a timezone it treats as
+    # text and will not sort chronologically.
+    return dt.strftime("%Y-%m-%d %H:%M") if dt else ""
+
+
+@router.get("/enquiries/export")
+def export_enquiries(db: Session = Depends(get_db),
+                     _: User = Depends(require_admin)) -> Response:
+    rows = db.scalars(select(Enquiry).order_by(Enquiry.created_at.desc())).all()
+    return _csv(
+        f"mop-enquiries-{date.today().isoformat()}.csv",
+        ["ID", "Received", "Name", "Phone", "Email", "Programme", "Status", "Message"],
+        [[e.id, _stamp(e.created_at), e.name, e.phone, e.email,
+          e.programme or "", e.status, e.message] for e in rows],
+    )
+
+
+@router.get("/doubts/export")
+def export_doubts(db: Session = Depends(get_db),
+                  _: User = Depends(require_admin)) -> Response:
+    rows = db.execute(
+        select(Doubt, User).join(User, Doubt.student_id == User.id)
+        .order_by(Doubt.created_at.desc())
+    ).all()
+    return _csv(
+        f"mop-support-{date.today().isoformat()}.csv",
+        ["ID", "Raised", "Student", "Student email", "Type", "Related day",
+         "Status", "Answered", "Description"],
+        [[d.id, _stamp(d.created_at), u.name, u.email, d.query_type,
+          d.related_day or "", d.status, _stamp(d.answered_at), d.description]
+         for d, u in rows],
+    )
 
 
 # --- job applications (careers page) --------------------------------------
