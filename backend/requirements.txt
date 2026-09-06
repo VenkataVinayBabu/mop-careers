@@ -19,4 +19,8 @@ reportlab==4.2.5
 # Render and App Runner, so teachers' uploads did not survive one. See
 # app/storage.py.
 boto3==1.35.76
+
+# Real .xlsx for the enquiries and support exports. A CSV cannot carry column
+# types, so Excel guessed -- and turned every phone number into 9.88E+09.
+openpyxl==3.1.5
 anthropic==0.120.0

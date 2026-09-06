@@ -5,7 +5,7 @@ import { useToast } from './Toast';
 import { useAuth } from '../context/AuthContext';
 
 /*
- * Download a table as a CSV that Excel opens.
+ * Download a table as a formatted Excel workbook.
  *
  * ADMIN AND SALES, and enforced on the server as well — the API guards these
  * routes itself, so hiding the button is presentation, not security. It
@@ -37,7 +37,7 @@ export default function ExportButton({ path, prefix, label = 'Download for Excel
       const url = URL.createObjectURL(res.data);
       const a = document.createElement('a');
       a.href = url;
-      a.download = `${prefix}-${new Date().toISOString().slice(0, 10)}.csv`;
+      a.download = `${prefix}-${new Date().toISOString().slice(0, 10)}.xlsx`;
       document.body.appendChild(a);
       a.click();
       a.remove();

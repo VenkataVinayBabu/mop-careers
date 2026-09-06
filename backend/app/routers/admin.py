@@ -1,6 +1,4 @@
 """Admin-only endpoints: batches, teacher assignment, accounts, milestones."""
-import csv
-import io
 import secrets
 from datetime import date
 
@@ -38,6 +36,7 @@ from app.models import (
     TeacherBatch,
     User,
 )
+from app.spreadsheet import XLSX_MEDIA_TYPE, build as build_sheet
 from app.schemas import (
     AssignTeacherRequest,
     BatchCreate,
@@ -430,6 +429,66 @@ def update_milestones(
     db.commit()
     db.refresh(ms)
     return MilestoneOut.model_validate(ms)
+
+
+# --- enquiries (Phase 5) --------------------------------------------------
+# Listing, updating the status and the CSV export live in routers/enquiries.py,
+# because a sales executive needs them and is NOT back office — which is what
+# this router's own guard requires. Deleting stays here, at member and above:
+# sales chases leads, but removing the record of one is somebody else's call.
+@router.delete("/enquiries/{enquiry_id}", response_model=MessageResponse)
+def delete_enquiry(enquiry_id: int, db: Session = Depends(get_db),
+                   _: User = Depends(require_member)) -> MessageResponse:
+    enquiry = db.get(Enquiry, enquiry_id)
+    if enquiry is None:
+        raise HTTPException(status.HTTP_404_NOT_FOUND, "Enquiry not found")
+    db.delete(enquiry)
+    db.commit()
+    return MessageResponse(message="Enquiry deleted")
+
+
+# --- exports (admin only) -------------------------------------------------
+# Deliberately require_admin, not require_member. Everything else in this
+# router is open to the back office; a spreadsheet is different, because it
+# leaves the system. One file is every student support request MOP has, with
+# names and email addresses, on somebody's laptop and out of reach of any audit
+# or access change made afterwards. That is the owner's call to make.
+@router.get("/doubts/export")
+def export_doubts(db: Session = Depends(get_db),
+                  _: User = Depends(require_admin)) -> Response:
+    rows = db.execute(
+        select(Doubt, User).join(User, Doubt.student_id == User.id)
+        .order_by(Doubt.created_at.desc())
+    ).all()
+    data = build_sheet(
+        "Support",
+        ["ID", "Raised", "Student", "Student email", "Type", "Related day",
+         "Status", "Answered", "Description"],
+        [
+            [
+                d.id,
+                # Naive: Excel has no concept of a timezone and shows the
+                # offset as text, which stops the column sorting as a date.
+                d.created_at.replace(tzinfo=None) if d.created_at else None,
+                u.name,
+                u.email,
+                d.query_type,
+                d.related_day or "",
+                d.status,
+                d.answered_at.replace(tzinfo=None) if d.answered_at else None,
+                d.description,
+            ]
+            for d, u in rows
+        ],
+    )
+    return Response(
+        content=data,
+        media_type=XLSX_MEDIA_TYPE,
+        headers={
+            "Content-Disposition":
+                f'attachment; filename="mop-support-{date.today().isoformat()}.xlsx"'
+        },
+    )
 
 
 # --- enquiries (Phase 5) --------------------------------------------------

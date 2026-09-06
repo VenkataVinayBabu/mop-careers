@@ -11,8 +11,6 @@ something nobody meant it to have.
 Deleting an enquiry stays in admin.py, at member and above. Sales chases leads;
 removing the record of one is somebody else's decision.
 """
-import csv
-import io
 from datetime import date
 
 from fastapi import APIRouter, Depends, HTTPException, Query, status
@@ -21,6 +19,7 @@ from sqlalchemy import select
 from sqlalchemy.orm import Session
 
 from app.database import get_db
+from app.spreadsheet import XLSX_MEDIA_TYPE, build as build_sheet
 from app.deps import require_enquiries, require_enquiries_export
 from app.models import Enquiry, User
 from app.schemas import EnquiryOut, EnquiryStatusUpdate
@@ -64,25 +63,22 @@ def update_enquiry_status(
 def export_enquiries(
     db: Session = Depends(get_db), _: User = Depends(require_enquiries_export)
 ) -> Response:
-    """The list as a CSV that Excel opens.
+    """The list as a formatted Excel workbook.
 
-    The BOM is not optional. Excel assumes the system codepage for a .csv
-    unless the file starts with one, so without it every accented name and
-    rupee sign arrives as mojibake — and whoever opens it has no idea the file
-    was fine and their spreadsheet mangled it.
+    Phone is declared a text column because it is the one that breaks: Excel
+    reads 9876543210 as a number and shows 9.88E+09, which is not a phone
+    number any more. See app/spreadsheet.py.
     """
     rows = db.scalars(select(Enquiry).order_by(Enquiry.created_at.desc())).all()
-    buf = io.StringIO()
-    # csv.writer already ends lines with CRLF, which is what Excel expects.
-    w = csv.writer(buf)
-    w.writerow(["ID", "Received", "Name", "Phone", "Email", "Programme", "Status", "Message"])
-    w.writerows(
+    data = build_sheet(
+        "Enquiries",
+        ["ID", "Received", "Name", "Phone", "Email", "Programme", "Status", "Message"],
         [
             [
                 e.id,
-                # Excel reads this as a date; an ISO string with a timezone it
-                # treats as text and will not sort chronologically.
-                e.created_at.strftime("%Y-%m-%d %H:%M") if e.created_at else "",
+                # Naive: Excel has no concept of a timezone and shows the offset
+                # as part of the text, which stops the column sorting as a date.
+                e.created_at.replace(tzinfo=None) if e.created_at else None,
                 e.name,
                 e.phone,
                 e.email,
@@ -91,13 +87,14 @@ def export_enquiries(
                 e.message,
             ]
             for e in rows
-        ]
+        ],
+        text_columns={"Phone"},
     )
     return Response(
-        content=buf.getvalue().encode("utf-8-sig"),
-        media_type="text/csv; charset=utf-8",
+        content=data,
+        media_type=XLSX_MEDIA_TYPE,
         headers={
             "Content-Disposition":
-                f'attachment; filename="mop-enquiries-{date.today().isoformat()}.csv"'
+                f'attachment; filename="mop-enquiries-{date.today().isoformat()}.xlsx"'
         },
     )
