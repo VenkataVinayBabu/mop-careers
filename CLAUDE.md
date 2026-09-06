@@ -609,12 +609,24 @@ site cannot be un-read), the class schedule, curriculum and placement records.
   Website > Settings rather than in .env. Verified live: an enquiry submitted
   on mopcareers.com arrives as `[MOP Query] <name> — <programme>`.
 
+  **Bounces and complaints reach a human.** SES publishes both to the SNS topic
+  `mop-careers-ses-notifications` (ap-south-1), which emails
+  `contacts@mopcareers.com`. Delivery notifications are deliberately off — at
+  this volume they would bury the two that matter. When one arrives, correct or
+  remove that address on the account it belongs to: repeated hard bounces are
+  what damages sending reputation, and a damaged reputation puts legitimate
+  password resets in spam.
+
   **SES is still in the sandbox**, which is the one thing left. It delivers
   only to addresses verified as SES identities — `contacts@mopcareers.com` and
   one Gmail are, so enquiry and doubt notifications work. **Everything aimed at
   somebody else does not:** password resets to a student, new-account emails,
   and class doubts to a teacher all fail silently until production access is
-  granted. Requested 5 Sep; check the banner on SES > Account dashboard.
+  granted. Requested 5 Sep. **AWS replied asking for use-case detail and the case sat at
+  "Pending customer action"** — the request form never offered a description
+  field, so they received almost nothing and it will wait indefinitely until
+  someone answers. Check the banner on SES > Account dashboard, and the case
+  itself in AWS Support > Your support cases.
 - ~~**Uploaded notes PDFs vanish on redeploy**~~ **FIXED, 6 Sep 2026.** They go
   to S3 now — bucket `mop-careers-uploads` in ap-south-1, all public access
   blocked, objects under `notes/`. `app/storage.py` chooses: `S3_BUCKET` set
