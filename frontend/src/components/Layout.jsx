@@ -82,6 +82,9 @@ const NAV = {
     { to: '/watch/batches', label: 'All Batches', icon: GraduationCap },
     { to: '/watch/assignments', label: 'Assignments', icon: FileText },
   ],
+  // One entry, because the enquiries list is the entire job. No dashboard:
+  // a dashboard summarising a single screen is a second click to reach it.
+  sales: [{ to: '/admin/enquiries', label: 'Enquiries', icon: Inbox, end: true }],
   student: [
     { to: '/app', label: 'Home', icon: Home, end: true },
     { to: '/app/curriculum', label: 'Curriculum', icon: BookOpen },

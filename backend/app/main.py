@@ -9,6 +9,7 @@ from app.routers import (
     admin,
     auth,
     doubts,
+    enquiries,
     fees,
     files,
     placements,
@@ -43,6 +44,9 @@ app.add_middleware(
 app.include_router(public.router)
 app.include_router(auth.router)
 app.include_router(admin.router)
+# Its own router because a sales executive needs these three endpoints and is
+# not back office, which admin.router requires of everything inside it.
+app.include_router(enquiries.router)
 app.include_router(website.router)
 app.include_router(website_changes.router)
 app.include_router(doubts.router)

@@ -3,6 +3,7 @@ import { useCallback, useEffect, useMemo, useState } from 'react';
 import { api, errorMessage } from '../../api/client';
 import ExportButton from '../../components/ExportButton';
 import { useToast } from '../../components/Toast';
+import { useAuth } from '../../context/AuthContext';
 import {
   EmptyState,
   ErrorState,
@@ -14,6 +15,10 @@ import { ENQUIRY_STATUSES, ENQUIRY_STATUS_CLS, formatDateTime } from '../../cons
 
 export default function AdminEnquiries() {
   const toast = useToast();
+  const { user } = useAuth();
+  // Sales works the leads but does not remove them — the API refuses, so the
+  // button is hidden rather than left to fail on click.
+  const canDelete = user?.role !== 'sales';
   const [rows, setRows] = useState([]);
   const [filter, setFilter] = useState('');
   const [busyId, setBusyId] = useState(null);
@@ -179,14 +184,16 @@ export default function AdminEnquiries() {
                       <option key={s} value={s}>{s}</option>
                     ))}
                   </select>
-                  <button
-                    type="button"
-                    onClick={() => remove(e)}
-                    disabled={busyId === e.id}
-                    className="btn-ghost btn-sm text-orange"
-                  >
-                    Delete
-                  </button>
+                  {canDelete && (
+                    <button
+                      type="button"
+                      onClick={() => remove(e)}
+                      disabled={busyId === e.id}
+                      className="btn-ghost btn-sm text-orange"
+                    >
+                      Delete
+                    </button>
+                  )}
                 </div>
               </div>
             </li>

@@ -9,6 +9,7 @@ from app.models import (
     ROLE_ADMIN,
     ROLE_CONTRIBUTOR,
     ROLE_MEMBER,
+    ROLE_SALES,
     ROLE_STUDENT,
     ROLE_TEACHER,
     ROLE_VIEWER,
@@ -122,6 +123,31 @@ def require_back_office(user: User = Depends(get_active_user)) -> User:
     """
     if user.role not in (ROLE_ADMIN, ROLE_MEMBER, ROLE_CONTRIBUTOR):
         raise HTTPException(status.HTTP_403_FORBIDDEN, "Not available for your role")
+    return user
+
+
+def require_enquiries(user: User = Depends(get_active_user)) -> User:
+    """Who may work the enquiries list: the back office minus contributors,
+    plus sales.
+
+    A contributor is absent for the same reason they have always been — they
+    never see enquiries. Sales is here because the list is their entire job.
+    """
+    if user.role not in (ROLE_ADMIN, ROLE_MEMBER, ROLE_SALES):
+        raise HTTPException(status.HTTP_403_FORBIDDEN, "Not allowed")
+    return user
+
+
+def require_enquiries_export(user: User = Depends(get_active_user)) -> User:
+    """Who may take the enquiries away as a file.
+
+    Narrower than the screen itself, deliberately. Viewing a list inside the
+    platform and carrying every lead's name and phone number out of it on a
+    laptop are different acts, and the second one no access change made later
+    can undo. The owner, and the people whose job is ringing those numbers.
+    """
+    if user.role not in (ROLE_ADMIN, ROLE_SALES):
+        raise HTTPException(status.HTTP_403_FORBIDDEN, "Not allowed")
     return user
 
 

@@ -7,8 +7,8 @@ import { useAuth } from '../context/AuthContext';
 /*
  * Download a table as a CSV that Excel opens.
  *
- * ADMIN ONLY, and enforced on the server as well — the API guards these routes
- * with require_admin, so hiding the button is presentation, not security. It
+ * ADMIN AND SALES, and enforced on the server as well — the API guards these
+ * routes itself, so hiding the button is presentation, not security. It
  * renders nothing for anyone else rather than showing a control that would
  * 403: a button that only fails is worse than no button.
  *
@@ -26,7 +26,9 @@ export default function ExportButton({ path, prefix, label = 'Download for Excel
   const toast = useToast();
   const [busy, setBusy] = useState(false);
 
-  if (user?.role !== 'admin') return null;
+  // Admin everywhere; sales only ever sees the enquiries screen, so passing
+  // the role list in would be ceremony for one caller.
+  if (!['admin', 'sales'].includes(user?.role)) return null;
 
   async function download() {
     setBusy(true);

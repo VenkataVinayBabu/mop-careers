@@ -22,8 +22,8 @@ import { MILESTONE_STEPS } from '../../constants';
    their own peer, and a screen listing accounts you cannot touch only invites
    the question "why am I being shown this?". */
 const ROLE_MANAGES = {
-  admin: ['member', 'contributor', 'viewer', 'teacher', 'student'],
-  member: ['contributor', 'viewer', 'teacher', 'student'],
+  admin: ['member', 'contributor', 'viewer', 'sales', 'teacher', 'student'],
+  member: ['contributor', 'viewer', 'sales', 'teacher', 'student'],
   contributor: ['teacher', 'student'],
 };
 
@@ -35,6 +35,7 @@ const TABS = [
   { key: 'member', label: 'Members' },
   { key: 'contributor', label: 'Contributors' },
   { key: 'viewer', label: 'Viewers' },
+  { key: 'sales', label: 'Sales' },
 ];
 
 /** What the New button and the modal call each role, and the one line of
@@ -58,6 +59,11 @@ const ROLE_COPY = {
     noun: 'viewer',
     title: 'New viewer',
     hint: 'A viewer sees every batch read-only — who is teaching, who is enrolled, which classes have been taught and whether the recording and notes were uploaded. They cannot change anything, and never see fees or placements.',
+  },
+  sales: {
+    noun: 'sales executive',
+    title: 'New sales executive',
+    hint: 'A sales executive sees only the enquiries that came off the public website. They can move a lead through New, Contacted, Converted and Closed as they chase it, and download the list as a spreadsheet. They see no batches, students, fees or website.',
   },
 };
 

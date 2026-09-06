@@ -14,6 +14,8 @@ export const HOME_FOR_ROLE = {
   // contributor's is "what came back?" — both live under Website.
   member: '/admin/website/approvals',
   contributor: '/admin/website',
+  // Sales has exactly one screen, so it is also their home.
+  sales: '/admin/enquiries',
 };
 
 /**

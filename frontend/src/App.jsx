@@ -157,6 +157,18 @@ export default function App() {
         }
       >
         <Route path="/admin/fees" element={<AdminFees />} />
+      </Route>
+
+      {/* Enquiries is its own block because sales belongs here and nowhere
+          else. Kept apart from fees deliberately: they used to share a guard,
+          and adding sales to it would have handed them the fees screen. */}
+      <Route
+        element={
+          <ProtectedRoute roles={['admin', 'member', 'sales']}>
+            <Layout />
+          </ProtectedRoute>
+        }
+      >
         <Route path="/admin/enquiries" element={<AdminEnquiries />} />
       </Route>
 

@@ -11,7 +11,10 @@ from pydantic import BaseModel, ConfigDict, EmailStr, Field, field_validator, mo
 # drift apart.
 from app.models import DEFAULT_CURRICULUM_DAYS
 
-Role = Literal["admin", "teacher", "student", "viewer", "contributor", "member"]
+# Kept in step with ROLE_MANAGES in models.py by hand. A role missing here
+# does not fail loudly at import: it fails when someone with that role logs
+# in, as a 500 from UserOut, long after the account was created.
+Role = Literal["admin", "teacher", "student", "viewer", "contributor", "member", "sales"]
 BatchStatus = Literal["upcoming", "active", "completed"]
 DayStatus = Literal["pending", "completed"]
 
@@ -76,7 +79,7 @@ class UserCreate(BaseModel):
     name: str = Field(min_length=2, max_length=120)
     email: EmailStr
     phone: str | None = Field(default=None, max_length=20)
-    role: Literal["teacher", "student", "viewer", "contributor", "member"]
+    role: Literal["teacher", "student", "viewer", "contributor", "member", "sales"]
     password: PasswordStr | None = None
     yoe_it: float | None = Field(default=None, ge=0, le=50)
     batch_id: int | None = None

@@ -42,6 +42,14 @@ ROLE_CONTRIBUTOR = "contributor"
 # contributor can read. Everything a contributor can do, plus fees, enquiries
 # and the viewer's follow-up screens.
 ROLE_MEMBER = "member"
+# Works the leads and nothing else. Sees the enquiries that came off the public
+# website, moves them through New/Contacted/Converted/Closed as they are
+# chased, and can take the list away as a spreadsheet. No batches, no students,
+# no fees, no website — the enquiries screen IS the job.
+#
+# Read-only everywhere else in the sense that matters: they cannot reach any
+# other screen at all, rather than seeing them and being refused.
+ROLE_SALES = "sales"
 ROLES = (
     ROLE_ADMIN,
     ROLE_TEACHER,
@@ -49,6 +57,7 @@ ROLES = (
     ROLE_VIEWER,
     ROLE_CONTRIBUTOR,
     ROLE_MEMBER,
+    ROLE_SALES,
 )
 
 # Who may change the public website without anybody else's say-so. A
@@ -70,8 +79,9 @@ ROLES_PUBLISH_DIRECTLY = (ROLE_ADMIN, ROLE_MEMBER)
 # reason. (Creating an admin is refused separately, in `UserCreate` — they are
 # provisioned by the seed script only.)
 ROLE_MANAGES: dict[str, tuple[str, ...]] = {
-    ROLE_ADMIN: (ROLE_MEMBER, ROLE_CONTRIBUTOR, ROLE_VIEWER, ROLE_TEACHER, ROLE_STUDENT),
-    ROLE_MEMBER: (ROLE_CONTRIBUTOR, ROLE_VIEWER, ROLE_TEACHER, ROLE_STUDENT),
+    ROLE_ADMIN: (ROLE_MEMBER, ROLE_CONTRIBUTOR, ROLE_VIEWER, ROLE_SALES,
+                 ROLE_TEACHER, ROLE_STUDENT),
+    ROLE_MEMBER: (ROLE_CONTRIBUTOR, ROLE_VIEWER, ROLE_SALES, ROLE_TEACHER, ROLE_STUDENT),
     # A contributor onboards learners and their teachers, and nothing else.
     ROLE_CONTRIBUTOR: (ROLE_TEACHER, ROLE_STUDENT),
 }

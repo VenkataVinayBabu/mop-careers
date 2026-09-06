@@ -21,6 +21,7 @@ export const ROLE_LABEL = {
   viewer: 'Viewer',
   member: 'Member',
   contributor: 'Contributor',
+  sales: 'Sales Executive',
 };
 
 export function formatDate(value) {

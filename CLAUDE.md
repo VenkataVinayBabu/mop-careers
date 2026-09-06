@@ -104,6 +104,13 @@ emails a reset link. Forced password change on first login.
   other batches.
 - **student** — own data only. Blocked students see *"Please contact MOP administration"*
   at login.
+- **sales** — works the leads and nothing else. Sees the enquiries that came off
+  the public website, moves them through New/Contacted/Converted/Closed as they
+  are chased, and downloads the list as a spreadsheet. **One screen, which is
+  also where they land at login.** No batches, students, fees, placements,
+  doubts, applications or website — not "sees and is refused", but cannot reach
+  at all. Cannot delete an enquiry: chasing a lead and destroying the record of
+  one are different jobs.
 - **contributor** — edits every word of the public website, but **publishes nothing**:
   each save becomes a pending change for a member to approve or send back with feedback.
   Onboards students and teachers, runs the class schedule and curriculum, and keeps

@@ -433,35 +433,10 @@ def update_milestones(
 
 
 # --- enquiries (Phase 5) --------------------------------------------------
-# Member and above. An enquiry is a named member of the public with their phone
-# number on it, and handling leads was not part of the contributor's job.
-@router.get("/enquiries", response_model=list[EnquiryOut])
-def list_enquiries(
-    enquiry_status: str | None = Query(default=None, alias="status"),
-    db: Session = Depends(get_db),
-    _: User = Depends(require_member),
-) -> list[EnquiryOut]:
-    stmt = select(Enquiry)
-    if enquiry_status:
-        stmt = stmt.where(Enquiry.status == enquiry_status)
-    rows = db.scalars(stmt.order_by(Enquiry.created_at.desc())).all()
-    return [EnquiryOut.model_validate(e) for e in rows]
-
-
-@router.patch("/enquiries/{enquiry_id}", response_model=EnquiryOut)
-def update_enquiry_status(
-    enquiry_id: int, payload: EnquiryStatusUpdate, db: Session = Depends(get_db),
-    _: User = Depends(require_member),
-) -> EnquiryOut:
-    enquiry = db.get(Enquiry, enquiry_id)
-    if enquiry is None:
-        raise HTTPException(status.HTTP_404_NOT_FOUND, "Enquiry not found")
-    enquiry.status = payload.status
-    db.commit()
-    db.refresh(enquiry)
-    return EnquiryOut.model_validate(enquiry)
-
-
+# Listing, updating the status and the CSV export live in routers/enquiries.py,
+# because a sales executive needs them and is NOT back office — which is what
+# this router's own guard requires. Deleting stays here, at member and above:
+# sales chases leads, but removing the record of one is somebody else's call.
 @router.delete("/enquiries/{enquiry_id}", response_model=MessageResponse)
 def delete_enquiry(enquiry_id: int, db: Session = Depends(get_db),
                    _: User = Depends(require_member)) -> MessageResponse:
@@ -503,18 +478,6 @@ def _stamp(dt) -> str:
     # Excel reads this as a date; an ISO string with a timezone it treats as
     # text and will not sort chronologically.
     return dt.strftime("%Y-%m-%d %H:%M") if dt else ""
-
-
-@router.get("/enquiries/export")
-def export_enquiries(db: Session = Depends(get_db),
-                     _: User = Depends(require_admin)) -> Response:
-    rows = db.scalars(select(Enquiry).order_by(Enquiry.created_at.desc())).all()
-    return _csv(
-        f"mop-enquiries-{date.today().isoformat()}.csv",
-        ["ID", "Received", "Name", "Phone", "Email", "Programme", "Status", "Message"],
-        [[e.id, _stamp(e.created_at), e.name, e.phone, e.email,
-          e.programme or "", e.status, e.message] for e in rows],
-    )
 
 
 @router.get("/doubts/export")
