@@ -394,9 +394,16 @@ which looks completely normal and is not.
 **Stage 2 (App Runner) is BLOCKED.** The console returns the free-plan
 limitations page even though the account is on the Paid plan and Active
 (confirmed via `GetAccountPlanState`). Amplify was unaffected, so it is
-specific to App Runner. Needs an AWS support case (Account and billing →
-Account → Activation). Alternatives if it stays blocked: Lightsail (~$10/mo,
-you manage the server, TLS and deploys) or EC2.
+specific to App Runner. **Support case raised 6 Sep 2026** — "App Runner
+unavailable in ap-south-1 — account is on the Paid plan", filed under Account
+and billing > Account > Other Account Issues, since Activation is not offered
+as a category. Alternatives if it stays blocked: Lightsail (~$10/mo, you manage
+the server, TLS and deploys) or EC2.
+
+**Nothing about the site depends on this.** The API runs on Render and works;
+what App Runner buys is removing the cross-region database latency (data
+endpoints went from ~0.3s to ~1.0s once the database moved to Mumbai) and
+letting Render be switched off entirely.
 
 **Stage 0 and Stage 1 are done (4 Sep 2026).** Account `MOP Careers` in
 **ap-south-1 (Mumbai)**, root MFA on, a $40/month budget set, **$120 of
