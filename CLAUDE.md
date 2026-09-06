@@ -27,10 +27,11 @@ marketing site (no auth) and an authenticated platform (admin / teacher / studen
 > website but publishes nothing — every save queues for a member to approve or
 > send back with feedback.
 >
-> **If you are starting fresh and want work to do**, the one item left with real
-> substance is **object storage** in thread 1, which unblocks photo uploads and
-> stops notes PDFs vanishing on redeploy. Everything else is either waiting on
-> MOP or on a decision.
+> **If you are starting fresh and want work to do**, the substantial items are
+> done: email works, uploads survive a deploy, and the site is live on
+> mopcareers.com. What is left is either waiting on MOP (thread 2's unverified
+> content), waiting on AWS (App Runner, thread 3a), or small — photo uploads
+> now that S3 exists, and changing the demo passwords in thread 5.
 >
 > **The AWS migration has started, and Stage 1 (RDS) is DONE** — the data is
 > restored onto AWS and verified (thread 3a). Nothing has moved off Render
@@ -279,10 +280,12 @@ The decisions this raised:
   ~$7/mo always-on instance a **nice-to-have rather than a prerequisite**. It is
   still worth paying for once real students are enrolled, because the *signed-in*
   app has no such fallback and eats the cold start on every login.
-- **Photos need object storage.** Mentor and student portraits, company logos.
-  Uploads currently go to local disk, which Render's free tier wipes on every deploy
-  — already true of the notes PDFs, and far more visible on a marketing site.
-  Cloudflare R2's free tier covers it.
+- ~~**Photos need object storage.**~~ **The storage exists now** (S3,
+  6 Sep 2026 — see thread 5), so this is no longer blocked on a decision. What
+  is still true is that **nothing uploads photos yet**: mentors, team members
+  and partners take an image URL, and only notes PDFs go through
+  `app/storage.py`. Wiring an upload button to the same module is now ordinary
+  work rather than a prerequisite.
 - **Live edits go live instantly.** Site settings ship without a published switch
   because every field has a graceful blank state; courses, mentors and stories all
   need one. This is also the natural home for the "Member approves what a
@@ -594,8 +597,14 @@ site cannot be un-read), the class schedule, curriculum and placement records.
   day. And **`ENQUIRY_EMAIL` / `ADMIN_DOUBTS_EMAIL` point at a personal Gmail**
   as a stopgap; they move to `enquiries@mopcareers.com` once that mailbox
   exists (Microsoft 365 was bought 5 Sep, pending DNS).
-- **Uploaded notes PDFs vanish on redeploy** — Render's free tier has no persistent
-  disk. Needs a paid disk or object storage (S3 / Cloudflare R2).
+- ~~**Uploaded notes PDFs vanish on redeploy**~~ **FIXED, 6 Sep 2026.** They go
+  to S3 now — bucket `mop-careers-uploads` in ap-south-1, all public access
+  blocked, objects under `notes/`. `app/storage.py` chooses: `S3_BUCKET` set
+  means S3, empty means local disk, so a developer still needs no AWS
+  credentials to run the app. Permission is unchanged and still decided in
+  `files.py` before any URL exists; downloads are a redirect to a link that
+  expires in five minutes. The IAM user can only put/get/delete under
+  `notes/` in that one bucket.
 - **The backend sleeps when idle** (30–60s to wake). Mitigated in the frontend — 75s
   timeout, a warm-up ping, and a notice after 6s — but not solved. A free uptime
   monitor hitting `/health` every 10 minutes keeps it awake; note Render allows 750
