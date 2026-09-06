@@ -342,14 +342,20 @@ of how much it would matter if wrong:
   and the four headline statistics are editable at Admin > Website >
   Statistics. **They remain the largest unverified claim on the site** — being
   editable makes them correctable, not true.
-- ~~**Contact details conflict across MOP's own properties.**~~ **Mostly
-  resolved, 5 Sep 2026**, by reading mopcareers.in rather than trusting this
-  note. Both sites publish the **same** HSR Layout address and the same phone
-  `+91 98908 13235` — the "Whitefield address" recorded here was wrong. The
-  only real difference is the email: the .com shows `hello@mopcareers.com`,
-  the .in shows `contacts@mopcareers.in`. That second one matches the footer
-  Bala supplied in thread 9, so it is the likelier intended address — it is a
-  site setting, so Bala can correct it himself.
+- ~~**Contact details conflict across MOP's own properties.**~~ **Resolved.**
+  Both sites publish the same HSR Layout address and the same phone
+  `+91 98908 13235` — the "Whitefield address" once recorded here was wrong.
+
+  **The email is answered too: `contacts@mopcareers.com` exists and receives**
+  (Microsoft 365 through GoDaddy, 6 Sep 2026, MX and SPF in Route 53, verified
+  by sending to it). **The public site still publishes `hello@mopcareers.com`,
+  which has no mailbox** — mail to it goes nowhere. Change it at Admin >
+  Website > Settings; it is one field and needs no developer.
+
+  `enquiries@` and `support@` are planned as aliases into the same mailbox.
+  Once they exist AND SES has production access, `ENQUIRY_EMAIL` and
+  `ADMIN_DOUBTS_EMAIL` on Render should move off the personal Gmail they
+  currently point at.
 - **The WhatsApp number is still unknown.** The setting is empty, so the buttons
   fall back to the enquiry form. Do **not** assume the phone number above takes
   WhatsApp — a landline or a number without it hands the visitor a dead end.
