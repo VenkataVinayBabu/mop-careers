@@ -605,11 +605,16 @@ site cannot be un-read), the class schedule, curriculum and placement records.
   ever moves to a paid instance or to AWS, 587 becomes available again, but
   2587 keeps working either way.
 
-  Two things still open here. **SES is in the sandbox**, so it only delivers to
-  verified addresses — production access was requested 5 Sep and takes about a
-  day. And **`ENQUIRY_EMAIL` / `ADMIN_DOUBTS_EMAIL` point at a personal Gmail**
-  as a stopgap; they move to `enquiries@mopcareers.com` once that mailbox
-  exists (Microsoft 365 was bought 5 Sep, pending DNS).
+  **Notifications go to `contacts@mopcareers.com`** (6 Sep), set at Admin >
+  Website > Settings rather than in .env. Verified live: an enquiry submitted
+  on mopcareers.com arrives as `[MOP Query] <name> — <programme>`.
+
+  **SES is still in the sandbox**, which is the one thing left. It delivers
+  only to addresses verified as SES identities — `contacts@mopcareers.com` and
+  one Gmail are, so enquiry and doubt notifications work. **Everything aimed at
+  somebody else does not:** password resets to a student, new-account emails,
+  and class doubts to a teacher all fail silently until production access is
+  granted. Requested 5 Sep; check the banner on SES > Account dashboard.
 - ~~**Uploaded notes PDFs vanish on redeploy**~~ **FIXED, 6 Sep 2026.** They go
   to S3 now — bucket `mop-careers-uploads` in ap-south-1, all public access
   blocked, objects under `notes/`. `app/storage.py` chooses: `S3_BUCKET` set
