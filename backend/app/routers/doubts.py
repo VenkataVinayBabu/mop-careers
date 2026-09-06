@@ -99,7 +99,10 @@ def raise_doubt(
     topic = _day_topic(db, student.batch_id, doubt.related_day)
     day_part = f"Day {doubt.related_day}" if doubt.related_day else "General"
     topic_part = f" — {topic}" if topic else ""
-    subject = f"[MOP Doubt] {day_part}{topic_part} — {student.name}"
+    # "Support" pairs with "[MOP Query]" on the enquiry form: both arrive in
+    # contacts@, and the prefix is what separates a prospective student asking
+    # about fees from an enrolled one stuck on Tuesday's class.
+    subject = f"[MOP Support] {day_part}{topic_part} — {student.name}"
 
     batch = db.get(Batch, student.batch_id) if student.batch_id else None
     body = f"""A student has raised a doubt.
@@ -122,7 +125,15 @@ Doubt #{doubt.id}
     admin_address = site_settings.doubts_email(db)
     if doubt.query_type == DOUBT_CLASS:
         teachers = _batch_teachers(db, student.batch_id)
-        recipients = [t.email for t in teachers] or [admin_address]
+        # The teacher is who answers a class doubt, and they are still the
+        # first recipient. The central address is added rather than being only
+        # a fallback, because MOP asked for EVERY support message to arrive at
+        # contacts@ — otherwise class doubts would be the one kind of student
+        # request nobody in the office ever saw.
+        #
+        # Deduplicated: a teacher could legitimately be the central address on
+        # a small team, and nobody wants the same mail twice.
+        recipients = list(dict.fromkeys([t.email for t in teachers] + [admin_address]))
         if not teachers:
             logger.warning(
                 "Doubt #%s is a class doubt but batch %s has no teacher; sent to admin instead",

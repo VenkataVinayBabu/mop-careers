@@ -164,8 +164,11 @@ Message:
 --
 Enquiry #{enquiry.id}
 """
-    # The programme is in the subject so the team can triage from the inbox.
-    subject = f"[MOP Enquiry] {enquiry.name}"
+    # "Query" rather than "Enquiry" because that is the word MOP sorts by:
+    # website queries and student support both land in contacts@, and the two
+    # need to be separable from a phone at a glance. The programme is in the
+    # subject for the same reason — triage without opening anything.
+    subject = f"[MOP Query] {enquiry.name}"
     if enquiry.programme:
         subject += f" — {enquiry.programme}"
 
