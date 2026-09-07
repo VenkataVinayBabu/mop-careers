@@ -43,6 +43,10 @@ const BLANK_DETAIL = {
 const BLANK_FEES = {
   registration: '', registrationWas: '', registrationNote: '',
   tuition: '', tuitionWas: '', tuitionNote: '', emi: '',
+  // A bootcamp: one fee, paid before the course, no tuition after a job. It
+  // changes what the public page is allowed to say — see the note beside the
+  // tick-box below.
+  upfrontOnly: false,
 };
 
 const BLANK = {
@@ -542,28 +546,46 @@ export default function AdminWebsiteProgramEditor() {
 
           {d.fees && (
             <div className="grid gap-5">
+              <Check
+                checked={Boolean(d.fees.upfrontOnly)}
+                onChange={(on) => setDetail('fees')({ ...d.fees, upfrontOnly: on })}
+                label="One fee, paid upfront — this is not pay after placement"
+                hint="For a bootcamp: one fee, and no placement promise. The programme page shows a single fee card, and three sections come off it — the three-step roadmap ending in Get hired, the placement support list, and the hiring network — along with the questions about paying after a job. Everything else, including the syllabus and the mentors, still shows. Leave it unticked for a pay-after-placement programme."
+              />
               <div className="grid gap-5 sm:grid-cols-2">
-                <Field id="fee-reg" label="Registration fee" max={60} value={d.fees.registration}
+                <Field id="fee-reg" label={d.fees.upfrontOnly ? 'Program fee' : 'Registration fee'}
+                       max={60} value={d.fees.registration}
                        onChange={(v) => setDetail('fees')({ ...d.fees, registration: v })} />
-                <Field id="fee-reg-was" label="Registration — was" max={60} value={d.fees.registrationWas}
+                <Field id="fee-reg-was" label={d.fees.upfrontOnly ? 'Program fee — was' : 'Registration — was'}
+                       max={60} value={d.fees.registrationWas}
                        onChange={(v) => setDetail('fees')({ ...d.fees, registrationWas: v })}
                        hint="Struck through. Blank for no strike-through." />
               </div>
-              <Field id="fee-reg-note" label="Registration note" max={200} value={d.fees.registrationNote}
+              <Field id="fee-reg-note" label={d.fees.upfrontOnly ? 'Fee note' : 'Registration note'}
+                     max={200} value={d.fees.registrationNote}
                      onChange={(v) => setDetail('fees')({ ...d.fees, registrationNote: v })} />
-              <div className="grid gap-5 sm:grid-cols-2">
-                <Field id="fee-tui" label="Tuition" max={60} value={d.fees.tuition}
-                       onChange={(v) => setDetail('fees')({ ...d.fees, tuition: v })} />
-                <Field id="fee-tui-was" label="Tuition — was" max={60} value={d.fees.tuitionWas}
-                       onChange={(v) => setDetail('fees')({ ...d.fees, tuitionWas: v })} />
-              </div>
-              <Field id="fee-tui-note" label="Tuition note" max={200} value={d.fees.tuitionNote}
-                     onChange={(v) => setDetail('fees')({ ...d.fees, tuitionNote: v })} />
+
+              {/* Hidden rather than removed when the fee is upfront: the values
+                  stay in the record, so unticking the box above puts the
+                  programme back exactly as it was. */}
+              {!d.fees.upfrontOnly && (
+                <>
+                  <div className="grid gap-5 sm:grid-cols-2">
+                    <Field id="fee-tui" label="Tuition" max={60} value={d.fees.tuition}
+                           onChange={(v) => setDetail('fees')({ ...d.fees, tuition: v })} />
+                    <Field id="fee-tui-was" label="Tuition — was" max={60} value={d.fees.tuitionWas}
+                           onChange={(v) => setDetail('fees')({ ...d.fees, tuitionWas: v })} />
+                  </div>
+                  <Field id="fee-tui-note" label="Tuition note" max={200} value={d.fees.tuitionNote}
+                         onChange={(v) => setDetail('fees')({ ...d.fees, tuitionNote: v })} />
+                </>
+              )}
               <Field id="fee-emi" label="EMI option" max={60} value={d.fees.emi}
                      onChange={(v) => setDetail('fees')({ ...d.fees, emi: v })} />
               <p className="text-xs text-navy-400">
-                Any field left blank here falls back to the standard fee for it, so you can
-                override the tuition alone.
+                {d.fees.upfrontOnly
+                  ? 'The programme page shows one fee card with this figure, and nothing about paying after placement.'
+                  : 'Any field left blank here falls back to the standard fee for it, so you can override the tuition alone.'}
               </p>
             </div>
           )}

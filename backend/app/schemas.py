@@ -1334,6 +1334,12 @@ class ProgramFees(BaseModel):
     tuitionWas: str = Field(default="", max_length=60)
     tuitionNote: str = Field(default="", max_length=200)
     emi: str = Field(default="", max_length=60)
+    # A bootcamp: paid in full before the course, with no tuition owed after a
+    # job. It is here rather than on the programme itself because it only means
+    # anything alongside the figures, and because a programme that charges
+    # this way is by definition not on the standard fee structure. The public
+    # page uses it to stop claiming pay after placement.
+    upfrontOnly: bool = False
 
 
 class ProgramDetail(BaseModel):

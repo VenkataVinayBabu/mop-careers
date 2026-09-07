@@ -32,6 +32,22 @@ const NAV = [
    wording. Anything else shows as-is. */
 const navBadge = (badge) => (badge === 'Most popular' ? 'Hot' : badge);
 
+/*
+ * Two lists here carry a heading that makes a claim about everything under it
+ * — the dropdown's "Pay After Placement" and the footer's "Placement Courses".
+ * A bootcamp is paid upfront and carries no placement promise, so listing one
+ * beneath either heading says something MOP has not said, one click before the
+ * programme page that is careful not to.
+ *
+ * Split rather than hidden: a bootcamp still belongs in the nav. When there is
+ * no bootcamp — which is every case today — `upfront` is empty and both lists
+ * render exactly as they did.
+ */
+function splitByFeeModel(programs) {
+  const upfront = programs.filter((p) => p.detail?.fees?.upfrontOnly);
+  return { pap: programs.filter((p) => !p.detail?.fees?.upfrontOnly), upfront };
+}
+
 function WhatsAppIcon({ className = 'h-4 w-4' }) {
   return (
     <svg className={className} viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
@@ -55,6 +71,7 @@ export function PublicHeader() {
   const mentors = useMentors();
   const stories = useStories();
   const programs = usePrograms();
+  const { pap: papPrograms, upfront: upfrontPrograms } = splitByFeeModel(programs);
 
   /* Every public page renders this header, so this is the one place the live
      settings need asking for. The call itself is deduplicated, and the page is
@@ -137,31 +154,40 @@ export function PublicHeader() {
       {menuOpen && (
         <div className="absolute left-1/2 top-full z-50 w-[19rem] -translate-x-1/2 pt-3">
           <div className="overflow-hidden rounded-2xl border border-navy-100 bg-white py-3 shadow-pop">
-            <p className="px-5 pb-2 text-[0.66rem] font-bold uppercase tracking-[0.13em] text-teal-ink">
-              Pay After Placement
-            </p>
-            <ul>
-              {programs.map((p) => (
-                <li key={p.slug}>
-                  <Link
-                    to={`/programs/${p.slug}`}
-                    onClick={() => { setMenuOpen(false); setOpen(false); }}
-                    className="flex items-center justify-between gap-3 px-5 py-2.5 text-[0.9rem] text-navy transition hover:bg-navy-50 hover:text-teal-ink"
-                  >
-                    {p.name}
-                    {p.badge && (
-                      <span
-                        className={`shrink-0 rounded-full px-2 py-0.5 text-[0.6rem] font-extrabold uppercase tracking-[0.08em] text-white ${
-                          p.badge === 'New' ? 'bg-teal' : 'bg-navy'
-                        }`}
-                      >
-                        {navBadge(p.badge)}
-                      </span>
-                    )}
-                  </Link>
-                </li>
+            {/* Filtered before the map, so the divider counts the groups that
+                actually render — otherwise a catalogue of nothing but
+                bootcamps would open with a rule above its first heading. */}
+            {[['Pay After Placement', papPrograms], ['Bootcamps', upfrontPrograms]]
+              .filter(([, list]) => list.length > 0)
+              .map(([heading, list], groupIndex) => (
+                <div key={heading} className={groupIndex > 0 ? 'mt-2 border-t border-navy-100 pt-3' : undefined}>
+                  <p className="px-5 pb-2 text-[0.66rem] font-bold uppercase tracking-[0.13em] text-teal-ink">
+                    {heading}
+                  </p>
+                  <ul>
+                    {list.map((p) => (
+                      <li key={p.slug}>
+                        <Link
+                          to={`/programs/${p.slug}`}
+                          onClick={() => { setMenuOpen(false); setOpen(false); }}
+                          className="flex items-center justify-between gap-3 px-5 py-2.5 text-[0.9rem] text-navy transition hover:bg-navy-50 hover:text-teal-ink"
+                        >
+                          {p.name}
+                          {p.badge && (
+                            <span
+                              className={`shrink-0 rounded-full px-2 py-0.5 text-[0.6rem] font-extrabold uppercase tracking-[0.08em] text-white ${
+                                p.badge === 'New' ? 'bg-teal' : 'bg-navy'
+                              }`}
+                            >
+                              {navBadge(p.badge)}
+                            </span>
+                          )}
+                        </Link>
+                      </li>
+                    ))}
+                  </ul>
+                </div>
               ))}
-            </ul>
           </div>
         </div>
       )}
@@ -308,6 +334,7 @@ export function PublicFooter() {
   /* The footer lists every programme too. Its own subscription — it is a
      separate component from the header and shares none of its scope. */
   const programs = usePrograms();
+  const { pap: papPrograms, upfront: upfrontPrograms } = splitByFeeModel(programs);
   const wa = whatsappLink();
   const socials = Object.entries(site.social || {}).filter(([, url]) => url);
   return (
@@ -331,13 +358,30 @@ export function PublicFooter() {
                 points at the home page's programmes section today; once the
                 detail pages land these become /programs/{slug}. */}
             <ul className="grid gap-2.5">
-              {programs.map((c) => (
+              {papPrograms.map((c) => (
                 <li key={c.slug}>
                   <Link to={`/programs/${c.slug}`} className="transition hover:text-teal-300">
                     {c.name}
                   </Link>
                 </li>
               ))}
+              {/* Under their own heading rather than the one above: a bootcamp
+                  is not a placement course. Absent entirely when there is
+                  none, which is the case today. */}
+              {upfrontPrograms.length > 0 && (
+                <>
+                  <li className="pt-3 text-[0.7rem] font-semibold uppercase tracking-[0.13em] text-white">
+                    Bootcamps
+                  </li>
+                  {upfrontPrograms.map((c) => (
+                    <li key={c.slug}>
+                      <Link to={`/programs/${c.slug}`} className="transition hover:text-teal-300">
+                        {c.name}
+                      </Link>
+                    </li>
+                  ))}
+                </>
+              )}
               <li className="pt-1">
                 <Link to="/#programs" className="font-semibold text-white transition hover:text-teal-300">
                   All programs &rarr;

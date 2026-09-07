@@ -102,11 +102,30 @@ export default function ProgramDetail() {
   if (!program) return <Navigate to={{ pathname: '/', hash: '#programs' }} replace />;
 
   const d = program.detail || {};
+  /* A programme paid in full upfront — a bootcamp — rather than Pay After
+     Placement. Most of this page is written for PAP, and on a bootcamp page
+     every one of those parts is a claim MOP has not made: the hero eyebrow,
+     the fee heading, the tuition card, the shared "when do I pay?" questions,
+     and the three sections that promise placement — the roadmap ending in
+     "Get hired", the career-services list, and the hiring network. The flag
+     turns all of it off together, because turning off some of it is worse
+     than none: a page that has stopped saying "pay after placement" while
+     still promising interviews and introductions reads as the same offer with
+     the price moved. What a bootcamp is — 45 days, one project, one fee — is
+     then said by the programme's own copy, which is MOP's to write. */
+  const upfrontOnly = Boolean(d.fees?.upfrontOnly);
   /* Merged per field, not all-or-nothing: a programme that overrides only its
      tuition should keep the standard registration note rather than blanking
-     it. Blank values in an override fall through to the standard too. */
-  const fees = { ...standardFees };
-  Object.entries(d.fees || {}).forEach(([k, v]) => { if (v) fees[k] = v; });
+     it. Blank values in an override fall through to the standard too.
+
+     EXCEPT when the fee is upfront-only, where there is nothing to fall back
+     to: the standard figures describe Pay After Placement, so a blank field
+     filling itself in from them puts a struck-through ₹90,000 and an EMI plan
+     on a ₹4,999 bootcamp. Blank has to mean blank here. */
+  const fees = upfrontOnly ? { ...d.fees } : { ...standardFees };
+  if (!upfrontOnly) {
+    Object.entries(d.fees || {}).forEach(([k, v]) => { if (v) fees[k] = v; });
+  }
   const mentors = allMentors.filter((m) => (m.programs || []).includes(program.slug));
   const related = programs.filter((p) => p.slug !== program.slug).slice(0, 3);
 
@@ -134,7 +153,11 @@ export default function ProgramDetail() {
 
           <div className="grid gap-10 lg:grid-cols-[1.15fr_0.85fr] lg:gap-14">
             <div>
-              <Eyebrow>Pay after placement &middot; {program.name}</Eyebrow>
+              <Eyebrow>
+                {upfrontOnly
+                  ? program.name
+                  : <>Pay after placement &middot; {program.name}</>}
+              </Eyebrow>
               <h1 className="mt-4 text-[clamp(2rem,4.6vw,3.4rem)] font-extrabold leading-[1.04] tracking-tight text-navy">
                 {d.headline || program.name}
               </h1>
@@ -247,6 +270,10 @@ export default function ProgramDetail() {
       )}
 
       {/* ------------------------------------------------------- roadmap */}
+      {/* "Learn. Prove. Get hired." is the Pay After Placement journey, and
+          the step that says so is the last one. Off entirely for a bootcamp
+          rather than reworded — see the note beside `upfrontOnly`. */}
+      {!upfrontOnly && (
       <section id="roadmap" className="py-16 sm:py-20">
         <div className="mx-auto max-w-[1240px] px-6">
           <SectionHead
@@ -275,6 +302,7 @@ export default function ProgramDetail() {
           </ol>
         </div>
       </section>
+      )}
 
       {/* --------------------------------------------------------- roles */}
       {d.roles?.length > 0 && (
@@ -502,6 +530,11 @@ export default function ProgramDetail() {
       )}
 
       {/* ----------------------------------------------- career services */}
+      {/* "Everything between your first class and your first offer" — mock
+          interviews, a placement readiness test, referrals into the hiring
+          network. That is what a PAP learner is buying and what a bootcamp
+          fee does not include. */}
+      {!upfrontOnly && (
       <section className="bg-white py-16 sm:py-20">
         <div className="mx-auto max-w-[1240px] px-6">
           <SectionHead
@@ -521,17 +554,24 @@ export default function ProgramDetail() {
           </ol>
         </div>
       </section>
+      )}
 
       {/* ---------------------------------------------------------- fees */}
       <section id="fees" className="py-16 sm:py-20">
         <div className="mx-auto max-w-[1240px] px-6">
           <SectionHead
             eyebrow="Program fee"
-            title="Simple, and mostly"
-            accent="paid later."
+            title={upfrontOnly ? 'One fee,' : 'Simple, and mostly'}
+            accent={upfrontOnly ? 'paid upfront.' : 'paid later.'}
             lede={fees.emi ? `EMI option available: ${fees.emi}.` : null}
           />
-          <div className="grid gap-4 lg:grid-cols-2">
+          {/* Two cards is the Pay After Placement shape: a small registration
+              fee now, the tuition after a job. A programme paid in full upfront
+              has one number, so it gets one card — the dark one, because a lone
+              outlined box beside empty space reads as a card that failed to
+              load. */}
+          <div className={upfrontOnly ? 'mx-auto max-w-xl' : 'grid gap-4 lg:grid-cols-2'}>
+            {!upfrontOnly && (
             <div className="rounded-[24px] border border-navy-100 bg-white p-7">
               <p className="text-[0.68rem] font-bold uppercase tracking-[0.1em] text-navy-400">
                 Registration &middot; pay upfront
@@ -545,6 +585,7 @@ export default function ProgramDetail() {
               <p className="mt-2 text-[0.88rem] text-navy-500">{fees.registrationNote}</p>
               <a href="#enquire" className="pbtn-outline mt-6">Apply now &rarr;</a>
             </div>
+            )}
 
             <div className="relative overflow-hidden rounded-[24px] bg-navy-900 p-7 text-white">
               <div
@@ -558,16 +599,24 @@ export default function ProgramDetail() {
               />
               <div className="relative">
                 <p className="text-[0.68rem] font-bold uppercase tracking-[0.1em] text-teal-300">
-                  Tuition &middot; pay after placement
+                  {upfrontOnly ? 'Program fee · paid in full' : 'Tuition · pay after placement'}
                 </p>
                 <div className="mt-4 flex items-baseline gap-3">
-                  <span className="text-[2.3rem] font-extrabold tracking-tight">{fees.tuition}</span>
-                  {fees.tuitionWas && (
-                    <span className="text-[1.1rem] text-navy-300 line-through">{fees.tuitionWas}</span>
+                  <span className="text-[2.3rem] font-extrabold tracking-tight">
+                    {upfrontOnly ? fees.registration : fees.tuition}
+                  </span>
+                  {(upfrontOnly ? fees.registrationWas : fees.tuitionWas) && (
+                    <span className="text-[1.1rem] text-navy-300 line-through">
+                      {upfrontOnly ? fees.registrationWas : fees.tuitionWas}
+                    </span>
                   )}
                 </div>
-                <p className="mt-2 text-[0.88rem] text-navy-200">{fees.tuitionNote}</p>
-                <a href="#enquire" className="pbtn-white mt-6">Talk to a counsellor &rarr;</a>
+                <p className="mt-2 text-[0.88rem] text-navy-200">
+                  {upfrontOnly ? fees.registrationNote : fees.tuitionNote}
+                </p>
+                <a href="#enquire" className="pbtn-white mt-6">
+                  {upfrontOnly ? <>Apply now &rarr;</> : <>Talk to a counsellor &rarr;</>}
+                </a>
               </div>
             </div>
           </div>
@@ -579,7 +628,7 @@ export default function ProgramDetail() {
         <div className="mx-auto max-w-[1240px] px-6">
           <SectionHead eyebrow="Questions" title="Before you" accent="apply." />
           <div className="mx-auto max-w-3xl">
-            {[...(d.faq || []), ...PROGRAM_FAQ].map(([q, a], i) => (
+            {[...(d.faq || []), ...(upfrontOnly ? [] : PROGRAM_FAQ)].map(([q, a], i) => (
               <details key={q} open={i === 0} className="group border-b border-navy-100">
                 <summary className="flex cursor-pointer list-none items-center justify-between gap-4 py-5 text-[0.98rem] font-semibold text-navy [&::-webkit-details-marker]:hidden">
                   {q}
@@ -597,8 +646,10 @@ export default function ProgramDetail() {
 
       {/* ---------------------------------------------- hiring partners */}
       {/* Admin-managed, and absent entirely when the list is empty rather
-          than leaving a heading over an empty box. */}
-      {partners.length > 0 && (
+          than leaving a heading over an empty box. Absent on a bootcamp page
+          too: "Where we make introductions" is a placement promise, and this
+          programme does not carry one. */}
+      {!upfrontOnly && partners.length > 0 && (
         <section className="py-16 sm:py-20">
           <div className="mx-auto max-w-[1240px] px-6">
             <SectionHead eyebrow="Hiring network" title="Where we make" accent="introductions." />
