@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react';
 
 import { PublicFloats, PublicFooter, PublicHeader, useHashScroll } from './PublicChrome';
 import { api, errorMessage } from '../../api/client';
+import Honeypot from '../../components/Honeypot';
 import useSeo from '../../hooks/useSeo';
 
 /*
@@ -63,6 +64,9 @@ function ApplyModal({ position, onClose }) {
   const [form, setForm] = useState({
     name: '', email: '', phone: '', years_experience: '',
     resume_url: '', portfolio_url: '', cover_letter: '', agreed_to_terms: false,
+    // The bot trap; sent with the rest by the spread in submit(). See
+    // components/Honeypot.jsx.
+    company_website: '',
   });
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState('');
@@ -137,7 +141,8 @@ function ApplyModal({ position, onClose }) {
             </button>
           </div>
         ) : (
-          <form onSubmit={submit} className="px-6 py-5" noValidate>
+          <form onSubmit={submit} className="relative px-6 py-5" noValidate>
+            <Honeypot value={form.company_website} onChange={set('company_website')} />
             <div className="space-y-4">
               <div>
                 <label className="label" htmlFor="ap-position">Position</label>

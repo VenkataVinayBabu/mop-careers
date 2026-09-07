@@ -1043,3 +1043,52 @@ need to know *why* something is the way it is.
   not.
 
 ---
+
+## 2026-09-07 — The hero statistics were wrong in two directions at once
+
+Reported from outside, via a review Bala had run on the live site. Both
+symptoms were one component, `frontend/src/components/CountUp.jsx`, and the
+data was correct throughout — the React fiber on the live page carried
+`value: 1050`, `47.6`, `500`, `87` while the screen showed something else.
+
+**Symptom one: negative headline figures.** The live hero rendered
+`-3,657+ learners placed`, `-₹165.8L highest package`, `-1,741+ hiring
+partners`, `-303% placement rate`. Every one of those is its real value times
+**-3.483**, which is what identified the cause: a single bad `easeOut(t)`
+shared by all four counters on one frame.
+
+The animation read its origin as `performance.now()` inside the
+IntersectionObserver callback, then measured elapsed time against the
+timestamp `requestAnimationFrame` passes — which is when the *frame* began,
+and can predate that line by a long way after throttling or a tab returning
+to the foreground. Elapsed came out at about **-908ms**, so `t = -0.649`, and
+`1 - (1 - t)^3` is `-3.483`. `Math.min(1, ...)` clamped the top and nothing
+clamped the bottom.
+
+Fixed by taking the origin from the first frame's own timestamp — both times
+then come off one clock — and clamping `t` to `[0, 1]` at both ends as a
+guard.
+
+**Symptom two: the same statistics stuck at `0+` and `₹0.0L`.** Not a
+separate bug and not missing data. A counter learns its number only from the
+animation, and a browser runs neither IntersectionObserver callbacks nor
+requestAnimationFrame for a tab it is not painting — a background tab, a
+throttled one, a screenshot service, a crawler. Where those never fire, the
+initial `0` is final.
+
+Fixed with a failsafe: a `setTimeout` — the one clock that still runs in a
+hidden tab — that shows the real number if the animation has not started
+within 4s, re-armed when it does start so an animation frozen partway through
+still lands on its final value rather than a partial one.
+
+**The lesson worth keeping: never let an animation be the only thing that
+knows the value.** The number is the content; the count-up is decoration. Any
+display whose correct state exists only as the end point of a
+`requestAnimationFrame` loop is one throttled tab away from showing something
+false, and it shows it on the page that most needs to be believed.
+
+Verified by reproducing both states on the live site before the change and
+neither after: with the pane hidden — the exact condition that produced the
+zeros — the counters now settle on `1,050 / 47.6 / 500 / 87`, the outcomes
+row on `1,050 / 150 / 47.6 / 500`, and no rendered value at any point in the
+animation is negative.

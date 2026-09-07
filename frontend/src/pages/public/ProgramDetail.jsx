@@ -8,7 +8,7 @@ import { useFees, useMentors, usePartners, usePrograms } from '../../data/siteSe
 import EnquiryForm from './EnquiryForm';
 import ProgramCard from './ProgramCard';
 import { PublicFloats, PublicFooter, PublicHeader } from './PublicChrome';
-import useSeo from '../../hooks/useSeo';
+import useSeo, { breadcrumbs, courseSchema } from '../../hooks/useSeo';
 
 /*
  * One program's own page, at /programs/{slug}.
@@ -52,12 +52,28 @@ export default function ProgramDetail() {
      of one. `program` is undefined for a beat while the catalogue loads, and
      on a slug that does not exist -- fall back rather than render "undefined"
      into the title. */
+  const seoDescription =
+    program?.summary ||
+    'Live, mentor-led career programmes with placement support throughout.';
   useSeo({
     title: program ? program.name : 'Programmes',
-    description:
-      program?.summary ||
-      'Live, mentor-led career programmes with placement support throughout.',
+    description: seoDescription,
     path: `/programs/${slug}`,
+    /* Marked up as a Course with its breadcrumb trail, so a result for this
+       page can carry the provider and the path that led to it rather than a
+       bare blue link. Only when the programme actually loaded — describing a
+       Course that is not on the page is the kind of mismatch that costs
+       trust in all the markup, not just this block. */
+    jsonLd: program
+      ? [
+          courseSchema({ name: program.name, description: seoDescription, slug }),
+          breadcrumbs([
+            ['Home', '/'],
+            ['Programs', '/#programs'],
+            [program.name, `/programs/${slug}`],
+          ]),
+        ]
+      : null,
   });
 
   /*

@@ -43,6 +43,26 @@ _RATE_MAX_PER_IP = 5
 _recent: dict[str, list[float]] = defaultdict(list)
 
 
+def _is_bot(honeypot: str | None) -> bool:
+    """True when a submission filled the field no human can see.
+
+    A scraper posts every input it finds in the form; a person cannot fill a
+    field that is not rendered. It costs a visitor nothing — no puzzle, no
+    third-party script, no images of traffic lights — and it stops the bulk of
+    automated form spam, which is untargeted and does not adapt.
+
+    THE THROTTLE ALREADY HERE IS NOT THIS. Five submissions per IP per hour
+    keeps the form from being hammered; it happily accepts five pieces of spam
+    an hour, forever, and every one of those lands in the list a salesperson
+    works through. The two solve different problems.
+
+    Callers answer a bot with the SAME 201 and the same wording a person gets.
+    Telling a bot which check it failed is how the next attempt gets past it,
+    and there is nobody to apologise to. The row is simply never written.
+    """
+    return bool(honeypot and honeypot.strip())
+
+
 def _rate_limit(request: Request) -> None:
     ip = request.client.host if request.client else "unknown"
     now = time.monotonic()
@@ -77,8 +97,18 @@ def read_mentors(db: Session = Depends(get_db)) -> list[Mentor]:
     baked into the bundle. That is why the table is seeded rather than
     starting empty — see the mentors migration. The same applies to the two
     endpoints below.
+
+    PLACEHOLDERS NEVER LEAVE THIS ENDPOINT. Nine invented mentors reached
+    production and sat there for weeks, each card reading "Placeholder mentor —
+    replace before launch", until someone outside the project noticed. They
+    were flagged in the database the whole time; nothing enforced the flag.
+    Filtering here rather than in the page is deliberate — a fabricated person
+    should not be one careless render away from a prospective student, and the
+    admin screen still lists them (it reads /admin/website/mentors) so they can
+    be found and replaced.
     """
-    return ordered(db, Mentor, published_only=True)
+    rows = ordered(db, Mentor, published_only=True)
+    return [m for m in rows if not m.is_placeholder]
 
 
 @router.get("/stories", response_model=list[StoryOut])
@@ -134,11 +164,24 @@ def read_openings(db: Session = Depends(get_db)) -> list[JobOpening]:
     return ordered(db, JobOpening, published_only=True)
 
 
+# One object for both the real reply and the bot's, so the two can never drift
+# apart and give a scraper something to compare.
+_ENQUIRY_ACCEPTED = MessageResponse(
+    message="Thanks for getting in touch. The MOP Careers team will contact you shortly."
+)
+_APPLICATION_ACCEPTED = MessageResponse(
+    message="Thanks for applying. The MOP Careers team will be in touch if there is a fit."
+)
+
+
 @router.post("/enquiries", response_model=MessageResponse, status_code=status.HTTP_201_CREATED)
 def submit_enquiry(
     payload: EnquiryCreate, request: Request, db: Session = Depends(get_db)
 ) -> MessageResponse:
     _rate_limit(request)
+    if _is_bot(payload.company_website):
+        logger.info("Enquiry discarded: honeypot filled")
+        return _ENQUIRY_ACCEPTED
 
     enquiry = Enquiry(
         name=payload.name.strip(),
@@ -179,9 +222,7 @@ Enquiry #{enquiry.id}
     send_email(site_settings.enquiry_email(db), subject, body)
 
     logger.info("Enquiry #%s received from %s", enquiry.id, enquiry.email)
-    return MessageResponse(
-        message="Thanks for getting in touch. The MOP Careers team will contact you shortly."
-    )
+    return _ENQUIRY_ACCEPTED
 
 
 @router.post(
@@ -193,6 +234,9 @@ def submit_job_application(
     """The careers page's Apply form. Shares the enquiry form's throttle, being
     the other write path anyone on the internet can reach."""
     _rate_limit(request)
+    if _is_bot(payload.company_website):
+        logger.info("Job application discarded: honeypot filled")
+        return _APPLICATION_ACCEPTED
 
     application = JobApplication(
         position=payload.position.strip(),
@@ -237,6 +281,4 @@ Application #{application.id}
         "Job application #%s for %r from %s",
         application.id, application.position, application.email,
     )
-    return MessageResponse(
-        message="Thanks for applying. The MOP Careers team will be in touch if there is a fit."
-    )
+    return _APPLICATION_ACCEPTED

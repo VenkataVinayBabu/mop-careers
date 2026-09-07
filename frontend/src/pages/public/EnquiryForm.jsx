@@ -1,6 +1,7 @@
 import { useState } from 'react';
 
 import { api, errorMessage } from '../../api/client';
+import Honeypot from '../../components/Honeypot';
 import { Spinner } from '../../components/ui';
 import { useProgramOptions } from '../../data/siteSettings';
 import useSlowRequest from '../../hooks/useSlowRequest';
@@ -10,11 +11,17 @@ import useSlowRequest from '../../hooks/useSlowRequest';
  * before it attempts the notification email, so a mail failure never loses a
  * lead — and it is rate limited per IP, which is why the 429 case gets its own
  * readable message rather than a generic failure.
+ *
+ * It also carries a honeypot. The throttle stops the form being hammered; the
+ * honeypot stops the steady trickle of untargeted spam that stays comfortably
+ * under five an hour and lands in the list a salesperson works through.
  */
 
 export default function EnquiryForm() {
   const [form, setForm] = useState({
     name: '', phone: '', email: '', programme: '', message: '',
+    // The bot trap. Empty for every real visitor; see components/Honeypot.jsx.
+    company_website: '',
   });
   const [status, setStatus] = useState({ state: 'idle', text: '' });
   const slow = useSlowRequest(status.state === 'sending');
@@ -34,9 +41,10 @@ export default function EnquiryForm() {
         email: form.email.trim(),
         programme: form.programme || null,
         message: form.message.trim(),
+        company_website: form.company_website,
       });
       setStatus({ state: 'sent', text: data.message });
-      setForm({ name: '', phone: '', email: '', programme: '', message: '' });
+      setForm({ name: '', phone: '', email: '', programme: '', message: '', company_website: '' });
     } catch (err) {
       setStatus({ state: 'error', text: errorMessage(err) });
     }
@@ -67,8 +75,9 @@ export default function EnquiryForm() {
     <form
       onSubmit={submit}
       noValidate
-      className="rounded-[22px] border border-navy-100 bg-white p-6 shadow-pop sm:p-7"
+      className="relative rounded-[22px] border border-navy-100 bg-white p-6 shadow-pop sm:p-7"
     >
+      <Honeypot value={form.company_website} onChange={set('company_website')} />
       <div className="grid gap-4 sm:grid-cols-2">
         <div>
           <label className="label" htmlFor="en-name">Full name</label>

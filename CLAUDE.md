@@ -321,10 +321,18 @@ of how much it would matter if wrong:
   **All of it is now editable at Admin > Website > Programs** — phases, topics,
   exit companies, salary bands, projects and FAQs — so correcting a syllabus is
   a form rather than a developer.
-- **Nine mentors do not exist.** Still live, still visibly marked — but this no
-  longer needs a developer. They are rows in the `mentors` table now, flagged
-  as stand-ins, and **Bala can delete or replace each one at Admin > Website >
-  Mentors in about a minute.** The screen counts them and says so at the top.
+- ~~**Nine mentors do not exist.**~~ **Off the public site, 7 Sep 2026.**
+  `GET /public/mentors` now drops any row flagged `is_placeholder`, so a
+  fabricated mentor cannot reach a visitor even if one is created again; the
+  baked-in fallback in `frontend/src/data/site.js` was cut from 13 people to
+  the two MOP has confirmed, **Balaram and Vinay K**. The rows still exist and
+  the admin screen still lists all 13, which is deliberate — they have to be
+  findable to be replaced.
+
+  **Josna P and Bharath David are not placeholders and are therefore not
+  filtered.** The user asked for only Balaram and Vinay K live, so those two
+  need unticking at Admin > Website > Mentors. Until that is done they are
+  published.
 - **Human Resource Management (HRM) is deliberately NOT published here.** MOP
   lists ten placement programmes on mopcareers.in; this site publishes nine.
   The user was asked and said not to add it (15 Aug 2026). Its content exists
@@ -779,8 +787,10 @@ being built past the rule without noticing.
 application form behind Apply Now, and admin screens for both new content
 types. What is left here is content, not code:
 
-- The three legal pages are stubs at `/privacy-policy`, `/terms-of-service`
-  and `/refund-policy` waiting on MOP's wording (the user has it).
+- ~~The three legal pages are stubs~~ **Written and live** at
+  `/privacy-policy`, `/terms-of-service` and `/refund-policy` — 45 headings
+  across the three in `frontend/src/data/legal.js`, including the PAP-specific
+  clauses. All three return 200.
 - The five social URLs are still unsupplied, so the footer icon row stays
   hidden.
 - `contacts@mopcareers.in` has not been set — one field at Admin > Website >
@@ -873,3 +883,105 @@ and note the domain differs from the site's own (`.in` vs `.com`, see thread 3).
 Everything here is public-site content and layout, so most of it is editable at
 Admin > Website once built; the nav, the button copy and the footer structure
 are code.
+
+### 11. The Python Full Stack Bootcamp — code done, programme not created
+
+Asked for 7 Sep 2026: **45 days, ₹4,999 paid upfront, one project. Not Pay
+After Placement.** MOP interviews students afterwards and the ones who qualify
+move into a PAP programme where they do two more projects — **and the user was
+explicit that none of that goes on the bootcamp page.** Bootcamp and PAP are
+sold as different things.
+
+**The code is built, live and dormant.** One tick-box at *Admin > Website >
+Programs > [programme] > Fees* — "One fee, paid upfront" — sets
+`detail.fees.upfrontOnly`, and the programme page then drops everything
+written for PAP: the hero eyebrow, the "paid later" fee heading, the tuition
+card (one card, not two), the shared pay-after-placement questions, and the
+three sections that promise placement — the roadmap ending in "Get hired", the
+"first class to first offer" services list, and the hiring network. The nav
+dropdown and the footer split into "Pay After Placement" and "Bootcamps",
+because both headings otherwise make the claim one click early. Nothing
+renders differently until a programme is ticked.
+
+**One behaviour worth knowing:** blank fee fields normally fall back to the
+standard figures from Settings. For an upfront programme they do not — the
+standard figures are PAP figures, and a blank field filling itself in put a
+struck-through ₹90,000 and an EMI plan beside ₹4,999.
+
+**What is left is content, and it is MOP's.** The programme does not exist yet:
+create it at *Admin > Website > Programs > New*. The hero headline, intro and
+highlights are database copy — **the existing Python Full Stack page's copy
+says "paying after you are placed", so do not clone it.** Nothing in the code
+will add the interview-then-PAP route to the page, and nothing will stop
+someone typing it in either.
+
+Note the existing `/programs/python-full-stack` stays as it is — a PAP
+programme. The bootcamp is a separate programme with its own slug.
+
+### 12. From Bala's website review (7 Sep 2026)
+
+He sent a review, run through some AI tool, scoring the live site 6/10. Two of
+its four "bugs" were one real defect in `CountUp.jsx`, now fixed (see
+HISTORY.md). The rest of what it raised, sorted into what is true:
+
+**True and still open:**
+
+- ~~**Nine placeholder mentors are live**~~ **Fixed in code, 7 Sep** — see
+  thread 2. Two real-but-unverified mentors still need unticking by hand.
+- **No analytics anywhere.** No gtag, GTM, Plausible or PostHog on the live
+  page, so nothing counts a callback request or a WhatsApp click. Nobody can
+  say whether the site converts.
+- **No spam protection on the enquiry form** — no honeypot, no captcha, no
+  rate limit on `POST /public/enquiries`. It has not been abused yet; a public
+  form on an indexed domain eventually is.
+- ~~**`og:image` is `apple-touch-icon.png`**~~ **Fixed 7 Sep.** A real
+  1200x630 card at `frontend/public/og-card.png`, regenerated by
+  `scripts/make-og-image.py` (needs Pillow and Windows system fonts).
+  `twitter:card` is now `summary_large_image`, and `useSeo` re-asserts both
+  on every route.
+- ~~**No spam protection on the enquiry form**~~ **Partly wrong when written.**
+  Both public POSTs were already throttled at 5/IP/hour. What was missing was
+  a honeypot, added 7 Sep: an off-screen `company_website` field on both
+  forms, checked in `_is_bot()`. A filled honeypot gets the same 201 and the
+  same wording as a real submission, from one shared response object, and the
+  row is never written.
+
+**Already done, and the review did not check:** per-page titles and
+descriptions, Open Graph tags, canonicals, `sitemap.xml` (15 URLs) and
+`robots.txt`; the three legal pages; email delivery verified end to end.
+
+**Audited 7 Sep against the rest of the review's list, so nobody re-checks:**
+
+| Its item | Measured |
+|---|---|
+| Mobile responsiveness | No horizontal scroll at 375px. The only wide elements are inside the clipped ticker. |
+| Alt text | 0 images missing it (there are only 2, both the logo). |
+| Form labels | 5 inputs, 0 unlabelled. `lang="en"` set, one `h1`. |
+| Tap targets | 19 below the WCAG 2.2 AA floor of 24x24 — mostly arrow links and social icons. |
+| Heading order | One skip, `h2 -> h4`. |
+| Performance | DOMContentLoaded 242ms, 13 requests, no images to compress or lazy-load. |
+| Bundle | **655KB JS (175KB gzipped) in one chunk** — the only real performance lever, and it is code splitting, not images. |
+| Schema markup | **Was zero. Added 7 Sep** — see below. |
+| Contrast | A naive script flagged 11 distinct styles, but it cannot resolve gradient backgrounds and most look like false positives. **Needs a real tool (axe/Lighthouse) before anyone acts on it.** |
+
+**Structured data, added 7 Sep.** `EducationalOrganization` static in
+`index.html` (so a crawler that never runs the JS still gets it), plus
+`Course` and `BreadcrumbList` injected per programme page by `useSeo`. The
+per-page block is removed on unmount — without that, browsing three
+programmes would leave Google three contradictory Course blocks on one URL.
+`offers` and `hasCourseInstance` are deliberately omitted: Google reads them
+as a price and a scheduled sitting, and the catalogue has neither. `sameAs`
+is omitted until MOP supplies the social URLs — it is one of the stronger
+signals for tying a new domain to a known brand, which is exactly the .com's
+problem against the .in and .co.in.
+
+**Wrong, and worth not acting on:**
+
+- *"A placement rate cannot exceed 100% — use a believable number e.g. 92%."*
+  The stored figure is **87%**. The 303% was the counter bug. Taking that
+  advice would replace a real number with an invented one.
+- *"Your stats look inflated — ₹165L package, 1,741 hiring partners."* Both
+  were the bug's output. The stored figures are ₹47.6L and 500+. The
+  underlying caution still stands for the reason in thread 2 — these are
+  MOP's own published claims and nobody has checked them against records —
+  but not for the numbers it cited.

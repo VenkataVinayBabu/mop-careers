@@ -54,14 +54,47 @@ function og(property, content) {
   }, content);
 }
 
+/*
+ * Per-page structured data (JSON-LD).
+ *
+ * WHAT IT BUYS. Titles and descriptions tell Google what a page SAYS;
+ * structured data tells it what the page IS. A programme page marked up as a
+ * Course can carry the provider and the breadcrumb trail into the result
+ * itself, and the site-wide Organization block in index.html is what ties
+ * mopcareers.com to the brand rather than leaving Google to infer it from
+ * three domains publishing similar copy.
+ *
+ * ONE BLOCK PER PAGE, REMOVED ON THE WAY OUT. Client-side navigation does not
+ * clear the head, so without the cleanup a visitor who browsed three
+ * programmes would leave Google three Course blocks describing three different
+ * courses on one URL — worse than no markup at all, because contradictory
+ * structured data is a reason to distrust all of it.
+ *
+ * The static Organization block in index.html is deliberately NOT managed
+ * here: it is true on every page, and a crawler that never runs the app should
+ * still get it.
+ */
+const LD_ID = 'page-structured-data';
+
+function structuredData(payload) {
+  document.getElementById(LD_ID)?.remove();
+  if (!payload) return;
+  const el = document.createElement('script');
+  el.type = 'application/ld+json';
+  el.id = LD_ID;
+  el.textContent = JSON.stringify(payload);
+  document.head.appendChild(el);
+}
+
 /**
  * @param {object} opts
  * @param {string} opts.title    Page title, without the site name — it is appended.
  * @param {string} opts.description  Under ~155 characters or Google truncates it.
  * @param {string} [opts.path]   Path for the canonical URL. Defaults to the current one.
  * @param {boolean} [opts.noindex]  Keep this page out of search results.
+ * @param {object|object[]} [opts.jsonLd]  Schema.org objects for this page.
  */
-export default function useSeo({ title, description, path, noindex = false }) {
+export default function useSeo({ title, description, path, noindex = false, jsonLd = null }) {
   useEffect(() => {
     // "Page — MOP Careers", except on the home page where that would stutter.
     const full = title && !title.includes(SITE_NAME) ? `${title} — ${SITE_NAME}` : title || SITE_NAME;
@@ -75,6 +108,14 @@ export default function useSeo({ title, description, path, noindex = false }) {
     og('og:url', url);
     og('og:type', 'website');
     og('og:site_name', SITE_NAME);
+    /* Re-asserted on every route, not just left to index.html. A route change
+       is a client-side navigation, so the tags in the static head keep
+       whatever the previous page set unless each one is written again — and
+       an og:image left pointing at a stale value is the sort of thing nobody
+       notices until a link is already shared. */
+    og('og:image', `${CANONICAL_ORIGIN}/og-card.png`);
+    meta('twitter:card', 'summary_large_image');
+    meta('twitter:image', `${CANONICAL_ORIGIN}/og-card.png`);
     meta('twitter:title', full);
     meta('twitter:description', description);
 
@@ -92,5 +133,53 @@ export default function useSeo({ title, description, path, noindex = false }) {
     } else if (robots) {
       robots.setAttribute('content', 'index, follow');
     }
-  }, [title, description, path, noindex]);
+
+    structuredData(jsonLd);
+    return () => structuredData(null);
+    // jsonLd is an object literal built during render, so it is a new
+    // reference every time — serialised for the dependency list, which
+    // compares by value and keeps this from rewriting the tag on every render.
+  }, [title, description, path, noindex, JSON.stringify(jsonLd)]);
+}
+
+/* Helpers so a page describes itself in one readable call rather than
+   assembling schema.org shapes inline. */
+export const ORIGIN = CANONICAL_ORIGIN;
+
+/** The trail shown under a result: MOP Careers > Programs > Data Science. */
+export function breadcrumbs(trail) {
+  return {
+    '@context': 'https://schema.org',
+    '@type': 'BreadcrumbList',
+    itemListElement: trail.map(([name, path_], i) => ({
+      '@type': 'ListItem',
+      position: i + 1,
+      name,
+      item: CANONICAL_ORIGIN + path_,
+    })),
+  };
+}
+
+/**
+ * A programme, as a schema.org Course.
+ *
+ * Only fields MOP can stand behind. `offers` and `hasCourseInstance` are
+ * omitted on purpose: Google reads them as a price and a scheduled sitting,
+ * and this catalogue has neither a fixed price per programme nor published
+ * cohort dates. Marking up a figure the site cannot honour is worse than
+ * carrying no Course markup at all.
+ */
+export function courseSchema({ name, description, slug, provider = SITE_NAME }) {
+  return {
+    '@context': 'https://schema.org',
+    '@type': 'Course',
+    name,
+    description,
+    url: `${CANONICAL_ORIGIN}/programs/${slug}`,
+    provider: {
+      '@type': 'Organization',
+      name: provider,
+      sameAs: CANONICAL_ORIGIN,
+    },
+  };
 }

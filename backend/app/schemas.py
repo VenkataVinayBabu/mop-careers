@@ -449,6 +449,12 @@ class JobApplicationCreate(BaseModel):
     resume_url: str = Field(min_length=8, max_length=500)
     portfolio_url: str | None = Field(default=None, max_length=300)
     cover_letter: str | None = Field(default=None, max_length=4000)
+    # A field no human ever fills, because no human can see it. Bots that
+    # scrape a form and post every input they find will fill it; the endpoint
+    # rejects anything that arrives with it set. Named for what a bot's
+    # heuristics look for, not for what it is — calling it `honeypot` tells the
+    # scraper exactly which field to skip.
+    company_website: str | None = Field(default=None, max_length=200)
 
     @field_validator("resume_url", "portfolio_url")
     @classmethod
@@ -497,6 +503,12 @@ class EnquiryCreate(BaseModel):
     email: EmailStr
     programme: str | None = Field(default=None, max_length=80)
     message: str = Field(min_length=5, max_length=2000)
+    # A field no human ever fills, because no human can see it. Bots that
+    # scrape a form and post every input they find will fill it; the endpoint
+    # rejects anything that arrives with it set. Named for what a bot's
+    # heuristics look for, not for what it is — calling it `honeypot` tells the
+    # scraper exactly which field to skip.
+    company_website: str | None = Field(default=None, max_length=200)
 
     @field_validator("phone")
     @classmethod
