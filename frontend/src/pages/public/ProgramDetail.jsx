@@ -181,31 +181,30 @@ export default function ProgramDetail() {
                 {d.intro || program.summary}
               </p>
 
-              {d.highlights?.length > 0 && (
-                <ul className="mt-7 grid gap-3">
-                  {d.highlights.map((h) => (
-                    <li key={h} className="flex gap-2.5 text-[0.95rem] text-navy-600">
-                      <svg className="mt-1 h-4 w-4 shrink-0 text-teal" viewBox="0 0 24 24" fill="none"
-                           stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round">
-                        <path d="m20 6-11 11-5-5" />
-                      </svg>
-                      {h}
-                    </li>
-                  ))}
-                </ul>
-              )}
+              {/* The highlights used to be listed here AND again in the
+                  What's-included card to the right, both visible without
+                  scrolling — the same four lines twice on one screen. The card
+                  is titled "What's included", which is what a highlight is, so
+                  the card keeps them and this column does not repeat them. */}
 
               <dl className="mt-9 flex flex-wrap gap-x-10 gap-y-5">
                 <div>
                   <dt className="text-[0.7rem] font-semibold uppercase tracking-[0.09em] text-navy-400">Duration</dt>
                   <dd className="mt-1 text-[1.3rem] font-extrabold tracking-tight text-navy">{program.duration}</dd>
                 </div>
-                <div>
-                  <dt className="text-[0.7rem] font-semibold uppercase tracking-[0.09em] text-navy-400">Average CTC</dt>
-                  <dd className="mt-1 text-[1.3rem] font-extrabold tracking-tight text-navy">
-                    {program.ctcAvg.replace(' avg', '')}
-                  </dd>
-                </div>
+                {/* Conditional, like Highest below it. A programme that
+                    publishes no package figure — every upfront-fee one, by
+                    design — was printing the heading "Average CTC" above an
+                    empty line, which reads as a number that failed to load.
+                    Same defect the Roles cards had. */}
+                {program.ctcAvg && (
+                  <div>
+                    <dt className="text-[0.7rem] font-semibold uppercase tracking-[0.09em] text-navy-400">Average CTC</dt>
+                    <dd className="mt-1 text-[1.3rem] font-extrabold tracking-tight text-navy">
+                      {program.ctcAvg.replace(' avg', '')}
+                    </dd>
+                  </div>
+                )}
                 {program.ctcHigh && (
                   <div>
                     <dt className="text-[0.7rem] font-semibold uppercase tracking-[0.09em] text-navy-400">Highest</dt>
@@ -237,11 +236,23 @@ export default function ProgramDetail() {
               <h2 className="mt-3 text-[1.3rem] font-extrabold tracking-tight text-navy">{program.name}</h2>
 
               <ul className="mt-6 grid gap-2.5 border-t border-navy-100 pt-6">
-                {(d.highlights || [program.summary]).concat([
-                  'Unlimited AI mock interviews',
-                  'ATS resume and LinkedIn support',
-                  'Referrals into the hiring network',
-                ]).slice(0, 6).map((f) => (
+                {/*
+                  * THREE LINES WERE HARDCODED HERE AND TWO OF THEM WERE FALSE.
+                  *
+                  * "Unlimited AI mock interviews" and "ATS resume and LinkedIn
+                  * support" appeared on every programme page. Neither feature
+                  * exists: the AI interviewer and the ATS resume builder were
+                  * dropped and are being bought in externally (CLAUDE.md thread
+                  * 7), and every trace of them was removed from the app — except
+                  * this card, which kept selling them.
+                  *
+                  * "Referrals into the hiring network" is true for a
+                  * pay-after-placement programme and is a placement claim, so it
+                  * comes off an upfront-fee page with the rest of them.
+                  */}
+                {(d.highlights?.length ? d.highlights : [program.summary]).concat(
+                  upfrontOnly ? [] : ['Referrals into the hiring network'],
+                ).slice(0, 6).map((f) => (
                   <li key={f} className="flex gap-2.5 text-[0.87rem] text-navy-600">
                     <svg className="mt-1 h-3.5 w-3.5 shrink-0 text-teal" viewBox="0 0 24 24" fill="none"
                          stroke="currentColor" strokeWidth="3.2" strokeLinecap="round" strokeLinejoin="round">
@@ -405,7 +416,7 @@ export default function ProgramDetail() {
                  so it is the one people look at hardest. */
               lede={
                 upfrontOnly
-                  ? 'What you learn, week by week.'
+                  ? 'Seven sections across 45 days, in the order you meet them — starting at installing Python and ending with the finished store deployed and online. Open any section to see the topics inside it.'
                   : 'Each phase ends at a point where you are genuinely employable — and the calibre of employer rises as you go.'
               }
             />
