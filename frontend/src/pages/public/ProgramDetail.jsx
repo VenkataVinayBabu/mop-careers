@@ -324,23 +324,38 @@ export default function ProgramDetail() {
       {d.roles?.length > 0 && (
         <section id="roles" className="bg-white py-16 sm:py-20">
           <div className="mx-auto max-w-[1240px] px-6">
+            {/* The lede explains the salary figures, so it only makes sense
+                when some are published. A programme that lists roles without
+                ranges gets a line about the roles instead. */}
             <SectionHead
               eyebrow="Career outcomes"
               title="Roles you will be"
               accent="ready for."
-              lede="Salary ranges are indicative and depend on your background, interview performance and employer."
+              lede={
+                d.roles.some((r) => r.salary)
+                  ? 'Salary ranges are indicative and depend on your background, interview performance and employer.'
+                  : 'Where these skills are used. What you actually reach depends on your background and how much you build beyond the course.'
+              }
             />
             <div className="grid gap-4 sm:grid-cols-2">
               {d.roles.map((r) => (
                 <article key={r.title} className="rounded-[20px] border border-navy-100 bg-paper p-6">
                   <h3 className="text-[1.1rem] font-bold tracking-tight text-navy">{r.title}</h3>
                   <p className="mt-2 text-[0.89rem] text-navy-500 sm:min-h-[3.2rem]">{r.body}</p>
-                  <div className="mt-5 border-t border-navy-100 pt-4">
-                    <p className="text-[0.7rem] font-semibold uppercase tracking-[0.09em] text-navy-400">
-                      Typical starting range
-                    </p>
-                    <p className="mt-1 text-[1.15rem] font-extrabold tracking-tight text-teal-ink">{r.salary}</p>
-                  </div>
+                  {/* Only when there is a figure. It used to render regardless,
+                      so a role left without one published the heading "Typical
+                      starting range" above an empty line — which reads as a
+                      number that failed to load rather than a claim nobody
+                      wanted to make. Leaving salary blank is the correct answer
+                      for any programme without MOP's own placement data. */}
+                  {r.salary && (
+                    <div className="mt-5 border-t border-navy-100 pt-4">
+                      <p className="text-[0.7rem] font-semibold uppercase tracking-[0.09em] text-navy-400">
+                        Typical starting range
+                      </p>
+                      <p className="mt-1 text-[1.15rem] font-extrabold tracking-tight text-teal-ink">{r.salary}</p>
+                    </div>
+                  )}
                   {r.companies?.length > 0 && (
                     <div className="mt-4 flex flex-wrap gap-1.5">
                       {r.companies.map((c) => (
