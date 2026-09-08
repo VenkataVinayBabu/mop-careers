@@ -663,11 +663,29 @@ Every batch used to be built from one hardcoded 55-day Python outline, so a Java
 batch arrived holding 55 days of Python topics. A batch is now built from its
 programme's own template and day count, and nothing assumes 55.
 
-What is left here is **content, not code**: seven of the eight programmes have a
-day count (45) and no planned days, so their batches open as placeholders for the
-teacher. Filling one in is a form at **Admin > Website > Programs > [programme] >
-Class curriculum** — the same place the marketing syllabus is edited, in a section
-marked internal. It needs MOP's curriculum, which nobody has supplied yet.
+**The day-by-day planner was removed on 8 Sep 2026, deliberately.** It let
+someone write each class day into the programme, so a new batch arrived
+pre-filled. The user was offered it twice — including a paste-the-whole-sheet
+box to make 45 rows a single action — and declined both times, on the grounds
+that **MOP hands the day plan out in the brochure and again after a student
+enrols**, so transferring it into the website editor duplicates a document that
+already exists and has no reader. It also sat inside the marketing-site editor,
+which was the wrong home for a teaching plan. What remains there is one field,
+now titled **Batch length**: how many days a batch runs.
+
+**Nothing was deleted.** `Program.curriculum` still exists, the API still
+accepts and returns it, `build_curriculum_days()` still uses it, and the one
+programme that has planned days (python-full-stack, 11) keeps them and still
+builds batches from them — the editor simply passes the stored value straight
+through, which was verified by saving through the rebuilt form and confirming
+all 11 survived. Restoring the editor means bringing `CurriculumTemplate` back
+from git history and one JSX tag in `WebsiteProgramEditor.jsx`.
+
+**The consequence, which is now the intended behaviour:** a batch of a
+programme with no planned days gets days titled *"To be announced"*, and the
+teacher fills each in as they teach it. Students see that in their roadmap
+meanwhile. If that ever becomes unacceptable, the fix is the paste box, not
+re-typing.
 
 Two things worth knowing before touching it:
 
@@ -917,6 +935,29 @@ someone typing it in either.
 
 Note the existing `/programs/python-full-stack` stays as it is — a PAP
 programme. The bootcamp is a separate programme with its own slug.
+
+### 13. The programme page is not a timetable (8 Sep 2026)
+
+Two more Pay After Placement claims were found on the programme page, both
+missed when the other five were gated for the bootcamp work. Found because the
+user sent a screenshot of the syllabus section for an unrelated reason.
+
+- The syllabus lede read *"Each phase ends at a point where you are genuinely
+  employable — and the calibre of employer rises as you go."* Hardcoded. An
+  upfront-fee programme now reads *"What you learn, week by week."*
+- Each phase can carry a **Placements exit** block naming the calibre of
+  employer a learner is ready for. It is the strongest placement claim on the
+  site, and it is now **not rendered at all** on an upfront-fee programme —
+  guarded in code rather than trusted to be left blank, because "leave that
+  field empty" is an instruction somebody eventually forgets. Verified against
+  a programme carrying exit data on all four phases: zero blocks rendered.
+
+That makes **seven** things `detail.fees.upfrontOnly` turns off, not five.
+
+Also decided: a programme's syllabus sections are named for what they cover
+(*Python Foundations*, *Databases & SQL*) rather than by week or day number,
+and their Body is left empty so a section is a name and its topic list. The
+user supplied a reference for this shape.
 
 ### 12. From Bala's website review (7 Sep 2026)
 

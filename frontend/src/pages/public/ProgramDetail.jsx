@@ -365,7 +365,18 @@ export default function ProgramDetail() {
               eyebrow="Program architecture"
               title="The full"
               accent="syllabus."
-              lede="Each phase ends at a point where you are genuinely employable — and the calibre of employer rises as you go."
+              /* The default lede makes two claims a bootcamp cannot: that each
+                 phase ends in employability, and that the calibre of employer
+                 rises as you go — the second describing the Placements Exit
+                 rows, which an upfront-fee programme leaves empty anyway. This
+                 was missed when the other five PAP assertions were gated;
+                 found because the syllabus is the section that sells a course,
+                 so it is the one people look at hardest. */
+              lede={
+                upfrontOnly
+                  ? 'What you learn, week by week.'
+                  : 'Each phase ends at a point where you are genuinely employable — and the calibre of employer rises as you go.'
+              }
             />
             <div className="grid gap-3">
               {d.syllabus.map((phase, i) => (
@@ -406,9 +417,14 @@ export default function ProgramDetail() {
                         ))}
                       </div>
                     )}
-                    {phase.exit?.length > 0 && (
+                    {!upfrontOnly && phase.exit?.length > 0 && (
                       /* The Placements Exit: who you are ready for at the end
-                         of this phase, not only at the end of the program. */
+                         of this phase, not only at the end of the program.
+                         Never on an upfront-fee page — it is the strongest
+                         placement claim the site makes, and a bootcamp makes
+                         none. Guarded here rather than trusted to stay empty,
+                         because "leave that field blank" is an instruction
+                         somebody eventually forgets. */
                       <div className="mt-5 rounded-xl border border-teal-100 bg-teal-50 px-4 py-3">
                         <p className="text-[0.68rem] font-bold uppercase tracking-[0.1em] text-teal-ink">
                           Placements exit {i + 1}

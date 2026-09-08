@@ -93,114 +93,6 @@ function Check({ checked, onChange, label, hint, tone = 'teal' }) {
   );
 }
 
-/*
- * The day-by-day plan a new batch of this programme is created from.
- *
- * Deliberately not the Repeater used everywhere else on this page: these rows
- * are keyed by day number rather than by position, so the up/down arrows would
- * be a lie — the server keeps the list in day order however it arrives.
- *
- * Sparse on purpose. Only the days somebody has actually planned need a row;
- * every other day of the batch is created as an editable placeholder for the
- * teacher, which is how days 12-55 have always worked.
- */
-function CurriculumTemplate({ totalDays, days, onChange }) {
-  const sorted = [...days].sort((a, b) => a.day_number - b.day_number);
-  const used = new Set(days.map((d) => d.day_number));
-  let next = 1;
-  while (used.has(next)) next += 1;
-
-  const patchAt = (index, changes) =>
-    onChange(days.map((d, i) => (i === index ? { ...d, ...changes } : d)));
-
-  const overrun = sorted.filter((d) => d.day_number > totalDays);
-  const duplicates = sorted.filter(
-    (d, i) => i > 0 && d.day_number === sorted[i - 1].day_number,
-  );
-
-  return (
-    <div>
-      <div className="mb-2 flex items-end justify-between gap-4">
-        <div>
-          <span className="label mb-0">Planned days</span>
-          <p className="mt-0.5 text-xs text-navy-400">
-            {days.length === 0
-              ? `Nothing planned yet, so a new batch gets ${totalDays} placeholder days.`
-              : `${days.length} of ${totalDays} days planned. The other ${Math.max(0, totalDays - days.length)} are created as placeholders.`}
-          </p>
-        </div>
-      </div>
-
-      {(overrun.length > 0 || duplicates.length > 0) && (
-        <p className="mb-2 rounded-lg bg-orange-50 p-3 text-xs font-medium text-orange-ink">
-          {overrun.length > 0
-            ? `Day ${overrun[0].day_number} is past the end of a ${totalDays}-day programme. Raise the length or move the day.`
-            : `Day ${duplicates[0].day_number} is planned twice.`}
-        </p>
-      )}
-
-      <div className="space-y-2">
-        {days.map((day, i) => (
-          <div
-            key={i}
-            className="grid items-start gap-2 rounded-lg border border-navy-100 bg-navy-50/40 p-3 sm:grid-cols-[5.5rem_1fr_auto]"
-          >
-            <div>
-              <label className="label text-xs" htmlFor={`day-n-${i}`}>Day</label>
-              <input
-                id={`day-n-${i}`}
-                type="number"
-                min={1}
-                max={365}
-                className="input"
-                value={day.day_number}
-                onChange={(e) =>
-                  patchAt(i, { day_number: Math.max(1, Number(e.target.value) || 1) })
-                }
-              />
-            </div>
-            <div className="grid gap-2">
-              <input
-                aria-label={`Day ${day.day_number} topic`}
-                className="input"
-                maxLength={200}
-                placeholder="Topic, e.g. Collections & Generics"
-                value={day.topic}
-                onChange={(e) => patchAt(i, { topic: e.target.value })}
-              />
-              <textarea
-                aria-label={`Day ${day.day_number} description`}
-                className="input"
-                rows={2}
-                maxLength={1000}
-                placeholder="What the class covers. Optional."
-                value={day.description}
-                onChange={(e) => patchAt(i, { description: e.target.value })}
-              />
-            </div>
-            <button
-              type="button"
-              onClick={() => onChange(days.filter((_, j) => j !== i))}
-              className="rounded px-2 py-1 text-xs font-semibold text-orange transition hover:bg-orange-50 sm:mt-6"
-            >
-              Remove
-            </button>
-          </div>
-        ))}
-      </div>
-
-      <button
-        type="button"
-        onClick={() => onChange([...days, { day_number: next, topic: '', description: '' }])}
-        disabled={next > totalDays}
-        className="btn-ghost btn-sm mt-3"
-      >
-        + Add day {next <= totalDays ? next : ''}
-      </button>
-    </div>
-  );
-}
-
 export default function AdminWebsiteProgramEditor() {
   const { programId } = useParams();
   const isNew = programId === 'new';
@@ -478,9 +370,34 @@ export default function AdminWebsiteProgramEditor() {
           />
         </Section>
 
+        {/*
+          * THE DAY-BY-DAY PLANNER USED TO LIVE HERE AND WAS REMOVED (8 Sep 2026).
+          *
+          * It let someone write each class day — day 1 topic, day 2 topic, all
+          * the way to day 45 — so a new batch arrived pre-filled. Nobody was
+          * ever going to use it: MOP gives the day-by-day plan out in the
+          * brochure and again after a student enrols, and transferring 45 rows
+          * into a repeater by hand to duplicate a document that already exists
+          * is work with no reader. It also sat inside the marketing-site
+          * editor, which was the wrong home for a teaching plan.
+          *
+          * What is left is the one field that genuinely belongs to a
+          * programme: how many days a batch of it runs.
+          *
+          * NOTHING WAS DELETED. `Program.curriculum` still exists, the API
+          * still accepts and returns it, and any programme that already has
+          * planned days keeps them and still builds batches from them — this
+          * form simply passes the existing value straight back. Restoring the
+          * editor means bringing back the `CurriculumTemplate` component from
+          * git history and one <CurriculumTemplate> tag here.
+          *
+          * A batch of a programme with no planned days gets days titled "To be
+          * announced" for the teacher to fill in as they teach — see
+          * backend/app/curriculum.py.
+          */}
         <Section
-          title="Class curriculum"
-          caption="Internal — none of this appears on the public site. It is the day-by-day plan a new batch of this programme is created from."
+          title="Batch length"
+          caption="Internal — this does not appear on the public site."
         >
           <div className="grid gap-5 sm:grid-cols-[12rem_1fr] sm:items-start">
             <div>
@@ -497,17 +414,11 @@ export default function AdminWebsiteProgramEditor() {
               <p className="mt-1.5 text-xs text-navy-400">How long a batch runs.</p>
             </div>
             <p className="rounded-lg bg-navy-50 p-4 text-xs text-navy-500 sm:mt-6">
-              This is a template for the <strong>next</strong> batch. Batches already
-              running keep the days they were created with, along with their dates,
-              recordings and attendance — editing here never touches a class in progress.
+              Applies to the <strong>next</strong> batch created. Batches already running
+              keep the days they were created with, along with their dates, recordings and
+              attendance — changing this never touches a class in progress.
             </p>
           </div>
-
-          <CurriculumTemplate
-            totalDays={form.total_days}
-            days={form.curriculum}
-            onChange={set('curriculum')}
-          />
         </Section>
 
         <Section title="Technologies" caption="The tool logos strip on the programme page.">
