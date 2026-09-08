@@ -15,11 +15,31 @@ import { useState } from 'react';
  * its own remove button. A comma also commits, because people paste comma
  * separated lists and expect that to work rather than producing one long tag.
  */
-export function TagList({ id, label, hint, value = [], onChange, placeholder }) {
+/*
+ * `sentences` turns OFF comma-splitting for lists whose entries are prose.
+ *
+ * The default is right for what this control was built for — Python, React,
+ * PostgreSQL — where a comma is the natural separator and pasting a whole list
+ * at once is the point. It is wrong wherever an entry is a phrase, because
+ * phrases contain commas. A highlight reading
+ *
+ *     ₹4,999, paid once before you start. Nothing owed afterwards.
+ *
+ * became four tags: "₹4", "999", and two fragments. The price was not merely
+ * split, it was destroyed — and this is the field whose own hint says "one
+ * sentence each". Topic names have the same problem: "Variables, Data Types,
+ * Operators" is one day's topic, not three.
+ *
+ * With `sentences`, Enter is the only way to commit an entry, which is what a
+ * list of sentences wants anyway.
+ */
+export function TagList({ id, label, hint, value = [], onChange, placeholder, sentences = false }) {
   const [draft, setDraft] = useState('');
 
   const commit = (raw) => {
-    const parts = raw.split(',').map((s) => s.trim()).filter(Boolean);
+    const parts = (sentences ? [raw] : raw.split(','))
+      .map((s) => s.trim())
+      .filter(Boolean);
     if (!parts.length) return;
     // Case-insensitive dedupe: "Python" and "python" in one list is a typo,
     // not two skills.
@@ -30,7 +50,7 @@ export function TagList({ id, label, hint, value = [], onChange, placeholder }) 
   };
 
   const onKeyDown = (e) => {
-    if (e.key === 'Enter' || e.key === ',') {
+    if (e.key === 'Enter' || (e.key === ',' && !sentences)) {
       // Enter inside a form would submit the whole programme.
       e.preventDefault();
       commit(draft);
@@ -64,7 +84,7 @@ export function TagList({ id, label, hint, value = [], onChange, placeholder }) 
           id={id}
           type="text"
           value={draft}
-          placeholder={placeholder || 'Type and press Enter'}
+          placeholder={placeholder || (sentences ? 'Type a line and press Enter' : 'Type and press Enter')}
           onChange={(e) => setDraft(e.target.value)}
           onKeyDown={onKeyDown}
           /* Committing on blur too, or anything typed and not confirmed with

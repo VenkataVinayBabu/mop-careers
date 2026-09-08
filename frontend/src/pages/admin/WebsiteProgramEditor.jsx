@@ -302,9 +302,11 @@ export default function AdminWebsiteProgramEditor() {
                  max={200} hint="Falls back to the programme name if blank." />
           <Field id="p-intro" label="Introduction" rows={4} max={1200} value={d.intro}
                  onChange={setDetail('intro')} hint="Falls back to the summary if blank." />
-          <TagList id="p-highlights" label="Highlights" value={d.highlights}
+          {/* `sentences`: these are whole lines, and a price like ₹4,999 was
+              being torn into "₹4" and "999" by the comma separator. */}
+          <TagList id="p-highlights" label="Highlights" value={d.highlights} sentences
                    onChange={setDetail('highlights')}
-                   hint="Ticked lines under the introduction. One sentence each." />
+                   hint="Ticked lines under the introduction. One sentence each — press Enter after each one." />
         </Section>
 
         <Section title="Why this programme" caption="The card grid explaining what makes it worth doing.">
@@ -360,8 +362,11 @@ export default function AdminWebsiteProgramEditor() {
                        onChange={(v) => patch({ title: v })} />
                 <Field id={`syl-b-${i}`} label="What it covers" rows={2} max={800} value={item.body}
                        onChange={(v) => patch({ body: v })} />
-                <TagList id={`syl-top-${i}`} label="Topics" value={item.topics}
-                         onChange={(v) => patch({ topics: v })} />
+                {/* `sentences` here too: a topic name like "Variables, Data
+                    Types, Operators" is one day's topic, not three. */}
+                <TagList id={`syl-top-${i}`} label="Topics" value={item.topics} sentences
+                         onChange={(v) => patch({ topics: v })}
+                         hint="One per line. Press Enter after each." />
                 <TagList id={`syl-e-${i}`} label="Placements exit" value={item.exit}
                          onChange={(v) => patch({ exit: v })}
                          hint="The calibre of employer a learner is ready for by the end of this phase. This is the strongest claim on the page — only list companies MOP can stand behind." />
