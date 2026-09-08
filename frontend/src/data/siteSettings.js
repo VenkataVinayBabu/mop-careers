@@ -338,6 +338,29 @@ let inFlight = null;
  *  Deliberately silent on failure, and never awaited by a render: the visitor
  *  already has readable values from the bundle and the last cached answer, and
  *  there is nothing they could do about a backend that is still waking up. */
+/*
+ * Whether the programme catalogue has come back from the API yet.
+ *
+ * WHY THIS EXISTS. Every list here starts on a baked-in default so a page can
+ * paint before the API answers, and for statistics or partners a slightly
+ * stale value is invisible. For the catalogue it is not: a programme page
+ * looks its slug up in this list, and a programme created after the bundle was
+ * built is simply not in the defaults. ProgramDetail read that as "no such
+ * programme" and redirected to the home page — so the newly created bootcamp
+ * bounced every first-time visitor straight off it, while anyone with a warm
+ * cache saw it fine and could not reproduce the complaint.
+ *
+ * The distinction a page needs is "not found" versus "not answered yet", and a
+ * list on its own cannot express it.
+ */
+const catalogueLoaded = createStore(false);
+
+/** True once /public/programs has replied — success or failure. Failure counts:
+ *  the defaults are then the best answer available and waiting forever would
+ *  hang the page on a sleeping backend. */
+export const useCatalogueLoaded = () =>
+  useSyncExternalStore(catalogueLoaded.subscribe, catalogueLoaded.get, catalogueLoaded.get);
+
 export function refreshPublicContent() {
   if (!inFlight) {
     inFlight = Promise.all([
@@ -345,7 +368,10 @@ export function refreshPublicContent() {
       api.get('/public/mentors').then(({ data }) => applyMentors(data)).catch(() => null),
       api.get('/public/stories').then(({ data }) => applyStories(data)).catch(() => null),
       api.get('/public/partners').then(({ data }) => applyPartners(data)).catch(() => null),
-      api.get('/public/programs').then(({ data }) => applyPrograms(data)).catch(() => null),
+      api.get('/public/programs')
+        .then(({ data }) => applyPrograms(data))
+        .catch(() => null)
+        .finally(() => catalogueLoaded.set(true)),
       api.get('/public/statistics').then(({ data }) => applyStatistics(data)).catch(() => null),
     ]);
   }

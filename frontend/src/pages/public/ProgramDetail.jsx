@@ -3,8 +3,11 @@ import { Navigate, useParams } from 'react-router-dom';
 
 import { warmUp } from '../../api/client';
 import Avatar from '../../components/Avatar';
+import { Spinner } from '../../components/ui';
 import { CAREER_SERVICES, PROGRAM_FAQ, ROADMAP } from '../../data/site';
-import { useFees, useMentors, usePartners, usePrograms } from '../../data/siteSettings';
+import {
+  useCatalogueLoaded, useFees, useMentors, usePartners, usePrograms,
+} from '../../data/siteSettings';
 import EnquiryForm from './EnquiryForm';
 import ProgramCard from './ProgramCard';
 import { PublicFloats, PublicFooter, PublicHeader } from './PublicChrome';
@@ -112,10 +115,39 @@ export default function ProgramDetail() {
   const allMentors = useMentors();
   const partners = usePartners();
   const standardFees = useFees();
+  const catalogueLoaded = useCatalogueLoaded();
 
-  // An unknown or unpublished slug goes home rather than to a 404 — the
-  // programme may simply have been withdrawn, and the list is what they want.
-  if (!program) return <Navigate to={{ pathname: '/', hash: '#programs' }} replace />;
+  /*
+   * An unknown or unpublished slug goes home rather than to a 404 — the
+   * programme may simply have been withdrawn, and the list is what they want.
+   *
+   * BUT NOT UNTIL THE CATALOGUE HAS ACTUALLY ARRIVED. `programs` starts on the
+   * defaults baked into the bundle, and a programme created after that build
+   * is not among them. This redirect fired on the first render and sent every
+   * visitor without a warm cache off the newly created bootcamp and back to
+   * the home page — which is every visitor following a shared link, while
+   * anyone who had browsed the site before saw it load perfectly and could not
+   * reproduce the report.
+   *
+   * `useCatalogueLoaded` is false until /public/programs replies, so an
+   * unrecognised slug now waits rather than assuming. A slug that IS known —
+   * from the cache or the defaults — still renders instantly; the wait only
+   * ever costs the pages that were broken anyway.
+   */
+  if (!program) {
+    if (!catalogueLoaded) {
+      return (
+        <div className="min-h-screen bg-paper">
+          <PublicHeader />
+          <div className="mx-auto flex max-w-[1240px] items-center gap-3 px-6 py-24 text-navy-400">
+            <Spinner />
+            <span className="text-[0.95rem]">Loading this programme…</span>
+          </div>
+        </div>
+      );
+    }
+    return <Navigate to={{ pathname: '/', hash: '#programs' }} replace />;
+  }
 
   const d = program.detail || {};
   /* A programme paid in full upfront — a bootcamp — rather than Pay After
