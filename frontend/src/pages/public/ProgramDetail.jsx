@@ -357,12 +357,28 @@ export default function ProgramDetail() {
                     </div>
                   )}
                   {r.companies?.length > 0 && (
-                    <div className="mt-4 flex flex-wrap gap-1.5">
-                      {r.companies.map((c) => (
-                        <span key={c} className="rounded-full bg-navy/[0.04] px-2.5 py-1 text-[0.72rem] text-navy-500">
-                          {c}
-                        </span>
-                      ))}
+                    <div className="mt-4">
+                      <div className="flex flex-wrap gap-1.5">
+                        {r.companies.map((c) => (
+                          <span key={c} className="rounded-full bg-navy/[0.04] px-2.5 py-1 text-[0.72rem] text-navy-500">
+                            {c}
+                          </span>
+                        ))}
+                      </div>
+                      {/* A row of company names on a programme page reads as
+                          "our students go here" whether or not anybody wrote
+                          that. On a pay-after-placement programme MOP does make
+                          a placement claim, so the names stand unqualified. On
+                          an upfront-fee one it makes none, and the same names
+                          without this line would be the page's biggest
+                          untruth — so the caption is not optional and is not
+                          left to whoever fills the form to remember. */}
+                      {upfrontOnly && (
+                        <p className="mt-2.5 text-[0.72rem] leading-snug text-navy-400">
+                          Companies that hire for this role. Not placement partners, and not
+                          where MOP has placed people.
+                        </p>
+                      )}
                     </div>
                   )}
                 </article>
