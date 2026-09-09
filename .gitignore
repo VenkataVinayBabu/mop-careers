@@ -36,3 +36,7 @@ dist-ssr/
 .idea/
 .DS_Store
 Thumbs.db
+
+# Generated documents. Regenerate rather than version them - a PDF is binary,
+# git stores a fresh full copy on every rebuild, and this one is ~1 MB.
+*.pdf
