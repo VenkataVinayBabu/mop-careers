@@ -1092,3 +1092,93 @@ neither after: with the pane hidden — the exact condition that produced the
 zeros — the counters now settle on `1,050 / 47.6 / 500 / 87`, the outcomes
 row on `1,050 / 150 / 47.6 / 500`, and no rendered value at any point in the
 animation is negative.
+
+## 2026-09-08/09 — The bootcamp, and six defects it exposed
+
+MOP asked for a **Python Full Stack Bootcamp**: 45 days, ₹4,999 paid upfront,
+one e-commerce project. Explicitly **not** Pay After Placement, and explicitly
+without mentioning the interview-then-PAP route that follows it.
+
+The programme page was written entirely for PAP, so a flag was added —
+`detail.fees.upfrontOnly`, one tick-box on the fee override — and everything
+written for PAP now turns off together. **Seven things**, not the five it
+looked like at first: the hero eyebrow, the "paid later" fee heading, the
+second fee card, the shared pay-after-placement questions, the roadmap ending
+in "Get hired", the career-services list, the hiring network — plus, found
+later from a screenshot the user sent for an unrelated reason, the syllabus
+lede ("each phase ends at a point where you are genuinely employable") and the
+per-phase **Placements exit** blocks. The nav dropdown and the footer split
+into "Pay After Placement" and "Bootcamps", because both headings otherwise
+make the claim one click early.
+
+**Guarded in code rather than left to the form.** Placements exit is not
+rendered at all on an upfront-fee programme, even when the data is there.
+"Leave that field blank" is an instruction somebody eventually forgets.
+
+### Six defects surfaced along the way, none of them found by testing
+
+Every one was found either by a user screenshot or by checking the live site,
+which is the lesson worth keeping.
+
+- **The Highlights field destroyed a price.** `₹4,999, paid once before you
+  start.` became four tags: `₹4`, `999`, and two fragments. `TagList` split
+  every entry on commas — right for `Python, React, PostgreSQL`, wrong for a
+  field whose own hint says "one sentence each". A `sentences` prop turns it
+  off; Highlights and syllabus Topics use it (a topic named "Variables, Data
+  Types, Operators" was becoming three), everything else keeps splitting.
+- **A new programme's page bounced first-time visitors to the home page.**
+  `ProgramDetail` looks its slug up in the catalogue and redirects home when
+  absent — but the catalogue starts on the defaults baked into the bundle, and
+  a programme created after that build is not in them. So the redirect fired
+  before `/public/programs` answered. **Anyone who had browsed the site before
+  had it cached and saw the page load perfectly**, which is why it survived
+  several rounds of checking: the people testing were the least able to
+  reproduce it. `data-analytics-with-ai` had the same fault and had been live
+  for weeks. Fixed with a `catalogueLoaded` flag — the distinction a page needs
+  is "not found" versus "not answered yet", and a list alone cannot express it.
+- **The What's-included card advertised two features that do not exist.**
+  "Unlimited AI mock interviews" and "ATS resume and LinkedIn support" were
+  hardcoded into every programme page. Both were dropped from the project
+  (thread 7) and every other trace removed — this card kept selling them, on
+  the public site, for weeks.
+- **The same highlights printed twice** on one screen, as ticked lines under
+  the intro and again in the card beside it.
+- **Three separate "empty label" bugs**, all the same shape: a heading rendered
+  unconditionally above a value that was deliberately left blank — "Typical
+  starting range" on a role with no salary, "Average CTC" on a programme with
+  no package figure, and the salary block itself. Each reads as a number that
+  failed to load rather than a claim nobody wanted to make.
+- **The sitemap listed two dead programme URLs** and not the new one.
+
+### The copy was written for the wrong reader, twice
+
+Worth recording because it is a judgement failure rather than a bug. The hero
+opened with *FastAPI, React, OOP, PostgreSQL, JWT* — **eleven terms a complete
+beginner has never met**, on a page whose own "Who it is for" field says
+"Complete beginners. No prior programming assumed." Rewritten to "Start from
+nothing. Finish with a working online store." The tool names still appear in
+Skills, Technologies and all seven syllabus sections, which is where somebody
+looking for them will look.
+
+Also settled: syllabus sections are named for what they cover (*Python
+Foundations*, *Databases & SQL*) rather than by week or day number, each
+carries a one-or-two-line summary, and the **day-by-day curriculum planner was
+removed from the programme editor entirely** — see thread 6 for why, and for
+what was deliberately not deleted.
+
+### Salary figures and employer names
+
+The user asked twice for both on the bootcamp's role cards. They are supplied
+as **market ranges, not MOP placement data**, and the document and the sheet
+both say so. The employer names carry a line printed by the page itself on any
+upfront-fee programme: *"Companies that hire for this role. Not placement
+partners, and not where MOP has placed people."* In code, for the same reason
+Placements exit is: a row of company names on a programme page reads as "our
+students go here" whether or not anybody wrote it.
+
+### Also this session
+
+`CountUp.jsx` (the negative and zeroed statistics), the enquiry-form honeypot,
+the 1200x630 share card, `EducationalOrganization` / `Course` / `BreadcrumbList`
+structured data, and the placeholder-mentor filter — each has its own entry
+above or in CLAUDE.md thread 12.

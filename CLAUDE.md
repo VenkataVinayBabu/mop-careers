@@ -16,7 +16,14 @@ marketing site (no auth) and an authenticated platform (admin / teacher / studen
 > mentors were written in-session rather than by MOP. None of that needs a
 > developer any more — it needs MOP's words.
 >
-> Jump to **"Open threads"** at the bottom — that is the live to-do list.
+> **⏸ PAUSED 9 SEP 2026 — the team moved to a different project.** Everything
+> outstanding on that day is gathered in one place at the top of **"Open
+> threads"**, under the heading *PAUSED — 9 September 2026*. Read that first;
+> the numbered threads below it are the reasoning behind each item.
+>
+> Nothing is broken — the site is live, the platform works, and the last commit
+> deployed cleanly. **The five quickest wins are listed there**, three of which
+> are admin edits somebody can do without a developer.
 >
 > **Thread 6 is closed too.** A batch is now built from its programme's own
 > curriculum template and day count, so a Java batch no longer arrives holding
@@ -260,6 +267,130 @@ trusting that a screen still works because it did once.
 
 Everything below is decided-but-not-built, or known-but-unresolved. This is the
 to-do list.
+
+---
+
+# ⏸ PAUSED — 9 September 2026
+
+**The team moved to a different project on 9 Sep 2026.** Everything below this
+line is what was outstanding on the day, gathered into one list so nobody has
+to read thirteen threads to find out where things stand. The numbered threads
+after it hold the reasoning; this is the index.
+
+**Nothing is broken.** The site is live at <https://mopcareers.com>, the
+platform works, email works, and the last commit deployed cleanly. What
+follows is unfinished, not failing.
+
+### Do these first if the project restarts
+
+Three of them are five-minute admin edits that have been outstanding for days,
+and two are live-content problems.
+
+| # | What | Where | Owner |
+|---|---|---|---|
+| 1 | **Untick Josna P and Bharath David.** Four mentors are published; the user asked for two — Balaram and Vinay K. | Admin > Website > Mentors | MOP |
+| 2 | **Clear the bootcamp's hidden tuition fields.** `₹1,20,000 + GST` and *"payable only after you accept an offer"* are still stored on the bootcamp, inherited from the programme it was edited out of. Invisible while "One fee, paid upfront" is ticked; publishes the instant anyone unticks it. | Admin > Website > Programs > Python Full Stack Bootcamp > Fees | MOP |
+| 3 | **Confirm the struck-through ₹6,999.** The bootcamp shows ₹4,999 with ₹6,999 crossed out. Only lawful if it genuinely was that price — misleading pricing is an offence under Indian consumer rules. | same screen | MOP |
+| 4 | **Change `Teacher@123` and `Student@123`,** or delete the demo accounts. They are in `backend/app/seed.py` and the site is on the public internet. | seed / Accounts | Developer |
+| 5 | **Decide whether Full Stack Web Development is gone deliberately.** The bootcamp was created by editing that programme, so it took its id and the course is no longer offered — nine programmes became eight. `/programs/full-stack-web-development` now redirects home. The sitemap has been regenerated to match. | — | Bala |
+
+### Waiting on AWS — two support cases, both open since early September
+
+| Case | Raised | Consequence while it waits |
+|---|---|---|
+| **SES production access** | 5 Sep. AWS asked for use-case detail; the case sat at *Pending customer action* because the request form never offered a description field. **It will wait indefinitely until somebody replies.** | SES only delivers to verified addresses. Enquiry and doubt notifications work. **Password resets to students, new-account emails and class doubts to teachers all fail silently.** |
+| **App Runner entitlement** | 6 Sep. The console returns the free-plan limitations page although the account is Paid and Active (confirmed via `GetAccountPlanState`). Amplify was unaffected. | The API stays on Render. It works. The cost is cross-region latency — data requests went from ~0.3s to ~1.0s once the database moved to Mumbai and the API did not. |
+
+### Money and security, on a clock
+
+- **The AWS credits run out around January 2027.** $120 sounds like a year; at
+  the current rate it is roughly four months, because the account carries a
+  second RDS instance belonging to a different MOP product. **Decide who pays
+  for AWS before then**, not after — it is the same shape of deadline as the
+  Render expiry that caused the September scramble.
+- **Render's database is still running and still paid** (~$6/mo), deliberately,
+  as the rollback. The two have forked; anything written since 5 Sep exists
+  only on RDS. Cancel it once AWS has been trouble-free for a while.
+- **The RDS security group still allows Render's shared outbound ranges.**
+  Those ranges are shared with every Render customer in the region, so the
+  database is currently protected by its password and SSL rather than by the
+  firewall. **Delete both rules the day the API runs inside AWS.**
+- **Backups are manual and must now target RDS**, not Render. `backup.ps1` with
+  `BACKUP_DATABASE_URL` set. Worth scheduling before students enrol.
+- **The API sleeps when idle** — 30-60s on the first sign-in after a quiet
+  period. ~$7/month on Render removes it. Only affects signing in; the public
+  site is CDN-served and does not sleep.
+
+### Content MOP still owes — none of it needs a developer
+
+All of it is a form at Admin > Website. It is listed at length in thread 2.
+
+- **Photos.** The entire live site contains **two images, and both are the
+  logo.** No mentor has a photograph, no learner story has a face, there is no
+  classroom or office shot. For a business selling people teaching people this
+  is the largest credibility gap left, and it is the one thing money cannot
+  fake later. S3 exists; **upload buttons do not** — mentors, team and partners
+  still take an image URL.
+- **The four headline statistics** — 1,050+ placements, ₹47.6L highest, 500+
+  partners, 87%. MOP's own published claims, never checked against records.
+  The biggest unverified thing on the site.
+- **Seven of the eight syllabi were written in-session, not by MOP.** Salary
+  bands are market estimates and the Placements Exit company lists are the
+  strongest claim on any page.
+- **The five social URLs.** Still unsupplied, so the footer icon row stays
+  hidden and `sameAs` is left out of the Organization schema — one of the
+  stronger signals for tying a new domain to a known brand, which is exactly
+  the .com's problem against the .in and .co.in.
+- **Cloud Computing and Cyber Security** are published but MOP has never
+  confirmed it runs them. Both carry `confirmed` unticked.
+- **The WhatsApp number differs from the published phone.** `916364805505`
+  against `+91 98908 13235`. Presumably deliberate; nobody has confirmed it.
+
+### Code that is known, scoped and unbuilt
+
+Ranked by what each is worth.
+
+1. **Prerendering the public pages.** Every URL on the site serves the same
+   5,523 bytes with **zero body text and no `<h1>`** — it is a client-rendered
+   SPA. Google executes JavaScript so it does eventually index; Bing, WhatsApp,
+   LinkedIn and the AI crawlers do not. The `.in` site serves 69,094 bytes of
+   readable HTML by comparison, which is part of why it outranks the `.com`.
+   **The fix is a build-time prerender, not a Next.js rewrite** — snapshot each
+   public route into `dist/<route>/index.html` after `vite build`; Amplify
+   serves a real file before applying the SPA rewrite. Same React app, no
+   framework change. It also gives per-page social previews, which `useSeo.js`
+   documents itself as unable to provide. The trade-off: content edited in
+   Admin reaches visitors instantly but crawlers only at the next build.
+   **Scoped and offered on 8 Sep; the user said leave it.**
+2. **No analytics at all.** Confirmed again 9 Sep — no gtag, GTM, Plausible or
+   PostHog on the live page. Nothing counts a callback request or a WhatsApp
+   click, so nobody can say whether the site converts. **Needs a decision
+   first:** GA4 is free but sets cookies and therefore needs a consent notice;
+   Plausible is ~$9/month, cookieless, about twenty lines.
+3. **655 KB of JavaScript in one chunk** (175 KB gzipped). Every visitor
+   downloads the admin screens, the teacher workspace and the student dashboard
+   in order to read the marketing page. Route-based code splitting is the only
+   real performance lever here — there are no images to compress.
+4. **Photo upload buttons.** S3 and `app/storage.py` exist and work for notes
+   PDFs; nothing else uploads through them.
+5. **Two approval-queue defects** (thread 8): two members approving the same
+   change simultaneously can apply it twice, and two pending changes to the
+   same item are not flagged.
+6. **Accessibility odds and ends** (thread 12): 19 tap targets below the WCAG
+   2.2 AA floor of 24x24, one heading-level skip (`h2 -> h4`), and a contrast
+   audit that needs a real tool — the script used flagged 11 styles but cannot
+   resolve gradient backgrounds and most looked like false positives.
+
+### Where the deployment record lives
+
+`MOP_Careers_AWS_Deployment.pdf` — 14 pages, the whole migration with the six
+AWS console screenshots MOP captured and redacted. **Deliberately not in git**
+(`*.pdf` is gitignored): it is a ~1 MB binary rebuilt whole each time, and an
+editor reading it as text reports it as a 465-line change. Regenerate it from
+the scratchpad script if it is ever needed again; the copy for sharing lives in
+the project folder, which is inside OneDrive.
+
+---
 
 ### 1. Admin content management — ✅ DONE
 
