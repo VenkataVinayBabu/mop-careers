@@ -298,8 +298,22 @@ and two are live-content problems.
 
 | Case | Raised | Consequence while it waits |
 |---|---|---|
-| **SES production access** | 5 Sep. AWS asked for use-case detail; the case sat at *Pending customer action* because the request form never offered a description field. **It will wait indefinitely until somebody replies.** | SES only delivers to verified addresses. Enquiry and doubt notifications work. **Password resets to students, new-account emails and class doubts to teachers all fail silently.** |
-| **App Runner entitlement** | 6 Sep. The console returns the free-plan limitations page although the account is Paid and Active (confirmed via `GetAccountPlanState`). Amplify was unaffected. | The API stays on Render. It works. The cost is cross-region latency — data requests went from ~0.3s to ~1.0s once the database moved to Mumbai and the API did not. |
+| **SES production access**<br/>case `178860267000302` | 5 Sep. AWS asked for use-case detail; **MOP replied on 6 Sep** with the full use case — transactional only, no marketing, no mailing list, each message type named. Status is *Customer action completed*: **the case is with AWS and there is nothing to reply to.** Checked 9 Sep. | SES only delivers to verified addresses. Enquiry and doubt notifications work. **Password resets to students, new-account emails and class doubts to teachers all fail silently.** |
+| **App Runner entitlement**<br/>case `178868454200914` | 6 Sep. The console returns the free-plan limitations page although the account is Paid and Active (confirmed via `GetAccountPlanState`). Amplify was unaffected. **Still *Unassigned* on 9 Sep** — nobody at AWS has picked it up. | The API stays on Render. It works. The cost is cross-region latency — data requests went from ~0.3s to ~1.0s once the database moved to Mumbai and the API did not. |
+
+**The account is on Basic Support**, which is the free plan. Account and
+billing cases are allowed on it — both of these are correctly filed as
+*Account* — but **there is no response-time commitment at all**. Neither case
+is stuck or mishandled; there is simply no clock on them. That is the reason
+App Runner has sat unassigned, and it is worth knowing before anyone spends an
+afternoon chasing.
+
+**If SES stays quiet, the faster route is not the support case.** AWS moved
+production-access requests into the SES console itself: *SES > Account
+dashboard > Request production access*, which asks for mail type, website URL,
+use case and bounce handling in proper fields. The original request went in
+through a form that offered no description box, which is why AWS had to ask.
+Submitting there is closer to the automated path than a human queue.
 
 ### Money and security, on a clock
 
