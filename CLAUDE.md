@@ -363,20 +363,23 @@ of how much it would matter if wrong:
 
   **The email is answered too: `contacts@mopcareers.com` exists and receives**
   (Microsoft 365 through GoDaddy, 6 Sep 2026, MX and SPF in Route 53, verified
-  by sending to it). **The public site still publishes `hello@mopcareers.com`,
-  which has no mailbox** — mail to it goes nowhere. Change it at Admin >
-  Website > Settings; it is one field and needs no developer.
+  by sending to it). ~~The public site still publishes `hello@mopcareers.com`~~
+  **Corrected — the live site publishes `contacts@mopcareers.com`** (checked
+  against `/public/site-settings`, 9 Sep 2026).
 
   `enquiries@` and `support@` are planned as aliases into the same mailbox.
   Once they exist AND SES has production access, `ENQUIRY_EMAIL` and
   `ADMIN_DOUBTS_EMAIL` on Render should move off the personal Gmail they
   currently point at.
-- **The WhatsApp number is still unknown.** The setting is empty, so the buttons
-  fall back to the enquiry form. Do **not** assume the phone number above takes
-  WhatsApp — a landline or a number without it hands the visitor a dead end.
-  Bala can now fill this in himself at **Admin > Website**, along with the
-  conflicting email, phone and address above — none of those needs a developer
-  any more.
+- ~~**The WhatsApp number is still unknown.**~~ **Set — `916364805505`**
+  (checked 9 Sep 2026). Note it is a *different* number from the published
+  phone `+91 98908 13235`, which is deliberate as far as anyone knows but has
+  not been confirmed with MOP.
+
+  **Still unsupplied: the five social URLs.** `social` is empty, so the footer
+  icon row stays hidden — and `sameAs` is left out of the Organization schema
+  for the same reason (thread 12), which costs the .com one of its better
+  signals against the .in and .co.in.
 
 ### 3a. Hosting moves to AWS — in progress
 
